@@ -6,13 +6,26 @@ import {
   type OperationContext
 } from "./pilot_component_session";
 
-type OperationName = "control.move_joint_online" | "control.move_task_online";
-
-export interface OperationTarget {
-  operation: OperationName;
-  control_id: string;
-  target_position: readonly number[];
-}
+export type OperationTarget =
+  | {
+      operation: "control.move_joint_online" | "control.move_task_online";
+      control_id: string;
+      target_position: readonly number[];
+    }
+  | {
+      operation: "control.set_servo_state";
+      control_id: string;
+      enabled: boolean;
+    }
+  | {
+      operation: "control.reset_fault";
+      control_id: string;
+    }
+  | {
+      operation: "control.set_brake_state";
+      control_id: string;
+      released: boolean;
+    };
 
 export interface OperationPresentation {
   state:
@@ -91,12 +104,37 @@ function createOperationRequest(
     sequence: context.sequence,
     source_timestamp_ns: context.source_timestamp_ns,
     ttl_ms: OPERATION_TTL_MS,
-    control_id: target.control_id,
-    payload: { target_position: [...target.target_position] }
+    control_id: target.control_id
   };
-  return target.operation === "control.move_joint_online"
-    ? { ...common, operation: "control.move_joint_online" }
-    : { ...common, operation: "control.move_task_online" };
+  if (target.operation === "control.move_joint_online") {
+    return {
+      ...common,
+      operation: target.operation,
+      payload: { target_position: [...target.target_position] }
+    };
+  }
+  if (target.operation === "control.move_task_online") {
+    return {
+      ...common,
+      operation: target.operation,
+      payload: { target_position: [...target.target_position] }
+    };
+  }
+  if (target.operation === "control.set_servo_state") {
+    return {
+      ...common,
+      operation: target.operation,
+      payload: { enabled: target.enabled }
+    };
+  }
+  if (target.operation === "control.set_brake_state") {
+    return {
+      ...common,
+      operation: target.operation,
+      payload: { released: target.released }
+    };
+  }
+  return { ...common, operation: target.operation, payload: {} };
 }
 
 function presentOperationResult(

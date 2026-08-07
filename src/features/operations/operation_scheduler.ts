@@ -11,6 +11,7 @@ export class OperationScheduler<T> {
   private in_flight = false;
   private pending: T | null = null;
   private sequence = 0;
+  private cancellation_generation = 0;
   private snapshot: SchedulerSnapshot = {
     in_flight: false,
     has_pending: false,
@@ -43,7 +44,7 @@ export class OperationScheduler<T> {
   cancel(): void {
     this.active = false;
     this.pending = null;
-    this.sequence += 1;
+    this.cancellation_generation += 1;
     this.publish();
   }
 
@@ -55,14 +56,19 @@ export class OperationScheduler<T> {
   private dispatch(target: T): void {
     this.in_flight = true;
     const token = ++this.sequence;
+    const dispatched_cancellation_generation = this.cancellation_generation;
     this.publish();
     void this.submit(target).then((presentation) => {
       if (token !== this.sequence) return;
       this.in_flight = false;
-      this.snapshot = { ...this.snapshot, presentation };
-      if (!this.active || presentation.terminal) {
+      const was_cancelled =
+        dispatched_cancellation_generation !== this.cancellation_generation;
+      if (!was_cancelled) {
+        this.snapshot = { ...this.snapshot, presentation };
+      }
+      if (!this.active || (!was_cancelled && presentation.terminal)) {
         this.pending = null;
-        if (presentation.terminal) this.active = false;
+        if (!was_cancelled && presentation.terminal) this.active = false;
         this.publish();
         return;
       }

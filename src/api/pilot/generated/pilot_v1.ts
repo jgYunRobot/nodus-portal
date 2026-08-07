@@ -409,7 +409,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Register or replace one generic component session */
+        /**
+         * Register or replace one generic component session
+         * @description Registers the live component session used by lifecycle routes and, under the current role-neutral pass_through policy, by POST /api/v1/operations. A UI command producer registers with component_type ui and uses only the opaque session_id returned by this response; component_type and capabilities are descriptive and do not grant authority.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -689,7 +692,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Admit one external Control operation */
+        /**
+         * Admit one external Control operation
+         * @description Accepts an operation from any live generic component session while source_policy is pass_through, including a component_type ui Portal session. session_id comes from ComponentRegistrationResponse. The command producer owns a separate operation (generation, sequence) cursor; it is not the lifecycle heartbeat/state sequence. On session replacement, expiry, or Pilot restart, the producer must stop active holds, re-register, reset the operation cursor for the new session, and must not replay a previous mutating request.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -874,6 +880,7 @@ export interface components {
                 [key: string]: components["schemas"]["JsonDiagnosticValue"];
             };
         };
+        /** @description Creates one generic live component session. In pass_through deployments, a UI that produces Control operations registers component_type ui and capability control.operation.v1, then submits operations with the returned session_id. component_type and capabilities remain descriptive rather than authorization claims. */
         ComponentRegistrationRequest: {
             component_id: components["schemas"]["Identifier"];
             instance_id: components["schemas"]["Identifier"];
@@ -888,10 +895,15 @@ export interface components {
             metadata: {
                 [key: string]: components["schemas"]["JsonDiagnosticValue"];
             };
-            /** @enum {string} */
+            /**
+             * @description Declares the clock domain used by operation source_timestamp_ns. The current operation admission profile enables monotonic_same_host only; cross-host browser command production is not part of this profile.
+             * @enum {string}
+             */
             clock_domain: "monotonic_same_host" | "unix_epoch_synchronized";
         };
+        /** @description Returns the opaque live session used for heartbeat, state, disconnect, endpoint publication, and operation submission. A replacement registration invalidates the earlier session. */
         ComponentRegistrationResponse: {
+            /** @description Opaque server-owned live session identity. UI and other command producers copy this value into OperationRequest.session_id and do not infer, persist across replacement, or expose it through public component projections. */
             session_id: components["schemas"]["Identifier"];
             server_instance_id: components["schemas"]["Identifier"];
             /** @constant */
@@ -899,6 +911,7 @@ export interface components {
             accepted_schema_versions: 1[];
             heartbeat_interval_ms: components["schemas"]["PositiveInt64"];
             lease_timeout_ms: components["schemas"]["PositiveInt64"];
+            /** @description Pilot monotonic nanoseconds at registration response creation. A same-host browser may conservatively map its monotonic performance.now() clock by recording performance.now() when this response is received and then using server_time plus subsequent local elapsed monotonic time. This intentionally backdates timestamps by response transit time. The browser must cancel holds and re-register after wake, clock discontinuity, session loss, or Pilot restart. This mapping does not make a cross-host browser a monotonic_same_host source. */
             server_time: components["schemas"]["NonNegativeInt64"];
         };
         HeartbeatRequest: {
@@ -1289,6 +1302,7 @@ export interface components {
             control_id: components["schemas"]["Identifier"];
             payload: components["schemas"]["RegisterFramePayload"];
         };
+        /** @description Closed union of Control operations submitted by a live generic component session. session_id is copied from ComponentRegistrationResponse. generation and sequence form a command-producer-owned cursor separate from lifecycle writes; sequence increases within a generation and a generation transition is allowed only after older in-flight operations finish. source_timestamp_ns uses the registered session clock domain. UI sessions follow the same contract as other command producers under pass_through. */
         OperationRequest: components["schemas"]["MoveJointOnlineRequest"] | components["schemas"]["MoveJointOfflineRequest"] | components["schemas"]["MoveTaskOnlineRequest"] | components["schemas"]["CalculateForwardKinematicsRequest"] | components["schemas"]["GetRobotStatusRequest"] | components["schemas"]["SetServoStateRequest"] | components["schemas"]["ResetFaultRequest"] | components["schemas"]["ResetOriginRequest"] | components["schemas"]["SetBrakeStateRequest"] | components["schemas"]["RegisterFrameRequest"];
         OperationDelivery: {
             /** @enum {string} */

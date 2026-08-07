@@ -115,6 +115,22 @@ describe("HoldSession", () => {
       operation: "control.move_task_online"
     });
     expect(sent.at(-1)?.target_position[0]).toBeGreaterThan(0);
+    expect(sent.at(-1)?.target_position).toHaveLength(7);
+
+    hold.start({
+      kind: "task",
+      frame_name: "Base",
+      axis_index: 3,
+      direction: 1,
+      speed_percent: 100
+    });
+    await Promise.resolve();
+    now = 150;
+    tick?.();
+    await Promise.resolve();
+    expect(sent.at(-1)?.target_position).toHaveLength(7);
+    expect(sent.at(-1)?.target_position.slice(3, 6)).toEqual([1, 0, 0]);
+    expect(sent.at(-1)?.target_position[6]).toBeGreaterThan(0);
   });
 
   it("keeps Home and Ready as progressive holds and stops on generation change", async () => {

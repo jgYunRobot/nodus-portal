@@ -87,4 +87,48 @@ describe("PilotOperationClient", () => {
     });
     expect(invalidated).toBe(1);
   });
+
+  it.each([
+    [
+      {
+        operation: "control.set_servo_state" as const,
+        control_id: "control-a",
+        enabled: true
+      },
+      { operation: "control.set_servo_state", payload: { enabled: true } }
+    ],
+    [
+      { operation: "control.reset_fault" as const, control_id: "control-a" },
+      { operation: "control.reset_fault", payload: {} }
+    ],
+    [
+      {
+        operation: "control.set_brake_state" as const,
+        control_id: "control-a",
+        released: false
+      },
+      { operation: "control.set_brake_state", payload: { released: false } }
+    ]
+  ])(
+    "encodes robot command %s through the public operation contract",
+    async (target, expected) => {
+      let submitted: unknown = null;
+      const client = new PilotOperationClient(
+        { reserveOperation: () => context } as never,
+        {
+          submitOperation: async (request: unknown) => {
+            submitted = request;
+            return {
+              status: 202,
+              body: operationResult("written_unconfirmed")
+            };
+          }
+        } as never
+      );
+
+      await client.submit(target);
+
+      expect(submitted).toMatchObject(expected);
+    }
+  );
 });

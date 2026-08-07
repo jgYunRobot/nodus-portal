@@ -20,6 +20,16 @@ export const DEFAULT_PORTAL_CONFIG: PortalConfig = {
   portal_label: "Nodus Portal"
 };
 
+let active_portal_config = DEFAULT_PORTAL_CONFIG;
+
+export function configurePortalConfig(config: PortalConfig): void {
+  active_portal_config = config;
+}
+
+export function getPortalConfig(): PortalConfig {
+  return active_portal_config;
+}
+
 export async function loadPortalConfig(
   fetch_config: ConfigFetch = fetch
 ): Promise<PortalConfig> {

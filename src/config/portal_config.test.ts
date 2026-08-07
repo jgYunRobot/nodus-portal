@@ -1,9 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
+  configurePortalConfig,
   DEFAULT_PORTAL_CONFIG,
+  getPortalConfig,
   loadPortalConfig,
   parsePortalConfig
 } from "./portal_config";
+
+afterEach(() => configurePortalConfig(DEFAULT_PORTAL_CONFIG));
 
 describe("parsePortalConfig", () => {
   it("uses same-origin defaults for omitted optional fields", () => {
@@ -36,5 +40,16 @@ describe("loadPortalConfig", () => {
     );
 
     expect(config).toEqual(DEFAULT_PORTAL_CONFIG);
+  });
+});
+
+describe("configurePortalConfig", () => {
+  it("publishes the validated runtime configuration to Pilot clients", () => {
+    const config = parsePortalConfig({
+      pilotBaseUrl: "https://pilot.example.test",
+      portalLabel: "Research Portal"
+    });
+    configurePortalConfig(config);
+    expect(getPortalConfig()).toEqual(config);
   });
 });

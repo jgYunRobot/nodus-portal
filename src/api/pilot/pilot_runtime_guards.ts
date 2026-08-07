@@ -11,9 +11,19 @@ export function isControlStatusResponse(
     typeof status.available === "boolean" &&
     typeof status.fresh === "boolean" &&
     typeof status.stale === "boolean" &&
-    typeof status.connection_generation === "number" &&
-    Number.isInteger(status.connection_generation) &&
-    (status.sample === null || isControlStatusSample(status.sample))
+    isNullableFiniteNumber(status.age_ms) &&
+    typeof status.request_pending === "boolean" &&
+    isNonNegativeInteger(status.connection_generation) &&
+    isNullableNonNegativeInteger(status.last_success_monotonic_ns) &&
+    isNullableNonNegativeInteger(status.last_failure_monotonic_ns) &&
+    isFiniteNumber(status.configured_polling_hz) &&
+    isFiniteNumber(status.measured_polling_hz) &&
+    isNonNegativeInteger(status.missed_poll_count) &&
+    isNonNegativeInteger(status.timeout_count) &&
+    isNonNegativeInteger(status.gateway_queue_high_watermark) &&
+    (status.sample === null ||
+      (isControlStatusSample(status.sample) &&
+        status.sample.connection_generation === status.connection_generation))
   );
 }
 
@@ -111,19 +121,111 @@ function isSampleStreamDescriptor(value: unknown): boolean {
   );
 }
 
-function isControlStatusSample(value: unknown): boolean {
+function isControlStatusSample(
+  value: unknown
+): value is components["schemas"]["ControlStatusSample"] {
   if (value === null || typeof value !== "object" || Array.isArray(value))
     return false;
   const sample = value as Record<string, unknown>;
   return (
-    typeof sample.sample_sequence === "number" &&
-    Number.isInteger(sample.sample_sequence) &&
-    sample.sample_sequence > 0 &&
-    typeof sample.connection_generation === "number" &&
-    Number.isInteger(sample.connection_generation) &&
-    typeof sample.source_timestamp_ns === "number" &&
-    typeof sample.pilot_receive_monotonic_ns === "number" &&
-    sample.robot_state !== null &&
-    typeof sample.robot_state === "object"
+    isPositiveInteger(sample.sample_sequence) &&
+    isNonNegativeInteger(sample.connection_generation) &&
+    isNonNegativeInteger(sample.source_timestamp_ns) &&
+    isNonNegativeInteger(sample.pilot_receive_monotonic_ns) &&
+    isRobotStatus(sample.robot_state)
   );
+}
+
+function isRobotStatus(value: unknown): boolean {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  const status = value as Record<string, unknown>;
+  return (
+    isNonNegativeInteger(status.timestamp_ns) &&
+    isJointState(status.real) &&
+    isJointState(status.desired) &&
+    isRobotInterface(status.interface) &&
+    Array.isArray(status.frames) &&
+    status.frames.every(isRobotFrame)
+  );
+}
+
+function isJointState(value: unknown): boolean {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  const state = value as Record<string, unknown>;
+  return (
+    isFiniteNumberArray(state.pos) &&
+    isFiniteNumberArray(state.vel) &&
+    isFiniteNumberArray(state.acc) &&
+    isFiniteNumberArray(state.torque)
+  );
+}
+
+function isRobotInterface(value: unknown): boolean {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  const robot_interface = value as Record<string, unknown>;
+  return (
+    isNonNegativeInteger(robot_interface.schema_version) &&
+    typeof robot_interface.robot_type === "string" &&
+    typeof robot_interface.connected === "boolean" &&
+    isNonNegativeInteger(robot_interface.dof) &&
+    typeof robot_interface.servo_activated === "boolean" &&
+    typeof robot_interface.brake_released === "boolean" &&
+    typeof robot_interface.brake_state_source === "string" &&
+    typeof robot_interface.motion_gate_state === "string" &&
+    typeof robot_interface.motion_gate_reason === "string" &&
+    isNonNegativeInteger(robot_interface.expected_wkc) &&
+    isNonNegativeInteger(robot_interface.last_wkc) &&
+    typeof robot_interface.last_error === "string"
+  );
+}
+
+function isRobotFrame(value: unknown): boolean {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  const frame = value as Record<string, unknown>;
+  return (
+    isNonNegativeInteger(frame.id) &&
+    typeof frame.name === "string" &&
+    isFiniteNumber(frame.x) &&
+    isFiniteNumber(frame.y) &&
+    isFiniteNumber(frame.z) &&
+    isFiniteNumber(frame.r1) &&
+    isFiniteNumber(frame.r2) &&
+    isFiniteNumber(frame.r3) &&
+    typeof frame.euler_type === "string" &&
+    ["XYZ", "XZY", "YXZ", "YZX", "ZXY", "ZYX", "ZXZ", "ZYZ"].includes(
+      frame.euler_type
+    )
+  );
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isFiniteNumberArray(value: unknown): value is number[] {
+  return Array.isArray(value) && value.every(isFiniteNumber);
+}
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return isNonNegativeInteger(value) && value > 0;
+}
+
+function isNullableFiniteNumber(value: unknown): value is number | null {
+  return value === null || isFiniteNumber(value);
+}
+
+function isNullableNonNegativeInteger(value: unknown): value is number | null {
+  return value === null || isNonNegativeInteger(value);
 }

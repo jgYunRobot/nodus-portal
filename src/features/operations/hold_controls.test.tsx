@@ -5,17 +5,23 @@ import type { HoldIntent } from "./hold_session";
 const mocks = vi.hoisted(() => ({
   cancel: vi.fn(),
   reconnect: vi.fn(),
+  resume: vi.fn(),
+  schedule: vi.fn(),
   start: vi.fn(),
   current_intent: null as Readonly<HoldIntent> | null,
   operation_snapshot: {
     in_flight: false,
     has_pending: false,
-    presentation: null
+    presentation: null as {
+      state: string;
+      message: string;
+      terminal: boolean;
+    } | null
   },
   session_snapshot: {
-    phase: "ready" as const,
+    phase: "ready" as "ready" | "recovering",
     server_instance_id: "pilot-a",
-    last_error: null
+    last_error: null as string | null
   }
 }));
 
@@ -107,7 +113,9 @@ vi.mock("./portal_operation_context", () => ({
     }),
     getScheduler: () => ({
       subscribe: () => () => undefined,
-      getSnapshot: () => mocks.operation_snapshot
+      getSnapshot: () => mocks.operation_snapshot,
+      resume: mocks.resume,
+      schedule: mocks.schedule
     }),
     session: {
       subscribe: () => () => undefined,
@@ -125,8 +133,13 @@ describe("HoldControls", () => {
   beforeEach(() => {
     mocks.cancel.mockReset();
     mocks.reconnect.mockReset();
+    mocks.resume.mockReset();
+    mocks.schedule.mockReset();
     mocks.start.mockReset();
     mocks.current_intent = null;
+    mocks.operation_snapshot.presentation = null;
+    mocks.session_snapshot.phase = "ready";
+    mocks.session_snapshot.last_error = null;
   });
 
   it("exposes joint, task, Home, and Ready holds", () => {
@@ -165,5 +178,54 @@ describe("HoldControls", () => {
     });
     window.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter" }));
     expect(mocks.cancel).toHaveBeenCalledWith("control-a");
+  });
+
+  it("submits robot commands through the selected Control scheduler", () => {
+    render(<HoldControls control_id="control-a" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Servo Off" }));
+    expect(mocks.schedule).toHaveBeenLastCalledWith({
+      operation: "control.set_servo_state",
+      control_id: "control-a",
+      enabled: false
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Fault Reset" }));
+    expect(mocks.schedule).toHaveBeenLastCalledWith({
+      operation: "control.reset_fault",
+      control_id: "control-a"
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Engage Brake" }));
+    expect(mocks.schedule).toHaveBeenLastCalledWith({
+      operation: "control.set_brake_state",
+      control_id: "control-a",
+      released: false
+    });
+    expect(mocks.cancel).toHaveBeenCalledTimes(3);
+    expect(mocks.resume).toHaveBeenCalledTimes(3);
+  });
+
+  it("shows operation and recovery information in one stable status panel", () => {
+    mocks.operation_snapshot.presentation = {
+      state: "written_unconfirmed",
+      message: "Control frame was written without execution acknowledgement.",
+      terminal: false
+    };
+    mocks.session_snapshot.phase = "recovering";
+    mocks.session_snapshot.last_error =
+      "Pilot session recovery is in progress.";
+
+    render(<HoldControls control_id="control-a" />);
+
+    const status_panel = screen.getByRole("status");
+    expect(status_panel.textContent).toContain("written_unconfirmed");
+    expect(status_panel.textContent).toContain("recovery:");
+    expect(status_panel.textContent).toContain(
+      "Pilot session recovery is in progress."
+    );
+    expect(
+      screen.getByRole("button", { name: "Retry session" })
+    ).not.toBeNull();
   });
 });

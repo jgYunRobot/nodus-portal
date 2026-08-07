@@ -22,7 +22,26 @@ function status(control_id: string, generation: number, sequence: number) {
       connection_generation: generation,
       source_timestamp_ns: 1,
       pilot_receive_monotonic_ns: 1,
-      robot_state: {}
+      robot_state: {
+        timestamp_ns: 1,
+        real: { pos: [0, 0, 0, 0, 0, 0], vel: [], acc: [], torque: [] },
+        desired: { pos: [0, 0, 0, 0, 0, 0], vel: [], acc: [], torque: [] },
+        interface: {
+          schema_version: 1,
+          robot_type: "test",
+          connected: true,
+          dof: 6,
+          servo_activated: true,
+          brake_released: true,
+          brake_state_source: "test",
+          motion_gate_state: "test",
+          motion_gate_reason: "",
+          expected_wkc: 0,
+          last_wkc: 0,
+          last_error: ""
+        },
+        frames: []
+      }
     }
   };
 }
@@ -54,14 +73,16 @@ describe("PilotStreamHub", () => {
     expect(hub.getSnapshot("alpha").status?.sample?.sample_sequence).toBe(2);
     expect(hub.getSnapshot("bravo").status?.sample?.sample_sequence).toBe(1);
   });
-  it("reseeds a sequence gap from the latest public snapshot", async () => {
+  it("accepts skipped samples from the latest-only UI stream", () => {
+    const read_latest = vi.fn(async () => status("alpha", 1, 2) as never);
     const hub = new PilotStreamHub({
-      read_latest: async () => status("alpha", 1, 2) as never
+      read_latest
     });
     hub.accept("alpha", status("alpha", 1, 1));
     hub.accept("alpha", status("alpha", 1, 3));
-    await vi.waitFor(() => expect(hub.getSnapshot("alpha").state).toBe("live"));
-    expect(hub.getSnapshot("alpha").status?.sample?.sample_sequence).toBe(2);
+    expect(hub.getSnapshot("alpha").state).toBe("live");
+    expect(hub.getSnapshot("alpha").status?.sample?.sample_sequence).toBe(3);
+    expect(read_latest).not.toHaveBeenCalled();
   });
   it("accepts a new generation without comparing its old cursor", () => {
     const hub = new PilotStreamHub();
@@ -73,6 +94,13 @@ describe("PilotStreamHub", () => {
   it("bounds malformed status independently", () => {
     const hub = new PilotStreamHub();
     hub.accept("alpha", { control_id: "bravo" });
+    expect(hub.getSnapshot("alpha").state).toBe("malformed");
+  });
+  it("rejects a status whose nested robot state is incomplete", () => {
+    const hub = new PilotStreamHub();
+    const malformed = status("alpha", 1, 1);
+    malformed.sample.robot_state = {} as never;
+    hub.accept("alpha", malformed);
     expect(hub.getSnapshot("alpha").state).toBe("malformed");
   });
   it("closes the one canonical SSE source after the last listener leaves", () => {
@@ -88,5 +116,46 @@ describe("PilotStreamHub", () => {
     unsubscribe();
     expect(create_source).toHaveBeenCalledTimes(1);
     expect(source.close).toHaveBeenCalledTimes(1);
+    expect(hub.getSnapshot("alpha").state).toBe("recovering");
+  });
+
+  it("reseeds a retained snapshot before a reconnect can expose it as live", async () => {
+    let latest_sequence = 1;
+    const source = { addEventListener: vi.fn(), close: vi.fn(), onerror: null };
+    const hub = new PilotStreamHub({
+      create_source: () => source,
+      read_latest: async () => status("alpha", 1, latest_sequence) as never
+    });
+    hub.accept("alpha", status("alpha", 1, 1));
+    const first_unsubscribe = hub.subscribe("alpha", vi.fn());
+    first_unsubscribe();
+    expect(hub.getSnapshot("alpha").state).toBe("recovering");
+
+    latest_sequence = 2;
+    hub.connect("alpha");
+    expect(hub.getSnapshot("alpha").state).toBe("recovering");
+    await vi.waitFor(() => expect(hub.getSnapshot("alpha").state).toBe("live"));
+    expect(hub.getSnapshot("alpha").status?.sample?.sample_sequence).toBe(2);
+  });
+
+  it("does not let an older recovery response replace a newer stream sample", async () => {
+    let resolve_latest:
+      ((value: ReturnType<typeof status>) => void) | undefined;
+    const hub = new PilotStreamHub({
+      create_source: () => ({
+        addEventListener: () => undefined,
+        close: () => undefined,
+        onerror: null
+      }),
+      read_latest: () =>
+        new Promise((resolve) => {
+          resolve_latest = resolve;
+        }) as never
+    });
+    hub.connect("alpha");
+    hub.accept("alpha", status("alpha", 1, 3));
+    resolve_latest?.(status("alpha", 1, 1));
+    await Promise.resolve();
+    expect(hub.getSnapshot("alpha").status?.sample?.sample_sequence).toBe(3);
   });
 });

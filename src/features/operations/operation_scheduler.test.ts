@@ -59,4 +59,31 @@ describe("OperationScheduler", () => {
     expect(submitted).toEqual([1]);
     expect(scheduler.getSnapshot().has_pending).toBe(false);
   });
+
+  it("resumes with the newest target after a cancelled request settles", async () => {
+    const first = deferred<typeof accepted>();
+    const second = deferred<typeof accepted>();
+    const submitted: number[] = [];
+    const scheduler = new OperationScheduler<number>((target) => {
+      submitted.push(target);
+      return submitted.length === 1 ? first.promise : second.promise;
+    });
+
+    scheduler.schedule(1);
+    scheduler.cancel();
+    scheduler.resume();
+    scheduler.schedule(2);
+    scheduler.schedule(3);
+    expect(submitted).toEqual([1]);
+
+    first.resolve(accepted);
+    await Promise.resolve();
+    expect(submitted).toEqual([1, 3]);
+    second.resolve(accepted);
+    await Promise.resolve();
+    expect(scheduler.getSnapshot()).toMatchObject({
+      in_flight: false,
+      has_pending: false
+    });
+  });
 });

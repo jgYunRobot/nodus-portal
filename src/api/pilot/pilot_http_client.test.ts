@@ -1,5 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  configurePortalConfig,
+  DEFAULT_PORTAL_CONFIG
+} from "../../config/portal_config";
 import { PilotHttpClient } from "./pilot_http_client";
+
+afterEach(() => configurePortalConfig(DEFAULT_PORTAL_CONFIG));
 
 describe("PilotHttpClient", () => {
   it("uses the public same-origin health path", async () => {
@@ -35,5 +41,19 @@ describe("PilotHttpClient", () => {
     expect(requests).toEqual([
       "/api/v1/pilot/streams?stream_kind=robot_status"
     ]);
+  });
+  it("uses the configured Pilot base URL when no constructor override is given", async () => {
+    configurePortalConfig({
+      pilot_base_url: "https://pilot.example.test",
+      portal_label: "Research Portal"
+    });
+    const requests: string[] = [];
+    const client = new PilotHttpClient(undefined, async (input) => {
+      requests.push(String(input));
+      return Response.json({ status: "ok" });
+    });
+
+    await client.getHealth();
+    expect(requests).toEqual(["https://pilot.example.test/api/v1/health"]);
   });
 });

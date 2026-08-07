@@ -15,4 +15,12 @@ describe("JogTargetProjector", () => {
   it("clamps Home and Ready projection at the fixed goal", () => {
     expect(projectGoalTarget([0.9], [0.5], [1], 100, 1_000)).toEqual([1]);
   });
+
+  it("advances every Home and Ready axis by the same path progress", () => {
+    const target = projectGoalTarget([0, 0], [0, 0], [1, 2], 100, 50);
+
+    expect(target[0]).toBeGreaterThan(0);
+    expect(target[1]).toBeGreaterThan(0);
+    expect(target[0]! / 1).toBeCloseTo(target[1]! / 2);
+  });
 });

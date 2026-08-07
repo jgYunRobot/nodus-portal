@@ -4,9 +4,11 @@ import { NavLink, Outlet, useLocation, useParams } from "react-router";
 import { Button } from "../components/actions/button";
 import { Drawer } from "../components/layout/drawer";
 import { ThemeMenu } from "../components/actions/theme_menu";
+import { getPortalConfig } from "../config/portal_config";
 import styles from "./portal_shell.module.css";
 
 export function PortalShell() {
+  const portal_label = getPortalConfig().portal_label;
   const [is_collapsed, setIsCollapsed] = useState(false);
   const [is_drawer_open, setIsDrawerOpen] = useState(false);
   const { control_id } = useParams();
@@ -38,7 +40,7 @@ export function PortalShell() {
         description="Portal navigation"
         on_open_change={setIsDrawerOpen}
         open={is_drawer_open}
-        title="Nodus Portal"
+        title={portal_label}
       >
         <Navigation
           control_id={control_id}

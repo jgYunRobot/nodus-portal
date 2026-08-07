@@ -1,8 +1,18 @@
 import type { ControlStatusSnapshot } from "../../api/pilot/pilot_stream_hub";
+import {
+  createEulerRotationMatrix,
+  type RotationMatrix3,
+  type Vector3
+} from "./jog_target_projector";
+
+export interface MotionTaskFrame {
+  translation: Vector3;
+  rotation: RotationMatrix3;
+}
 
 export interface MotionRobotStatus {
   joint_positions: readonly number[];
-  frames: ReadonlyMap<string, readonly number[]>;
+  frames: ReadonlyMap<string, MotionTaskFrame>;
   connection_generation: number;
 }
 
@@ -26,10 +36,18 @@ export function adaptMotionRobotStatus(
   ) {
     return null;
   }
-  const frames = new Map<string, readonly number[]>();
+  const frames = new Map<string, MotionTaskFrame>();
   snapshot.status.sample.robot_state.frames.forEach((frame) => {
-    const pose = [frame.x, frame.y, frame.z, frame.r1, frame.r2, frame.r3];
-    if (pose.every(Number.isFinite)) frames.set(frame.name, pose);
+    const translation: Vector3 = [frame.x, frame.y, frame.z];
+    const rotation = createEulerRotationMatrix(
+      frame.r1,
+      frame.r2,
+      frame.r3,
+      frame.euler_type
+    );
+    if (translation.every(Number.isFinite) && rotation !== null) {
+      frames.set(frame.name, { translation, rotation });
+    }
   });
   return {
     joint_positions: joint_positions.slice(),

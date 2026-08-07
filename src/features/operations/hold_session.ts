@@ -2,12 +2,14 @@ import type { ControlStatusSnapshot } from "../../api/pilot/pilot_stream_hub";
 import {
   HOME_JOINT_TARGET,
   JOINT_RATE_RAD_PER_SECOND,
+  createTaskTargetPosition,
   projectDirectionalTarget,
   projectGoalTarget,
+  projectTaskRotation,
   READY_JOINT_TARGET,
-  TASK_ROTATION_RATE_RAD_PER_SECOND,
   TASK_TRANSLATION_RATE_PER_SECOND,
-  type JogDirection
+  type JogDirection,
+  type RotationMatrix3
 } from "./jog_target_projector";
 import type { OperationTarget } from "./pilot_operation_client";
 import { OperationScheduler } from "./operation_scheduler";
@@ -48,6 +50,7 @@ export class HoldSession {
   private timer: number | null = null;
   private intent: HoldIntent | null = null;
   private projection: number[] | null = null;
+  private task_rotation: RotationMatrix3 | null = null;
   private connection_generation: number | null = null;
   private last_tick_ms: number | null = null;
   constructor(private readonly options: HoldSessionOptions) {
@@ -88,6 +91,7 @@ export class HoldSession {
     this.timer = null;
     this.intent = null;
     this.projection = null;
+    this.task_rotation = null;
     this.connection_generation = null;
     this.last_tick_ms = null;
     this.options.scheduler.cancel();
@@ -147,25 +151,38 @@ export class HoldSession {
     }
     if (intent.kind === "task") {
       const frame = status.frames.get(intent.frame_name);
-      if (frame === undefined || frame[intent.axis_index] === undefined)
-        return null;
-      if (this.projection === null) this.projection = [...frame];
-      const rate =
-        intent.axis_index < 3
-          ? TASK_TRANSLATION_RATE_PER_SECOND
-          : TASK_ROTATION_RATE_RAD_PER_SECOND;
-      this.projection[intent.axis_index] = projectDirectionalTarget(
-        this.projection[intent.axis_index],
-        frame[intent.axis_index],
-        intent.direction,
-        intent.speed_percent,
-        elapsed_ms,
-        rate
+      if (frame === undefined) return null;
+      if (this.projection === null) this.projection = [...frame.translation];
+      if (this.task_rotation === null) this.task_rotation = frame.rotation;
+      if (intent.axis_index < 3) {
+        this.projection[intent.axis_index] = projectDirectionalTarget(
+          this.projection[intent.axis_index]!,
+          frame.translation[intent.axis_index]!,
+          intent.direction,
+          intent.speed_percent,
+          elapsed_ms,
+          TASK_TRANSLATION_RATE_PER_SECOND
+        );
+      } else {
+        this.task_rotation = projectTaskRotation(
+          this.task_rotation,
+          frame.rotation,
+          intent.axis_index,
+          intent.direction,
+          intent.speed_percent,
+          elapsed_ms
+        );
+        if (this.task_rotation === null) return null;
+      }
+      const target_position = createTaskTargetPosition(
+        this.projection,
+        this.task_rotation
       );
+      if (target_position === null) return null;
       return {
         operation: "control.move_task_online",
         control_id: this.options.control_id,
-        target_position: this.projection
+        target_position
       };
     }
     const goal =

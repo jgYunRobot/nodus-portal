@@ -1,4 +1,5 @@
 import type { components } from "./generated/pilot_v1";
+import { getPortalConfig } from "../../config/portal_config";
 import {
   isComponentRegistrationResponse,
   isErrorResponse,
@@ -35,10 +36,22 @@ export interface PilotHttpResponse<T> {
   body: T;
 }
 
+const PILOT_REQUEST_TIMEOUT_MS = 5000;
+
+export function resolvePilotPath(
+  path: string,
+  base_url = getPortalConfig().pilot_base_url
+): string {
+  return base_url === "same-origin" ? path : new URL(path, base_url).toString();
+}
+
 export class PilotHttpClient {
   private readonly base_url: string;
   private readonly fetch_pilot: PilotFetch;
-  constructor(base_url = "same-origin", fetch_pilot?: PilotFetch) {
+  constructor(
+    base_url = getPortalConfig().pilot_base_url,
+    fetch_pilot?: PilotFetch
+  ) {
     this.base_url = base_url;
     this.fetch_pilot = fetch_pilot ?? ((input, init) => fetch(input, init));
   }
@@ -128,7 +141,10 @@ export class PilotHttpClient {
   }
   private async get<T>(path: string): Promise<T> {
     const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 5000);
+    const timeout = window.setTimeout(
+      () => controller.abort(),
+      PILOT_REQUEST_TIMEOUT_MS
+    );
     try {
       const response = await this.fetch_pilot(this.resolvePath(path), {
         headers: { Accept: "application/json" },
@@ -160,26 +176,34 @@ export class PilotHttpClient {
     path: string,
     body: T
   ): Promise<PilotHttpResponse<unknown>> {
-    const response = await this.fetch_pilot(this.resolvePath(path), {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
-    });
-    const response_body = await response.json().catch(() => null);
-    if (![200, 201, 202, 404, 409, 503].includes(response.status)) {
-      throw new PilotHttpError(
-        response.status,
-        `Pilot POST ${path} failed with HTTP ${response.status}.`
-      );
+    const controller = new AbortController();
+    const timeout = window.setTimeout(
+      () => controller.abort(),
+      PILOT_REQUEST_TIMEOUT_MS
+    );
+    try {
+      const response = await this.fetch_pilot(this.resolvePath(path), {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+      const response_body = await response.json().catch(() => null);
+      if (![200, 201, 202, 404, 409, 503].includes(response.status)) {
+        throw new PilotHttpError(
+          response.status,
+          `Pilot POST ${path} failed with HTTP ${response.status}.`
+        );
+      }
+      return { status: response.status, body: response_body };
+    } finally {
+      window.clearTimeout(timeout);
     }
-    return { status: response.status, body: response_body };
   }
   private resolvePath(path: string): string {
-    return this.base_url === "same-origin"
-      ? path
-      : new URL(path, this.base_url).toString();
+    return resolvePilotPath(path, this.base_url);
   }
 }
