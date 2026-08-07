@@ -10,6 +10,7 @@ declare module "urdf-loader" {
   }
 
   export default class URDFLoader extends Loader {
+    parseCollision: boolean;
     workingPath: string;
     load(
       url: string,

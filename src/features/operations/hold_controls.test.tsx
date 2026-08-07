@@ -129,22 +129,18 @@ describe("HoldControls", () => {
     mocks.current_intent = null;
   });
 
-  it("organizes joint telemetry and progressive Home/Ready holds", () => {
+  it("exposes joint, task, Home, and Ready holds", () => {
     render(<HoldControls control_id="control-a" />);
 
     expect(screen.getByRole("button", { name: "Joint 6 +" })).not.toBeNull();
     expect(screen.getByRole("button", { name: "Home" })).not.toBeNull();
     expect(screen.getByRole("button", { name: "Ready" })).not.toBeNull();
-    expect(screen.getByText("0.100 rad")).not.toBeNull();
-    expect(screen.getByText("0.200 rad/s")).not.toBeNull();
-    expect(screen.getByText("0.400 Nm")).not.toBeNull();
 
     fireEvent.click(screen.getByRole("tab", { name: "Task" }));
     expect(screen.getByRole("button", { name: "Task Rz −" })).not.toBeNull();
     expect(
       (screen.getByLabelText("Task jog frame") as HTMLSelectElement).value
     ).toBe("Base");
-    expect(screen.getByText("0.110 m")).not.toBeNull();
   });
 
   it("uses the selected speed/frame and cancels on global keyboard release", () => {

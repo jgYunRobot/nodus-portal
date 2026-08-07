@@ -71,9 +71,7 @@ test("renders stable multi-robot Home cards from public stream descriptors", asy
 test("restores the direct Control-scoped Jogging route", async ({ page }) => {
   await page.goto("/robots/control-alpha/jogging");
   await expect(page.getByRole("heading", { name: "Jogging" })).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "control-alpha" })
-  ).toBeVisible();
+  await expect(page.getByText("control-alpha", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Jogging" })).toHaveAttribute(
     "aria-current",
     "page"
@@ -105,6 +103,27 @@ test("loads a selected Portal-owned robot profile only on the Jogging route", as
   await urdf;
   await expect.poll(() => loaded_meshes.size).toBe(7);
   await expect(page.getByLabel("eRob 3 kg visualization")).toBeVisible();
+
+  const visualization_bounds = await page
+    .getByLabel("eRob 3 kg visualization")
+    .boundingBox();
+  const controls_bounds = await page
+    .getByLabel("Continuous jogging controls")
+    .boundingBox();
+  const values_bounds = await page
+    .getByRole("heading", { name: "Real-time values" })
+    .boundingBox();
+  expect(visualization_bounds).not.toBeNull();
+  expect(controls_bounds).not.toBeNull();
+  expect(values_bounds).not.toBeNull();
+  if (
+    visualization_bounds === null ||
+    controls_bounds === null ||
+    values_bounds === null
+  )
+    throw new Error("Jogging layout landmarks are unavailable.");
+  expect(controls_bounds.x).toBeGreaterThan(visualization_bounds.x);
+  expect(values_bounds.y).toBeGreaterThan(visualization_bounds.y);
 
   await page.goto("/home");
   await expect(page.locator("canvas")).toHaveCount(0);

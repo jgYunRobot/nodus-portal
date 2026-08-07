@@ -2,11 +2,7 @@ import { lazy, Suspense, useState } from "react";
 import { useParams } from "react-router";
 import { useControlStatus } from "../api/pilot/use_control_status";
 import { Card } from "../components/feedback/card";
-import { StatusBadge } from "../components/feedback/status_badge";
-import {
-  adaptRobotVisualizationState,
-  type RobotVisualizationState
-} from "../features/robot_model/robot_status_adapter";
+import { adaptRobotVisualizationState } from "../features/robot_model/robot_status_adapter";
 import {
   loadRobotProfile,
   ROBOT_PROFILES,
@@ -22,14 +18,10 @@ const RobotScene = lazy(() =>
   }))
 );
 
-function statusLabel(state: RobotVisualizationState) {
-  return state.tone === "success"
-    ? "Live"
-    : state.tone === "warning"
-      ? "Held"
-      : state.tone === "danger"
-        ? "Unavailable"
-        : "Waiting";
+function formatValue(value: number | undefined, unit: string): string {
+  return typeof value === "number" && Number.isFinite(value)
+    ? `${value.toFixed(3)} ${unit}`
+    : "—";
 }
 
 export function JoggingPage() {
@@ -41,6 +33,13 @@ export function JoggingPage() {
 function JoggingWorkspace({ control_id }: { control_id: string }) {
   const snapshot = useControlStatus(control_id);
   const visualization = adaptRobotVisualizationState(snapshot);
+  const robot_state = snapshot.status?.sample?.robot_state;
+  const realtime_robot_state =
+    snapshot.state === "live" &&
+    snapshot.status?.fresh === true &&
+    !snapshot.status.stale
+      ? robot_state
+      : undefined;
   const [profile, setProfile] = useState<RobotProfile | null>(() =>
     loadRobotProfile(control_id)
   );
@@ -55,81 +54,103 @@ function JoggingWorkspace({ control_id }: { control_id: string }) {
     <main className={styles.page}>
       <div className={styles.title_row}>
         <div>
-          <p className={styles.eyebrow}>Selected Control</p>
           <h1>Jogging</h1>
+          <p className={styles.eyebrow}>{control_id}</p>
         </div>
-        <StatusBadge
-          label={statusLabel(visualization)}
-          tone={visualization.tone}
-        />
       </div>
-      <Card>
-        <h2>{control_id}</h2>
-        <div className={styles.status_row}>
-          <StatusBadge
-            label={`Stream: ${snapshot.state}`}
-            tone={visualization.tone}
-          />
-          <p>{visualization.message}</p>
-        </div>
-      </Card>
-      <Card className={styles.detail_grid} aria-label="Robot status details">
-        <div>
-          <strong>Freshness</strong>
-          <p>{snapshot.status?.fresh ? "Fresh" : "Not fresh"}</p>
-        </div>
-        <div>
-          <strong>Connection generation</strong>
-          <p>{snapshot.status?.connection_generation ?? "Unavailable"}</p>
-        </div>
-        <div>
-          <strong>Sample sequence</strong>
-          <p>{snapshot.status?.sample?.sample_sequence ?? "Unavailable"}</p>
-        </div>
-      </Card>
-      <Card className={styles.operation_card}>
-        <HoldControls control_id={control_id} />
-      </Card>
-      <Card className={styles.profile_card}>
-        <div>
-          <h2>Visualization profile</h2>
-          <p>
-            Choose a Portal presentation profile for this Control. It does not
-            identify the connected robot or authorize motion.
-          </p>
-        </div>
-        <label>
-          Robot model
-          <select
-            aria-label="Visualization profile"
-            onChange={(event) => selectProfile(event.target.value)}
-            value={profile?.id ?? ""}
+      <div className={styles.workspace}>
+        <section className={styles.visual_column}>
+          <Card className={styles.profile_card}>
+            <label>
+              Robot model
+              <select
+                aria-label="Visualization profile"
+                onChange={(event) => selectProfile(event.target.value)}
+                value={profile?.id ?? ""}
+              >
+                <option value="">No profile selected</option>
+                {ROBOT_PROFILES.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {profile === null ? (
+              <p className={styles.empty_scene}>No model selected.</p>
+            ) : (
+              <Suspense
+                fallback={
+                  <p className={styles.empty_scene}>Loading visualization…</p>
+                }
+              >
+                <RobotScene
+                  profile={profile}
+                  joint_positions={visualization.joint_positions}
+                />
+              </Suspense>
+            )}
+          </Card>
+          <Card
+            className={styles.values_card}
+            aria-label="Real-time robot values"
           >
-            <option value="">No profile selected</option>
-            {ROBOT_PROFILES.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        {profile === null ? (
-          <p className={styles.empty_scene}>
-            No visualization profile is assigned to this Control.
-          </p>
-        ) : (
-          <Suspense
-            fallback={
-              <p className={styles.empty_scene}>Loading robot visualization…</p>
-            }
-          >
-            <RobotScene
-              profile={profile}
-              joint_positions={visualization.joint_positions}
-            />
-          </Suspense>
-        )}
-      </Card>
+            <h2>Real-time values</h2>
+            {realtime_robot_state === undefined ? (
+              <p className={styles.empty_values}>No fresh RobotStatus.</p>
+            ) : (
+              <div className={styles.joint_values}>
+                {realtime_robot_state.real.pos.map((_, joint_index) => (
+                  <article className={styles.value_row} key={joint_index}>
+                    <strong>Joint {joint_index + 1}</strong>
+                    <dl>
+                      <div>
+                        <dt>Position</dt>
+                        <dd>
+                          {formatValue(
+                            realtime_robot_state.real.pos[joint_index],
+                            "rad"
+                          )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Velocity</dt>
+                        <dd>
+                          {formatValue(
+                            realtime_robot_state.real.vel[joint_index],
+                            "rad/s"
+                          )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Torque</dt>
+                        <dd>
+                          {formatValue(
+                            realtime_robot_state.real.torque[joint_index],
+                            "Nm"
+                          )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Accel.</dt>
+                        <dd>
+                          {formatValue(
+                            realtime_robot_state.real.acc[joint_index],
+                            "rad/s²"
+                          )}
+                        </dd>
+                      </div>
+                    </dl>
+                  </article>
+                ))}
+              </div>
+            )}
+          </Card>
+        </section>
+        <Card className={styles.operation_card}>
+          <HoldControls control_id={control_id} />
+        </Card>
+      </div>
     </main>
   );
 }

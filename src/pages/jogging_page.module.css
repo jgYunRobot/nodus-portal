@@ -3,49 +3,40 @@
   gap: var(--space-6);
 }
 
-.title_row,
-.status_row {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  justify-content: space-between;
-}
-
 .title_row h1,
 .title_row p,
-.status_row p,
-.detail_grid p,
-.profile_card h2,
-.profile_card p {
+.values_card h2,
+.empty_scene,
+.empty_values {
   margin: 0;
 }
 
-.eyebrow {
+.eyebrow,
+.empty_scene,
+.empty_values,
+.value_row dt {
   color: var(--color-text-muted);
-  font-size: 0.875rem;
 }
 
-.status_row {
-  gap: var(--space-2);
-  justify-content: flex-start;
+.eyebrow,
+.value_row dt {
+  font-size: 0.75rem;
 }
 
-.detail_grid {
+.workspace {
+  align-items: start;
   display: grid;
-  gap: var(--space-4);
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-6);
+  grid-template-columns: minmax(0, 1fr) minmax(22rem, 0.72fr);
 }
 
-.detail_grid strong {
-  display: block;
-  font-size: 0.875rem;
-  margin-bottom: var(--space-1);
+.visual_column {
+  display: grid;
+  gap: var(--space-6);
 }
 
-.detail_grid p {
-  color: var(--color-text-muted);
-  overflow-wrap: anywhere;
+.operation_card {
+  min-width: 0;
 }
 
 .profile_card {
@@ -69,12 +60,62 @@
 }
 
 .empty_scene {
-  color: var(--color-text-muted);
+  min-height: 360px;
+  padding: var(--space-4) 0;
+}
+
+.values_card {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.values_card h2 {
+  font-size: 1rem;
+}
+
+.joint_values {
+  border-top: 1px solid var(--color-border);
+}
+
+.value_row {
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: minmax(6rem, 0.45fr) minmax(0, 1.55fr);
+  padding: var(--space-3) 0;
+}
+
+.value_row dl {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   margin: 0;
 }
 
+.value_row dl div {
+  min-width: 0;
+}
+
+.value_row dd {
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  margin: var(--space-1) 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 720px) {
-  .detail_grid {
+  .value_row,
+  .value_row dl {
     grid-template-columns: 1fr;
   }
 }

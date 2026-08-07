@@ -1,10 +1,18 @@
-import { Grid, OrbitControls } from "@react-three/drei";
+import { Bounds, Grid, OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { useEffect, useState } from "react";
 import type { Object3D } from "three";
 import URDFLoader, { type URDFRobot } from "urdf-loader";
 import type { RobotProfile } from "./robot_profile";
 import styles from "./robot_scene.module.css";
+
+const default_scene_camera_position: [number, number, number] = [
+  -1.4578, 1.1175, -1.2626
+];
+const default_scene_camera_target: [number, number, number] = [
+  0.0036, 0.3785, -0.0372
+];
+const robot_scene_rotation: [number, number, number] = [-Math.PI / 2, 0, 0];
 
 interface RobotSceneProps {
   profile: RobotProfile;
@@ -39,6 +47,7 @@ function LoadedRobot({ profile, joint_positions, on_error }: LoadedRobotProps) {
     let disposed = false;
     const loader = new URDFLoader();
     loader.workingPath = "/robots/e_rob/";
+    loader.parseCollision = false;
     loader.load(
       profile.urdf_path,
       (loaded) => {
@@ -79,25 +88,38 @@ export function RobotScene({ profile, joint_positions }: RobotSceneProps) {
     <div className={styles.scene} aria-label={`${profile.label} visualization`}>
       <Canvas
         className={styles.canvas}
-        camera={{ position: [1.3, 0.9, 1.3], fov: 42 }}
+        camera={{ position: default_scene_camera_position, fov: 45, zoom: 1 }}
       >
-        <ambientLight intensity={1.2} />
-        <directionalLight intensity={2.2} position={[3, 4, 2]} />
-        <Grid args={[2, 2]} cellColor="#587077" sectionColor="#9bccc8" />
-        <LoadedRobot
-          profile={profile}
-          joint_positions={joint_positions}
-          on_error={setLoadError}
+        <color attach="background" args={["#101417"]} />
+        <ambientLight intensity={0.65} />
+        <directionalLight intensity={1.7} position={[2.4, 3.2, 4.1]} />
+        <directionalLight intensity={0.45} position={[-3.4, -2.1, 2.5]} />
+        <Grid
+          args={[1.6, 16]}
+          cellColor="#46505a"
+          position={[0, -0.01, 0]}
+          sectionColor="#7a8791"
         />
-        <OrbitControls makeDefault />
+        <Bounds clip margin={1.25}>
+          <group rotation={robot_scene_rotation}>
+            <LoadedRobot
+              profile={profile}
+              joint_positions={joint_positions}
+              on_error={setLoadError}
+            />
+          </group>
+        </Bounds>
+        <OrbitControls
+          enableDamping
+          makeDefault
+          target={default_scene_camera_target}
+        />
       </Canvas>
-      <p
-        className={styles.overlay}
-        role={load_error === null ? undefined : "alert"}
-      >
-        {load_error ??
-          "Drag to inspect. This is a presentation profile, not a robot identity claim."}
-      </p>
+      {load_error === null ? null : (
+        <p className={styles.overlay} role="alert">
+          {load_error}
+        </p>
+      )}
     </div>
   );
 }

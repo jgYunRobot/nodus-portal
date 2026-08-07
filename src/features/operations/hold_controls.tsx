@@ -39,14 +39,9 @@ function sameIntent(
   return true;
 }
 
-function formatValue(value: number | undefined, unit: string): string {
-  return typeof value === "number" && Number.isFinite(value)
-    ? `${value.toFixed(3)} ${unit}`
-    : "—";
-}
-
 function HoldButton({
   label,
+  display_label = label,
   intent,
   disabled,
   active,
@@ -54,6 +49,7 @@ function HoldButton({
   stop
 }: {
   label: string;
+  display_label?: string;
   intent: HoldIntent;
   disabled: boolean;
   active: boolean;
@@ -78,6 +74,7 @@ function HoldButton({
   }
   return (
     <button
+      aria-label={label}
       aria-pressed={active}
       className={active ? styles.hold_button_active : styles.hold_button}
       disabled={disabled}
@@ -89,17 +86,8 @@ function HoldButton({
       onPointerUp={stop}
       type="button"
     >
-      {label}
+      {display_label}
     </button>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt>{label}</dt>
-      <dd>{value}</dd>
-    </div>
   );
 }
 
@@ -129,9 +117,6 @@ export function HoldControls({ control_id }: HoldControlsProps) {
   const active_frame = frames.some((frame) => frame.name === selected_frame)
     ? selected_frame
     : (frames[0]?.name ?? "");
-  const active_frame_state = frames.find(
-    (frame) => frame.name === active_frame
-  );
   const joint_count = Math.max(
     DEFAULT_JOINT_COUNT,
     robot_state?.real.pos.length ?? 0
@@ -193,26 +178,7 @@ export function HoldControls({ control_id }: HoldControlsProps) {
       aria-label="Continuous jogging controls"
       className={styles.controls}
     >
-      <header className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>Motion jog</p>
-          <h2>Hold to run</h2>
-          <p className={styles.description}>
-            Targets are projected from the latest RobotStatus while the control
-            is held. Releasing ends local target generation.
-          </p>
-        </div>
-        <dl className={styles.stream_summary}>
-          <Metric
-            label="Status"
-            value={has_authoritative_status ? "Fresh" : "Unavailable"}
-          />
-          <Metric
-            label="Generation"
-            value={String(status.status?.connection_generation ?? "—")}
-          />
-        </dl>
-      </header>
+      <h2 className={styles.heading}>Jog</h2>
 
       <div className={styles.speed_control}>
         <label htmlFor={`jog-speed-${control_id}`}>Speed</label>
@@ -271,10 +237,6 @@ export function HoldControls({ control_id }: HoldControlsProps) {
       {mode === "joint" ? (
         <div className={styles.mode_content} role="tabpanel">
           <div className={styles.goal_bar}>
-            <div>
-              <strong>Progressive goals</strong>
-              <span>Hold to continue moving toward Home or Ready.</span>
-            </div>
             <div className={styles.goal_buttons}>
               {(["home", "ready"] as const).map((kind) => {
                 const intent: HoldIntent = { kind, speed_percent };
@@ -308,12 +270,12 @@ export function HoldControls({ control_id }: HoldControlsProps) {
                 <article className={styles.joint_row} key={joint_index}>
                   <div className={styles.identity}>
                     <strong>Joint {joint_index + 1}</strong>
-                    <span>Authoritative state</span>
                   </div>
                   <div className={styles.jog_buttons}>
                     <HoldButton
                       active={sameIntent(hold.current_intent, negative_intent)}
                       disabled={controls_disabled}
+                      display_label="−"
                       intent={negative_intent}
                       label={`Joint ${joint_index + 1} −`}
                       start={start}
@@ -322,42 +284,13 @@ export function HoldControls({ control_id }: HoldControlsProps) {
                     <HoldButton
                       active={sameIntent(hold.current_intent, positive_intent)}
                       disabled={controls_disabled}
+                      display_label="+"
                       intent={positive_intent}
                       label={`Joint ${joint_index + 1} +`}
                       start={start}
                       stop={stop}
                     />
                   </div>
-                  <dl className={styles.metrics}>
-                    <Metric
-                      label="Position"
-                      value={formatValue(
-                        robot_state?.real.pos[joint_index],
-                        "rad"
-                      )}
-                    />
-                    <Metric
-                      label="Velocity"
-                      value={formatValue(
-                        robot_state?.real.vel[joint_index],
-                        "rad/s"
-                      )}
-                    />
-                    <Metric
-                      label="Torque"
-                      value={formatValue(
-                        robot_state?.real.torque[joint_index],
-                        "Nm"
-                      )}
-                    />
-                    <Metric
-                      label="Accel."
-                      value={formatValue(
-                        robot_state?.real.acc[joint_index],
-                        "rad/s²"
-                      )}
-                    />
-                  </dl>
                 </article>
               );
             })}
@@ -385,23 +318,6 @@ export function HoldControls({ control_id }: HoldControlsProps) {
               )}
             </select>
           </div>
-          <dl className={styles.pose_grid} aria-label="Selected frame pose">
-            <Metric label="X" value={formatValue(active_frame_state?.x, "m")} />
-            <Metric label="Y" value={formatValue(active_frame_state?.y, "m")} />
-            <Metric label="Z" value={formatValue(active_frame_state?.z, "m")} />
-            <Metric
-              label="Rx"
-              value={formatValue(active_frame_state?.r1, "rad")}
-            />
-            <Metric
-              label="Ry"
-              value={formatValue(active_frame_state?.r2, "rad")}
-            />
-            <Metric
-              label="Rz"
-              value={formatValue(active_frame_state?.r3, "rad")}
-            />
-          </dl>
           <div className={styles.axis_list}>
             {TASK_AXES.map((axis, axis_index) => {
               const negative_intent: HoldIntent = {
@@ -419,12 +335,12 @@ export function HoldControls({ control_id }: HoldControlsProps) {
                 <article className={styles.axis_row} key={axis}>
                   <div className={styles.identity}>
                     <strong>{axis}</strong>
-                    <span>{axis_index < 3 ? "Translation" : "Rotation"}</span>
                   </div>
                   <div className={styles.axis_buttons}>
                     <HoldButton
                       active={sameIntent(hold.current_intent, negative_intent)}
                       disabled={controls_disabled || active_frame.length === 0}
+                      display_label="−"
                       intent={negative_intent}
                       label={`Task ${axis} −`}
                       start={start}
@@ -433,6 +349,7 @@ export function HoldControls({ control_id }: HoldControlsProps) {
                     <HoldButton
                       active={sameIntent(hold.current_intent, positive_intent)}
                       disabled={controls_disabled || active_frame.length === 0}
+                      display_label="+"
                       intent={positive_intent}
                       label={`Task ${axis} +`}
                       start={start}
@@ -446,13 +363,11 @@ export function HoldControls({ control_id }: HoldControlsProps) {
         </div>
       )}
 
-      <p aria-live="polite" className={styles.operation_state}>
-        {operation.presentation === null
-          ? session.phase === "ready"
-            ? "Pilot operation session ready."
-            : `Pilot session: ${session.phase}.`
-          : `${operation.presentation.state}: ${operation.presentation.message}`}
-      </p>
+      {operation.presentation !== null ? (
+        <p aria-live="polite" className={styles.operation_state}>
+          {`${operation.presentation.state}: ${operation.presentation.message}`}
+        </p>
+      ) : null}
     </section>
   );
 }
