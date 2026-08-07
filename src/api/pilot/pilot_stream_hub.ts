@@ -24,6 +24,7 @@ interface PilotStreamHubOptions {
 
 export class PilotStreamHub {
   private readonly snapshots = new Map<string, ControlStatusSnapshot>();
+  private readonly initial_snapshots = new Map<string, ControlStatusSnapshot>();
   private readonly listeners = new Map<string, Set<Listener>>();
   private readonly sources = new Map<string, StreamSource>();
   private readonly create_source: (url: string) => StreamSource;
@@ -38,14 +39,20 @@ export class PilotStreamHub {
       ((control_id) => new PilotHttpClient().getControlStatus(control_id));
   }
   getSnapshot(control_id: string): ControlStatusSnapshot {
-    return (
-      this.snapshots.get(control_id) ?? {
+    const snapshot = this.snapshots.get(control_id);
+    if (snapshot !== undefined) return snapshot;
+
+    let initial_snapshot = this.initial_snapshots.get(control_id);
+    if (initial_snapshot === undefined) {
+      initial_snapshot = {
         control_id,
         status: null,
         state: "idle",
         last_error: null
-      }
-    );
+      };
+      this.initial_snapshots.set(control_id, initial_snapshot);
+    }
+    return initial_snapshot;
   }
   subscribe(control_id: string, listener: Listener): () => void {
     const listeners = this.listeners.get(control_id) ?? new Set<Listener>();

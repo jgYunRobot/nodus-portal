@@ -28,6 +28,20 @@ function status(control_id: string, generation: number, sequence: number) {
 }
 
 describe("PilotStreamHub", () => {
+  it("keeps the initial external-store snapshot referentially stable", () => {
+    const hub = new PilotStreamHub({
+      create_source: () => ({
+        addEventListener: () => undefined,
+        close: () => undefined,
+        onerror: null
+      })
+    });
+
+    expect(hub.getSnapshot("control-alpha")).toBe(
+      hub.getSnapshot("control-alpha")
+    );
+  });
+
   it("isolates controls and ignores duplicate or old samples", () => {
     const hub = new PilotStreamHub();
     const listener = vi.fn();
