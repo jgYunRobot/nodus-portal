@@ -18,3 +18,16 @@ This initial repository contains only shared agent rules and project documentati
 ```
 
 The setup script initializes the pinned `docs/agent_docs` submodule.
+
+## Frontend commands
+
+Portal requires Node.js 24.19.0 and npm 11.17.0 or newer within the Node 24 line.
+
+```bash
+npm ci
+npm run typecheck
+npm run lint
+npm run format:check
+npm test
+npm run build
+```

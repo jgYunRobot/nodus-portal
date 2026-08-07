@@ -1,0 +1,46 @@
+:root {
+  background: #07080b;
+  color: #f5f7fa;
+  color-scheme: dark;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.bootstrap_surface {
+  box-sizing: border-box;
+  display: grid;
+  min-height: 100vh;
+  place-content: center;
+  padding: 32px;
+}
+
+.bootstrap_surface > * {
+  margin: 0;
+}
+
+.bootstrap_surface h1 {
+  margin-top: 8px;
+}
+
+.bootstrap_surface p:not(.bootstrap_eyebrow) {
+  color: #9aa4b2;
+  margin-top: 12px;
+}
+
+.bootstrap_eyebrow {
+  color: #4c80ff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
