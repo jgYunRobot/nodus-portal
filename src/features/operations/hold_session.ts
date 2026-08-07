@@ -69,6 +69,10 @@ export class HoldSession {
     return this.intent !== null;
   }
 
+  get current_intent(): Readonly<HoldIntent> | null {
+    return this.intent;
+  }
+
   start(intent: HoldIntent): void {
     this.stop();
     this.options.scheduler.resume();
