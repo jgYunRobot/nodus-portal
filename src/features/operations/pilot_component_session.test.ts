@@ -1,14 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { PortalComponentSession } from "./pilot_component_session";
 
-function response(server_time = 1_000_000_000) {
+function response(
+  server_time = 1_000_000_000,
+  heartbeat_interval_ms = 10,
+  lease_timeout_ms = 1_000
+) {
   return {
     session_id: "opaque-session",
     server_instance_id: "pilot-a",
     accepted_protocol_version: 1 as const,
     accepted_schema_versions: [1] as [1],
-    heartbeat_interval_ms: 10,
-    lease_timeout_ms: 1_000,
+    heartbeat_interval_ms,
+    lease_timeout_ms,
     server_time
   };
 }
@@ -66,6 +70,45 @@ describe("PortalComponentSession", () => {
     expect(calls).toEqual(["state:1", "heartbeat:2"]);
     expect(operation).toMatchObject({ generation: 0, sequence: 1 });
     expect(operation?.source_timestamp_ns).toBe(1_010_000_000);
+  });
+
+  it("keeps one registration while successful heartbeats renew multiple lease windows", async () => {
+    let registrations = 0;
+    let heartbeat_calls = 0;
+    let heartbeat: (() => void) | undefined;
+    let now_ms = 0;
+    const session = new PortalComponentSession({
+      client: {
+        registerComponent: async () => {
+          registrations += 1;
+          return response(1_000_000_000, 100, 250);
+        },
+        updateComponentState: async () => lifecycleResponse(),
+        heartbeat: async () => {
+          heartbeat_calls += 1;
+          return lifecycleResponse();
+        }
+      } as never,
+      clock: { now: () => now_ms },
+      instance_id: "portal-test",
+      set_timeout: ((callback: () => void) => {
+        heartbeat = callback;
+        return 1;
+      }) as typeof window.setTimeout,
+      clear_timeout: (() => undefined) as typeof window.clearTimeout
+    });
+
+    session.start();
+    await flush();
+    for (let cycle = 0; cycle < 12; cycle += 1) {
+      now_ms += 100;
+      heartbeat?.();
+      await flush();
+    }
+
+    expect(registrations).toBe(1);
+    expect(heartbeat_calls).toBe(12);
+    expect(session.getSnapshot().phase).toBe("ready");
   });
 
   it("discards the anchor and operations on visibility loss and server replacement", async () => {

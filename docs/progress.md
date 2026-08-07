@@ -620,3 +620,56 @@
 
 - Run the Portal validation suite when explicitly requested and visually confirm stable Jogging
   dimensions during forced Pilot/RobotStatus recovery.
+
+## 2026-08-07 - Stable hold-lifetime interaction lock
+
+### Changes
+
+- Changed conflicting-control locking from per-operation pending transitions to the lifetime of the
+  active hold intent.
+- Kept the originating hold button enabled so pointer capture and release events remain reliable,
+  while disabling every other hold button, robot command, Jog mode tab, speed input, and task-frame
+  selector until release or cancellation.
+- Added component coverage for the locked-during-hold and unlocked-after-release states.
+- Updated the detailed frontend design with the hold-lifetime interaction-lock contract.
+
+### Status
+
+- A continuous hold now presents one stable disabled state for conflicting controls instead of
+  flickering as individual operation requests enter and leave the scheduler.
+
+### Validation
+
+- Build, lint, typecheck, and test commands were not run because repository rules require explicit
+  user instruction before executing them.
+
+### Next goals
+
+- Run the Portal validation suite when explicitly requested and visually verify pointer, touch, and
+  keyboard release behavior during continuous Jog, Home, and Ready holds.
+
+## 2026-08-07 - Stable component-session lease renewal
+
+### Changes
+
+- Separated the operation timestamp anchor from the component-session lease-renewal timestamp.
+- Renewed the local lease only after a successful state or heartbeat response, using the
+  conservative lifecycle request time as the renewal boundary.
+- Added regression coverage that advances through multiple lease windows while verifying that
+  successful heartbeats keep a single Portal registration alive.
+
+### Status
+
+- Portal no longer replaces its still-live Pilot component session every lease timeout while
+  heartbeats are succeeding; operation source timestamps retain their original registration
+  response anchor.
+
+### Validation
+
+- Build, lint, typecheck, and test commands were not run because repository rules require explicit
+  user instruction before executing them.
+
+### Next goals
+
+- Run the Portal validation suite when explicitly requested, then confirm that Pilot logs one
+  Portal registration followed by heartbeats without periodic `component.replaced` events.

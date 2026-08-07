@@ -26,6 +26,7 @@ interface SessionRecord {
   lease_timeout_ms: number;
   server_time_ns: number;
   response_received_ms: number;
+  lease_renewed_ms: number;
   lifecycle_sequence: number;
   operation_sequence: number;
   operation_generation: number;
@@ -224,6 +225,7 @@ export class PortalComponentSession {
           lease_timeout_ms: response.lease_timeout_ms,
           server_time_ns: response.server_time,
           response_received_ms,
+          lease_renewed_ms: response_received_ms,
           lifecycle_sequence: 0,
           operation_sequence: 0,
           operation_generation: 0
@@ -273,20 +275,24 @@ export class PortalComponentSession {
         ) {
           return;
         }
-        const now_ms = this.clock.now();
+        const lifecycle_requested_ms = this.clock.now();
         if (
-          !Number.isFinite(now_ms) ||
-          (this.last_clock_ms !== null && now_ms < this.last_clock_ms) ||
-          now_ms - record.response_received_ms > record.lease_timeout_ms
+          !Number.isFinite(lifecycle_requested_ms) ||
+          (this.last_clock_ms !== null &&
+            lifecycle_requested_ms < this.last_clock_ms) ||
+          lifecycle_requested_ms - record.lease_renewed_ms >=
+            record.lease_timeout_ms
         ) {
           this.invalidate(
             "Session lease or monotonic clock requires recovery."
           );
           return;
         }
-        this.last_clock_ms = now_ms;
+        this.last_clock_ms = lifecycle_requested_ms;
         record.lifecycle_sequence += 1;
         const response = await action(record);
+        if (this.record !== record || this.stopped) return;
+        record.lease_renewed_ms = lifecycle_requested_ms;
         if (
           response !== null &&
           typeof response === "object" &&

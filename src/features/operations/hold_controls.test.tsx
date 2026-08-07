@@ -107,7 +107,7 @@ vi.mock("./portal_operation_context", () => ({
   usePortalOperationRuntime: () => ({
     cancel: mocks.cancel,
     getHold: () => ({
-      active: false,
+      active: mocks.current_intent !== null,
       current_intent: mocks.current_intent,
       start: mocks.start
     }),
@@ -204,6 +204,35 @@ describe("HoldControls", () => {
     });
     expect(mocks.cancel).toHaveBeenCalledTimes(3);
     expect(mocks.resume).toHaveBeenCalledTimes(3);
+  });
+
+  it("locks conflicting controls for the complete hold lifetime", () => {
+    mocks.current_intent = {
+      kind: "joint",
+      joint_index: 0,
+      direction: 1,
+      speed_percent: 25
+    };
+
+    const view = render(<HoldControls control_id="control-a" />);
+
+    expect(screen.getByRole("button", { name: "Joint 1 +" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Joint 1 −" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Joint 2 +" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Home" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Ready" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Servo Off" })).toBeDisabled();
+    expect(screen.getByRole("tab", { name: "Task" })).toBeDisabled();
+    expect(screen.getByLabelText("Jog speed")).toBeDisabled();
+
+    mocks.current_intent = null;
+    view.rerender(<HoldControls control_id="control-a" />);
+
+    expect(screen.getByRole("button", { name: "Joint 1 −" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Home" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Servo Off" })).toBeEnabled();
+    expect(screen.getByRole("tab", { name: "Task" })).toBeEnabled();
+    expect(screen.getByLabelText("Jog speed")).toBeEnabled();
   });
 
   it("shows operation and recovery information in one stable status panel", () => {

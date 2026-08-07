@@ -130,6 +130,8 @@ export function HoldControls({ control_id }: HoldControlsProps) {
     robot_state !== undefined;
   const controls_disabled =
     session.phase !== "ready" || !has_authoritative_status;
+  const hold_active = hold.active;
+  const interaction_locked = controls_disabled || hold_active;
   const command_pending = operation.in_flight || operation.has_pending;
   const servo_activated = robot_state?.interface.servo_activated === true;
   const brake_released = robot_state?.interface.brake_released === true;
@@ -155,7 +157,7 @@ export function HoldControls({ control_id }: HoldControlsProps) {
   }, [control_id, runtime]);
 
   function start(intent: HoldIntent): void {
-    if (!controls_disabled) hold.start(intent);
+    if (!controls_disabled && !hold.active) hold.start(intent);
   }
 
   function stop(): void {
@@ -194,7 +196,7 @@ export function HoldControls({ control_id }: HoldControlsProps) {
         <button
           aria-pressed={servo_activated}
           className={servo_activated ? styles.command_active : styles.command}
-          disabled={controls_disabled || command_pending}
+          disabled={interaction_locked || command_pending}
           onClick={() =>
             submitCommand({
               operation: "control.set_servo_state",
@@ -208,7 +210,7 @@ export function HoldControls({ control_id }: HoldControlsProps) {
         </button>
         <button
           className={styles.command}
-          disabled={controls_disabled || command_pending}
+          disabled={interaction_locked || command_pending}
           onClick={() =>
             submitCommand({ operation: "control.reset_fault", control_id })
           }
@@ -219,7 +221,7 @@ export function HoldControls({ control_id }: HoldControlsProps) {
         <button
           aria-pressed={!brake_released}
           className={!brake_released ? styles.command_active : styles.command}
-          disabled={controls_disabled || command_pending}
+          disabled={interaction_locked || command_pending}
           onClick={() =>
             submitCommand({
               operation: "control.set_brake_state",
@@ -237,6 +239,7 @@ export function HoldControls({ control_id }: HoldControlsProps) {
         <label htmlFor={`jog-speed-${control_id}`}>Speed</label>
         <input
           aria-label="Jog speed"
+          disabled={interaction_locked}
           id={`jog-speed-${control_id}`}
           max="100"
           min="1"
@@ -252,6 +255,7 @@ export function HoldControls({ control_id }: HoldControlsProps) {
         <button
           aria-selected={mode === "joint"}
           className={mode === "joint" ? styles.tab_selected : styles.tab}
+          disabled={interaction_locked}
           onClick={() => selectMode("joint")}
           role="tab"
           type="button"
@@ -261,6 +265,7 @@ export function HoldControls({ control_id }: HoldControlsProps) {
         <button
           aria-selected={mode === "task"}
           className={mode === "task" ? styles.tab_selected : styles.tab}
+          disabled={interaction_locked}
           onClick={() => selectMode("task")}
           role="tab"
           type="button"
@@ -275,10 +280,11 @@ export function HoldControls({ control_id }: HoldControlsProps) {
             <div className={styles.goal_buttons}>
               {(["home", "ready"] as const).map((kind) => {
                 const intent: HoldIntent = { kind, speed_percent };
+                const active = sameIntent(hold.current_intent, intent);
                 return (
                   <HoldButton
-                    active={sameIntent(hold.current_intent, intent)}
-                    disabled={controls_disabled}
+                    active={active}
+                    disabled={controls_disabled || (hold_active && !active)}
                     intent={intent}
                     key={kind}
                     label={kind === "home" ? "Home" : "Ready"}
@@ -301,6 +307,14 @@ export function HoldControls({ control_id }: HoldControlsProps) {
                 ...negative_intent,
                 direction: 1
               };
+              const negative_active = sameIntent(
+                hold.current_intent,
+                negative_intent
+              );
+              const positive_active = sameIntent(
+                hold.current_intent,
+                positive_intent
+              );
               return (
                 <article className={styles.joint_row} key={joint_index}>
                   <div className={styles.identity}>
@@ -308,8 +322,10 @@ export function HoldControls({ control_id }: HoldControlsProps) {
                   </div>
                   <div className={styles.jog_buttons}>
                     <HoldButton
-                      active={sameIntent(hold.current_intent, negative_intent)}
-                      disabled={controls_disabled}
+                      active={negative_active}
+                      disabled={
+                        controls_disabled || (hold_active && !negative_active)
+                      }
                       display_label="−"
                       intent={negative_intent}
                       label={`Joint ${joint_index + 1} −`}
@@ -317,8 +333,10 @@ export function HoldControls({ control_id }: HoldControlsProps) {
                       stop={stop}
                     />
                     <HoldButton
-                      active={sameIntent(hold.current_intent, positive_intent)}
-                      disabled={controls_disabled}
+                      active={positive_active}
+                      disabled={
+                        controls_disabled || (hold_active && !positive_active)
+                      }
                       display_label="+"
                       intent={positive_intent}
                       label={`Joint ${joint_index + 1} +`}
@@ -337,7 +355,7 @@ export function HoldControls({ control_id }: HoldControlsProps) {
             <label htmlFor={`task-frame-${control_id}`}>Task frame</label>
             <select
               aria-label="Task jog frame"
-              disabled={controls_disabled || frames.length === 0}
+              disabled={interaction_locked || frames.length === 0}
               id={`task-frame-${control_id}`}
               onChange={(event) => changeFrame(event.target.value)}
               value={active_frame}
@@ -366,6 +384,14 @@ export function HoldControls({ control_id }: HoldControlsProps) {
                 ...negative_intent,
                 direction: 1
               };
+              const negative_active = sameIntent(
+                hold.current_intent,
+                negative_intent
+              );
+              const positive_active = sameIntent(
+                hold.current_intent,
+                positive_intent
+              );
               return (
                 <article className={styles.axis_row} key={axis}>
                   <div className={styles.identity}>
@@ -373,8 +399,12 @@ export function HoldControls({ control_id }: HoldControlsProps) {
                   </div>
                   <div className={styles.axis_buttons}>
                     <HoldButton
-                      active={sameIntent(hold.current_intent, negative_intent)}
-                      disabled={controls_disabled || active_frame.length === 0}
+                      active={negative_active}
+                      disabled={
+                        controls_disabled ||
+                        active_frame.length === 0 ||
+                        (hold_active && !negative_active)
+                      }
                       display_label="−"
                       intent={negative_intent}
                       label={`Task ${axis} −`}
@@ -382,8 +412,12 @@ export function HoldControls({ control_id }: HoldControlsProps) {
                       stop={stop}
                     />
                     <HoldButton
-                      active={sameIntent(hold.current_intent, positive_intent)}
-                      disabled={controls_disabled || active_frame.length === 0}
+                      active={positive_active}
+                      disabled={
+                        controls_disabled ||
+                        active_frame.length === 0 ||
+                        (hold_active && !positive_active)
+                      }
                       display_label="+"
                       intent={positive_intent}
                       label={`Task ${axis} +`}

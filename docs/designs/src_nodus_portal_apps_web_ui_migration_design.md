@@ -266,6 +266,10 @@ Portal replaces stale interval-state reads with the following model:
 9. Pointer up, pointer cancel, lost capture, blur, page hide, or intent replacement deactivates the
    hold and prevents new operations. Portal does not claim that a final browser message synthesizes
    a Control stop.
+10. While a hold intent is active, its originating control remains enabled so it can retain pointer
+    capture and receive release events. Every other mutating control, Jog mode tab, speed input, and
+    task-frame selector remains disabled for the entire hold lifetime and unlocks only after release
+    or cancellation. Per-request `in_flight` transitions must not drive this interaction lock.
 
 Status freshness remains visible for diagnostics, but a delayed status sample does not reset or
 freeze the time-based projection after the hold has been seeded. When a newer sample arrives, the
