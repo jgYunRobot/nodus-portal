@@ -22,6 +22,36 @@ test("restores the direct Control-scoped Jogging route", async ({ page }) => {
   );
 });
 
+test("loads a selected Portal-owned robot profile only on the Jogging route", async ({
+  page
+}) => {
+  await page.goto("/robots/control-alpha/jogging");
+  await expect(page.locator("canvas")).toHaveCount(0);
+
+  const loaded_meshes = new Set<string>();
+  page.on("response", (response) => {
+    if (
+      response.status() === 200 &&
+      response.url().includes("/official_erob_arm/")
+    ) {
+      loaded_meshes.add(response.url());
+    }
+  });
+
+  const urdf = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/robots/e_rob/e_rob_3kg.urdf") &&
+      response.status() === 200
+  );
+  await page.getByLabel("Visualization profile").selectOption("e_rob_3kg");
+  await urdf;
+  await expect.poll(() => loaded_meshes.size).toBe(7);
+  await expect(page.getByLabel("eRob 3 kg visualization")).toBeVisible();
+
+  await page.goto("/home");
+  await expect(page.locator("canvas")).toHaveCount(0);
+});
+
 test("uses the route error surface for unknown paths and opens the mobile drawer", async ({
   page
 }) => {
