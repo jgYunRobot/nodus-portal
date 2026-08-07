@@ -4,6 +4,7 @@ import type { HoldIntent } from "./hold_session";
 
 const mocks = vi.hoisted(() => ({
   cancel: vi.fn(),
+  reconnect: vi.fn(),
   start: vi.fn(),
   current_intent: null as Readonly<HoldIntent> | null,
   operation_snapshot: {
@@ -45,7 +46,12 @@ vi.mock("../../api/pilot/use_control_status", () => ({
         pilot_receive_monotonic_ns: 1,
         robot_state: {
           timestamp_ns: 1,
-          real: { pos: [0, 0, 0, 0, 0, 0], vel: [], acc: [], torque: [] },
+          real: {
+            pos: [0.1, 0, 0, 0, 0, 0],
+            vel: [0.2, 0, 0, 0, 0, 0],
+            acc: [0.3, 0, 0, 0, 0, 0],
+            torque: [0.4, 0, 0, 0, 0, 0]
+          },
           desired: { pos: [0, 0, 0, 0, 0, 0], vel: [], acc: [], torque: [] },
           interface: {
             schema_version: 1,
@@ -65,7 +71,7 @@ vi.mock("../../api/pilot/use_control_status", () => ({
             {
               id: 0,
               name: "Base",
-              x: 0,
+              x: 0.11,
               y: 0,
               z: 0,
               r1: 0,
@@ -105,7 +111,8 @@ vi.mock("./portal_operation_context", () => ({
     }),
     session: {
       subscribe: () => () => undefined,
-      getSnapshot: () => mocks.session_snapshot
+      getSnapshot: () => mocks.session_snapshot,
+      reconnect: mocks.reconnect
     }
   })
 }));
@@ -117,20 +124,27 @@ describe("HoldControls", () => {
 
   beforeEach(() => {
     mocks.cancel.mockReset();
+    mocks.reconnect.mockReset();
     mocks.start.mockReset();
     mocks.current_intent = null;
   });
 
-  it("exposes every joint/task axis and progressive Home/Ready holds", () => {
+  it("organizes joint telemetry and progressive Home/Ready holds", () => {
     render(<HoldControls control_id="control-a" />);
 
     expect(screen.getByRole("button", { name: "Joint 6 +" })).not.toBeNull();
-    expect(screen.getByRole("button", { name: "Task Rz −" })).not.toBeNull();
     expect(screen.getByRole("button", { name: "Home" })).not.toBeNull();
     expect(screen.getByRole("button", { name: "Ready" })).not.toBeNull();
+    expect(screen.getByText("0.100 rad")).not.toBeNull();
+    expect(screen.getByText("0.200 rad/s")).not.toBeNull();
+    expect(screen.getByText("0.400 Nm")).not.toBeNull();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Task" }));
+    expect(screen.getByRole("button", { name: "Task Rz −" })).not.toBeNull();
     expect(
       (screen.getByLabelText("Task jog frame") as HTMLSelectElement).value
     ).toBe("Base");
+    expect(screen.getByText("0.110 m")).not.toBeNull();
   });
 
   it("uses the selected speed/frame and cancels on global keyboard release", () => {
@@ -138,6 +152,7 @@ describe("HoldControls", () => {
     fireEvent.change(screen.getByLabelText("Jog speed"), {
       target: { value: "60" }
     });
+    fireEvent.click(screen.getByRole("tab", { name: "Task" }));
     fireEvent.change(screen.getByLabelText("Task jog frame"), {
       target: { value: "Tool" }
     });
