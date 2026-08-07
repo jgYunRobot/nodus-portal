@@ -1,0 +1,22 @@
+.page {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.heading h1,
+.heading p,
+.notice {
+  margin: 0;
+}
+
+.heading p,
+.notice {
+  color: var(--color-text-muted);
+  margin-top: var(--space-2);
+}
+
+.grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+}

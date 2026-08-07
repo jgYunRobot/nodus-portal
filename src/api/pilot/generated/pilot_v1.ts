@@ -246,7 +246,11 @@ export interface paths {
         /** List finite Pilot-owned sample stream descriptors */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    control_id?: components["parameters"]["SampleControlId"];
+                    stream_kind?: components["parameters"]["SampleStreamKind"];
+                    schema_id?: components["parameters"]["SampleSchemaId"];
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -259,7 +263,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": Record<string, never>;
+                        "application/json": components["schemas"]["SampleStreamsResponse"];
                     };
                 };
                 400: components["responses"]["BadRequest"];
@@ -1358,6 +1362,10 @@ export interface components {
             result: components["schemas"]["RobotStatusOperationResult"] | components["schemas"]["RegisterFrameOperationResult"] | null;
             error: components["schemas"]["OperationError"] | null;
         };
+        SampleStreamsResponse: {
+            server_instance_id: components["schemas"]["Identifier"];
+            streams: components["schemas"]["SampleStreamDescriptor"][];
+        };
         SampleStreamDescriptor: {
             stream_id: string;
             /** @constant */
@@ -1453,6 +1461,9 @@ export interface components {
     parameters: {
         SessionId: components["schemas"]["Identifier"];
         ControlId: components["schemas"]["Identifier"];
+        SampleControlId: components["schemas"]["Identifier"];
+        SampleStreamKind: "robot_status" | "control_operation";
+        SampleSchemaId: string;
         AfterSequence: components["schemas"]["NonNegativeInt64"];
         /** @description Required when after_sequence is non-zero. */
         ConnectionGeneration: components["schemas"]["NonNegativeInt64"];

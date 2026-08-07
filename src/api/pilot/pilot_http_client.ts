@@ -1,4 +1,5 @@
 import type { components } from "./generated/pilot_v1";
+import { isSampleStreamsResponse } from "./pilot_runtime_guards";
 
 export class PilotHttpError extends Error {
   readonly status: number;
@@ -8,6 +9,13 @@ export class PilotHttpError extends Error {
     this.name = "PilotHttpError";
     this.status = status;
     this.retryable = status === 408 || status === 429 || status >= 500;
+  }
+}
+
+export class PilotProtocolError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PilotProtocolError";
   }
 }
 
@@ -34,6 +42,19 @@ export class PilotHttpClient {
   }
   getEndpoints(): Promise<components["schemas"]["EndpointDirectoryResponse"]> {
     return this.get("/api/v1/endpoints");
+  }
+  async getRobotStatusStreams(): Promise<
+    components["schemas"]["SampleStreamsResponse"]
+  > {
+    const response = await this.get<unknown>(
+      "/api/v1/pilot/streams?stream_kind=robot_status"
+    );
+    if (!isSampleStreamsResponse(response)) {
+      throw new PilotProtocolError(
+        "Pilot stream directory response does not match the public contract."
+      );
+    }
+    return response;
   }
   getControlStatus(
     control_id: string

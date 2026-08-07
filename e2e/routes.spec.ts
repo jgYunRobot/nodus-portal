@@ -10,6 +10,64 @@ test("redirects the root route to Home", async ({ page }) => {
   );
 });
 
+test("renders stable multi-robot Home cards from public stream descriptors", async ({
+  page
+}) => {
+  await page.route(
+    (url) => url.pathname === "/api/v1/pilot/streams",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          server_instance_id: "pilot-a",
+          streams: [
+            {
+              stream_id: "control.bravo.robot_status",
+              owner: "pilot",
+              control_id: "control-bravo",
+              stream_kind: "robot_status",
+              schema_id: "nodus.robot_status.v1",
+              schema_version: 1,
+              source_clock_domains: ["monotonic_same_host"],
+              configured_production_hz: 60,
+              retention_capacity: 64,
+              recording_grade: true
+            },
+            {
+              stream_id: "control.alpha.robot_status",
+              owner: "pilot",
+              control_id: "control-alpha",
+              stream_kind: "robot_status",
+              schema_id: "nodus.robot_status.v1",
+              schema_version: 1,
+              source_clock_domains: ["monotonic_same_host"],
+              configured_production_hz: 60,
+              retention_capacity: 64,
+              recording_grade: true
+            }
+          ]
+        })
+      });
+    }
+  );
+
+  await page.goto("/home");
+  await expect(
+    page.getByRole("region", { name: "Discovered robots" })
+  ).toBeVisible();
+  expect(
+    await page
+      .locator("[data-control-id]")
+      .evaluateAll((cards) =>
+        cards.map((card) => card.getAttribute("data-control-id"))
+      )
+  ).toEqual(["control-alpha", "control-bravo"]);
+  await expect(
+    page.getByRole("link", { name: "Open Jogging" }).first()
+  ).toHaveAttribute("href", "/robots/control-alpha/jogging");
+  await expect(page.locator("canvas")).toHaveCount(0);
+});
+
 test("restores the direct Control-scoped Jogging route", async ({ page }) => {
   await page.goto("/robots/control-alpha/jogging");
   await expect(page.getByRole("heading", { name: "Jogging" })).toBeVisible();

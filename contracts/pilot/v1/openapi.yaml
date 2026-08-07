@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Nodus Pilot Public API",
-    "version": "1.0.0"
+    "version": "1.0.1"
   },
   "paths": {
     "/api/v1/health": {
@@ -151,8 +151,28 @@
     "/api/v1/pilot/streams": {
       "get": {
         "summary": "List finite Pilot-owned sample stream descriptors",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SampleControlId"
+          },
+          {
+            "$ref": "#/components/parameters/SampleStreamKind"
+          },
+          {
+            "$ref": "#/components/parameters/SampleSchemaId"
+          }
+        ],
         "responses": {
-          "200": {"description": "Pilot stream descriptors", "content": {"application/json": {"schema": {"type": "object"}}}},
+          "200": {
+            "description": "Pilot stream descriptors",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SampleStreamsResponse"
+                }
+              }
+            }
+          },
           "400": {"$ref": "#/components/responses/BadRequest"}
         }
       }
@@ -611,6 +631,34 @@
         "required": true,
         "schema": {
           "$ref": "#/components/schemas/Identifier"
+        }
+      },
+      "SampleControlId": {
+        "name": "control_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
+      },
+      "SampleStreamKind": {
+        "name": "stream_kind",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": ["robot_status", "control_operation"]
+        }
+      },
+      "SampleSchemaId": {
+        "name": "schema_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "x-max-utf8-bytes": 256
         }
       },
       "AfterSequence": {
@@ -3133,6 +3181,18 @@
                 "type": "null"
               }
             ]
+          }
+        }
+      },
+      "SampleStreamsResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["server_instance_id", "streams"],
+        "properties": {
+          "server_instance_id": {"$ref": "#/components/schemas/Identifier"},
+          "streams": {
+            "type": "array",
+            "items": {"$ref": "#/components/schemas/SampleStreamDescriptor"}
           }
         }
       },

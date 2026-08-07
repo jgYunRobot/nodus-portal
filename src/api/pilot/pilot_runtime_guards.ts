@@ -17,6 +17,41 @@ export function isControlStatusResponse(
   );
 }
 
+export function isSampleStreamsResponse(
+  value: unknown
+): value is components["schemas"]["SampleStreamsResponse"] {
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    return false;
+  const response = value as Record<string, unknown>;
+  return (
+    typeof response.server_instance_id === "string" &&
+    Array.isArray(response.streams) &&
+    response.streams.every(isSampleStreamDescriptor)
+  );
+}
+
+function isSampleStreamDescriptor(value: unknown): boolean {
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    return false;
+  const descriptor = value as Record<string, unknown>;
+  return (
+    typeof descriptor.stream_id === "string" &&
+    descriptor.owner === "pilot" &&
+    typeof descriptor.control_id === "string" &&
+    descriptor.stream_kind === "robot_status" &&
+    typeof descriptor.schema_id === "string" &&
+    descriptor.schema_version === 1 &&
+    Array.isArray(descriptor.source_clock_domains) &&
+    descriptor.source_clock_domains.every(
+      (clock_domain) => typeof clock_domain === "string"
+    ) &&
+    (typeof descriptor.configured_production_hz === "number" ||
+      descriptor.configured_production_hz === null) &&
+    typeof descriptor.retention_capacity === "number" &&
+    descriptor.recording_grade === true
+  );
+}
+
 function isControlStatusSample(value: unknown): boolean {
   if (value === null || typeof value !== "object" || Array.isArray(value))
     return false;

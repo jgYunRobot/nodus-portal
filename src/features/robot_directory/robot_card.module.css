@@ -1,0 +1,67 @@
+.card {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.header {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+}
+
+.header h2,
+.header p,
+.detail dt,
+.detail dd {
+  margin: 0;
+}
+
+.identity,
+.stream_id {
+  overflow-wrap: anywhere;
+}
+
+.identity {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  margin-top: var(--space-1);
+}
+
+.details {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.detail {
+  min-width: 0;
+}
+
+.detail dt {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  margin-bottom: var(--space-1);
+  text-transform: uppercase;
+}
+
+.detail dd {
+  overflow-wrap: anywhere;
+}
+
+.action {
+  align-items: center;
+  background: var(--color-accent);
+  border-radius: var(--radius-control);
+  color: var(--color-on-accent);
+  display: inline-flex;
+  justify-content: center;
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
+  text-decoration: none;
+}
+
+.action:hover {
+  background: var(--color-accent-hover);
+}

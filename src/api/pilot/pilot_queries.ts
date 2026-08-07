@@ -35,3 +35,11 @@ export function usePilotEndpoints() {
     retry: 2
   });
 }
+
+export function useRobotStatusStreams() {
+  return useQuery({
+    queryKey: pilot_query_keys.robot_status_streams,
+    queryFn: () => pilot_client.getRobotStatusStreams(),
+    retry: 2
+  });
+}

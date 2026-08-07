@@ -21,4 +21,19 @@ describe("PilotHttpClient", () => {
       retryable: false
     });
   });
+  it("queries only public RobotStatus stream descriptors", async () => {
+    const requests: string[] = [];
+    const client = new PilotHttpClient("same-origin", async (input) => {
+      requests.push(String(input));
+      return Response.json({ server_instance_id: "pilot-a", streams: [] });
+    });
+
+    await expect(client.getRobotStatusStreams()).resolves.toEqual({
+      server_instance_id: "pilot-a",
+      streams: []
+    });
+    expect(requests).toEqual([
+      "/api/v1/pilot/streams?stream_kind=robot_status"
+    ]);
+  });
 });
