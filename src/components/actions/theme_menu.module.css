@@ -1,0 +1,21 @@
+.content {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  min-width: 152px;
+  padding: var(--space-1);
+}
+.item {
+  align-items: center;
+  border-radius: 8px;
+  color: var(--color-text);
+  cursor: pointer;
+  display: flex;
+  gap: var(--space-2);
+  min-height: 40px;
+  outline: none;
+  padding: 0 var(--space-2);
+}
+.item[data-highlighted] {
+  background: var(--color-surface-soft);
+}

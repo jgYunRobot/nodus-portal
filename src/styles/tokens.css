@@ -1,0 +1,14 @@
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --radius-control: 12px;
+  --radius-card: 20px;
+  --radius-card-large: 28px;
+  --control-height: 44px;
+  --motion-fast: 120ms;
+}
