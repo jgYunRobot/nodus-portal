@@ -13,6 +13,7 @@ import {
   saveRobotProfile,
   type RobotProfile
 } from "../features/robot_model/robot_profile";
+import { HoldControls } from "../features/operations/hold_controls";
 import styles from "./jogging_page.module.css";
 
 const RobotScene = lazy(() =>
@@ -85,6 +86,9 @@ function JoggingWorkspace({ control_id }: { control_id: string }) {
           <strong>Sample sequence</strong>
           <p>{snapshot.status?.sample?.sample_sequence ?? "Unavailable"}</p>
         </div>
+      </Card>
+      <Card className={styles.operation_card}>
+        <HoldControls control_id={control_id} />
       </Card>
       <Card className={styles.profile_card}>
         <div>

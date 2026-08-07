@@ -30,6 +30,65 @@ export function isSampleStreamsResponse(
   );
 }
 
+export function isComponentRegistrationResponse(
+  value: unknown
+): value is components["schemas"]["ComponentRegistrationResponse"] {
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    return false;
+  const response = value as Record<string, unknown>;
+  return (
+    typeof response.session_id === "string" &&
+    typeof response.server_instance_id === "string" &&
+    response.accepted_protocol_version === 1 &&
+    Array.isArray(response.accepted_schema_versions) &&
+    typeof response.heartbeat_interval_ms === "number" &&
+    typeof response.lease_timeout_ms === "number" &&
+    typeof response.server_time === "number"
+  );
+}
+
+export function isLifecycleAcceptedResponse(
+  value: unknown
+): value is components["schemas"]["LifecycleAcceptedResponse"] {
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    return false;
+  const response = value as Record<string, unknown>;
+  return (
+    response.status === "accepted" &&
+    response.snapshot !== null &&
+    typeof response.snapshot === "object"
+  );
+}
+
+export function isErrorResponse(
+  value: unknown
+): value is components["schemas"]["ErrorResponse"] {
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    return false;
+  const response = value as Record<string, unknown>;
+  if (response.error === null || typeof response.error !== "object")
+    return false;
+  const error = response.error as Record<string, unknown>;
+  return typeof error.code === "string" && typeof error.message === "string";
+}
+
+export function isOperationResult(
+  value: unknown
+): value is components["schemas"]["OperationResult"] {
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    return false;
+  const result = value as Record<string, unknown>;
+  return (
+    result.schema_version === 1 &&
+    typeof result.request_id === "string" &&
+    typeof result.operation === "string" &&
+    typeof result.control_id === "string" &&
+    typeof result.pilot_disposition === "string" &&
+    result.control_outcome !== null &&
+    typeof result.control_outcome === "object"
+  );
+}
+
 function isSampleStreamDescriptor(value: unknown): boolean {
   if (value === null || typeof value !== "object" || Array.isArray(value))
     return false;

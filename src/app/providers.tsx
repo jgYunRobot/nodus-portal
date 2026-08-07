@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { PortalOperationProvider } from "../features/operations/portal_operation_context";
 
 export function PortalProviders({ children }: { children: ReactNode }) {
   const [query_client] = useState(
@@ -10,6 +11,8 @@ export function PortalProviders({ children }: { children: ReactNode }) {
       })
   );
   return (
-    <QueryClientProvider client={query_client}>{children}</QueryClientProvider>
+    <QueryClientProvider client={query_client}>
+      <PortalOperationProvider>{children}</PortalOperationProvider>
+    </QueryClientProvider>
   );
 }
