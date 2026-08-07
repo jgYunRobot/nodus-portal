@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ThemeMenu } from "../components/actions/theme_menu";
@@ -18,16 +18,14 @@ describe("ThemeProvider", () => {
 
   it("defaults to black and persists an accessible theme choice", async () => {
     const user = userEvent.setup();
-    render(
+    const view = render(
       <ThemeProvider>
         <ThemeMenu />
       </ThemeProvider>
     );
     expect(document.documentElement.dataset.theme).toBe("black");
-    await user.click(screen.getByRole("button", { name: "Choose theme" }));
-    await user.click(
-      await screen.findByRole("menuitemradio", { name: "Light" })
-    );
+    await user.click(view.getByRole("button", { name: "Choose theme" }));
+    await user.click(await view.findByRole("menuitemradio", { name: "Light" }));
     expect(document.documentElement.dataset.theme).toBe("light");
     expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("light");
   });

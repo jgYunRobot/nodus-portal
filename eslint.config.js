@@ -5,7 +5,13 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["dist", "coverage", "node_modules", "storybook-static"]
+    ignores: [
+      "dist",
+      "coverage",
+      "node_modules",
+      "storybook-static",
+      "src/api/pilot/generated"
+    ]
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
