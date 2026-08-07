@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { App } from "./app/app";
+import { PortalRouter } from "./app/router";
 import { ThemeProvider } from "./app/theme_provider";
 import "./styles/layers.css";
 
@@ -12,7 +12,7 @@ if (root_element === null) {
 createRoot(root_element).render(
   <StrictMode>
     <ThemeProvider>
-      <App />
+      <PortalRouter />
     </ThemeProvider>
   </StrictMode>
 );
