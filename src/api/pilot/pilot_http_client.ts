@@ -19,9 +19,9 @@ type PilotFetch = (
 export class PilotHttpClient {
   private readonly base_url: string;
   private readonly fetch_pilot: PilotFetch;
-  constructor(base_url = "same-origin", fetch_pilot: PilotFetch = fetch) {
+  constructor(base_url = "same-origin", fetch_pilot?: PilotFetch) {
     this.base_url = base_url;
-    this.fetch_pilot = fetch_pilot;
+    this.fetch_pilot = fetch_pilot ?? ((input, init) => fetch(input, init));
   }
   getHealth(): Promise<components["schemas"]["HealthResponse"]> {
     return this.get("/api/v1/health");
@@ -43,16 +43,22 @@ export class PilotHttpClient {
     );
   }
   private async get<T>(path: string): Promise<T> {
-    const response = await this.fetch_pilot(this.resolvePath(path), {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(5000)
-    });
-    if (!response.ok)
-      throw new PilotHttpError(
-        response.status,
-        `Pilot GET ${path} failed with HTTP ${response.status}.`
-      );
-    return response.json() as Promise<T>;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 5000);
+    try {
+      const response = await this.fetch_pilot(this.resolvePath(path), {
+        headers: { Accept: "application/json" },
+        signal: controller.signal
+      });
+      if (!response.ok)
+        throw new PilotHttpError(
+          response.status,
+          `Pilot GET ${path} failed with HTTP ${response.status}.`
+        );
+      return response.json() as Promise<T>;
+    } finally {
+      window.clearTimeout(timeout);
+    }
   }
   private resolvePath(path: string): string {
     return this.base_url === "same-origin"
