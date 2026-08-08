@@ -11,6 +11,7 @@ import { useSearchParams } from "react-router";
 import { Button } from "../components/actions/button";
 import { Card } from "../components/feedback/card";
 import { StatusBadge } from "../components/feedback/status_badge";
+import { MjpegPreview } from "../features/camera/mjpeg_preview";
 import { selectVisionCameraEndpoints } from "../features/camera/vision_camera";
 import { useVisionCamera } from "../features/camera/use_vision_camera";
 import { resolveDeviceDeckSelection } from "../features/device_directory/device_deck";
@@ -370,9 +371,11 @@ function CameraDeviceCard({
             )}
             {(!is_narrow_viewport || selected_preview === "color") && (
               <figure>
-                <img
+                <MjpegPreview
                   alt={`${entry.display_name} color preview`}
-                  src={endpoints.color.endpoint}
+                  endpoint={endpoints.color.endpoint}
+                  key={endpoints.color.endpoint}
+                  on_stream_failure={on_provider_failure}
                 />
                 <figcaption>Color</figcaption>
               </figure>
@@ -380,9 +383,11 @@ function CameraDeviceCard({
             {endpoints.depth !== null &&
               (!is_narrow_viewport || selected_preview === "depth") && (
                 <figure>
-                  <img
+                  <MjpegPreview
                     alt={`${entry.display_name} depth preview`}
-                    src={endpoints.depth.endpoint}
+                    endpoint={endpoints.depth.endpoint}
+                    key={endpoints.depth.endpoint}
+                    on_stream_failure={on_provider_failure}
                   />
                   <figcaption>Depth</figcaption>
                 </figure>

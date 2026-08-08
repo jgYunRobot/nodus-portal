@@ -424,8 +424,11 @@ then activates the destination card. An old provider response cannot update the 
 - **One device malformed:** isolate the error to its card.
 - **Selected device removed:** remove its stale URL query with replace navigation and activate the
   first empty slot after Pilot confirms lifecycle removal or expiry.
-- **Camera stream failure:** retain card dimensions and information/settings access while showing a
-  stable preview error surface.
+- **Camera stream failure:** retain card dimensions and information/settings access, show a stable
+  reconnecting surface, and consume the exact advertised stream endpoint through a bounded reader
+  that detects HTTP failure, multipart EOF, malformed parts, and a five-second data stall. Retry
+  with bounded exponential backoff, retain only one pending JPEG for presentation, and never modify
+  the strict endpoint with guessed query parameters. A decoded frame resets the retry delay.
 
 ## 15. Implementation checkpoints
 

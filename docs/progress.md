@@ -1,5 +1,36 @@
 # Progress
 
+## 2026-08-09 - Camera preview stream recovery
+
+### Changes
+
+- Added a bounded Camera MJPEG reader that detects HTTP failure, multipart EOF, invalid parts, and
+  five seconds without stream data, then retries Color and Depth with exponential backoff while
+  preserving the exact advertised endpoint.
+- Kept the active Camera card and information visible while a preview reconnects, and revalidated
+  the public device directory after a stream failure.
+- Added parser regressions for transport-chunk boundaries and malformed part headers using only
+  in-memory bytes; they do not read or assert values from deployment configuration files.
+
+### Status
+
+- Portal now owns MJPEG EOF and stall detection instead of relying on browser `<img>` error events,
+  which can leave the last decoded frame visible after the connection has already closed.
+
+### Validation
+
+- Node 24 Prettier check and `git diff --check` passed for the owned Portal changes.
+- Vite transformed both new Camera modules with HTTP 200.
+- Against the user-running D435 provider, PC and tablet re-established four total Color/Depth
+  streams. During a 30-second observation, all four remained active while the capture frame advanced
+  from 12744 to 13511 with zero capture timeouts and drops.
+- Unit, typecheck, lint, production build, and Playwright were not run because they were not
+  explicitly requested.
+
+### Next goals
+
+- Confirm from both screens that an actual network interruption recovers without a page reload.
+
 ## 2026-08-09 - Operation page consolidation
 
 ### Changes
