@@ -3,6 +3,9 @@
   gap: var(--space-4);
   min-width: 0;
 }
+.selected {
+  border-color: var(--color-accent);
+}
 
 .header {
   align-items: flex-start;

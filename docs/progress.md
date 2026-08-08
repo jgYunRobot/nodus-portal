@@ -1,5 +1,34 @@
 # Progress
 
+## 2026-08-08 - Persistent Robot Dock D1 selection state
+
+### Changes
+
+- Added versioned local presentation state for the preferred Control and optional Dock mode. The
+  state stores no RobotStatus, session, command, model, or authority data.
+- Added pure effective-Control and route-page helpers. A direct robot URL remains authoritative;
+  global pages use only the last explicit Home-card preference.
+- Made Home card space select a Control without leaving Home, retained `Open Jogging` as an exact
+  Control link, and updated sidebar Device/Jogging/Operating targets to use the effective Control.
+
+### Status
+
+- D1 is complete. It intentionally adds neither a Dock surface nor shared command controls; those
+  remain D2 and D3 work.
+
+### Validation
+
+- Passed `npm run format:check`, `npm run typecheck`, `npm run lint`, `npm test` (15 files / 56
+  tests), and `npm run build`.
+- Passed `npm run test:e2e` (6 Chromium tests) using public-contract fixtures, including Home
+  selection that remains on `/home` while the Device sidebar link targets the selected Control.
+- Vite retained its existing non-failing lazy robot-scene chunk-size warning.
+
+### Next goals
+
+- D2: add the fixed bottom-right Dock overlay, responsive expanded/collapsed presentation, and
+  no-reflow visual acceptance.
+
 ## 2026-08-08 - Portal validation remediation
 
 ### Changes

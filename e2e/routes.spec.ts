@@ -68,6 +68,46 @@ test("renders stable multi-robot Home cards from public stream descriptors", asy
   await expect(page.locator("canvas")).toHaveCount(0);
 });
 
+test("keeps a Home card selection while sidebar navigation targets that Control", async ({
+  page
+}) => {
+  await page.route(
+    (url) => url.pathname === "/api/v1/pilot/streams",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          server_instance_id: "pilot-a",
+          streams: [
+            {
+              stream_id: "control.alpha.robot_status",
+              owner: "pilot",
+              control_id: "control-alpha",
+              stream_kind: "robot_status",
+              schema_id: "nodus.robot_status.v1",
+              schema_version: 1,
+              source_clock_domains: ["monotonic_same_host"],
+              configured_production_hz: 60,
+              retention_capacity: 64,
+              recording_grade: true
+            }
+          ]
+        })
+      });
+    }
+  );
+
+  await page.goto("/home");
+  const card = page.locator('[data-control-id="control-alpha"]');
+  await card.click();
+  await expect(page).toHaveURL(/\/home$/);
+  await expect(card).toHaveAttribute("data-selected", "true");
+  await expect(page.getByRole("link", { name: "Device" })).toHaveAttribute(
+    "href",
+    "/robots/control-alpha/device"
+  );
+});
+
 test("restores the direct Control-scoped Jogging route", async ({ page }) => {
   await page.goto("/robots/control-alpha/jogging");
   await expect(page.getByRole("heading", { name: "Jogging" })).toBeVisible();

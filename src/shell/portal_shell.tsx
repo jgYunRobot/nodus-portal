@@ -5,20 +5,24 @@ import { Button } from "../components/actions/button";
 import { Drawer } from "../components/layout/drawer";
 import { ThemeMenu } from "../components/actions/theme_menu";
 import { getPortalConfig } from "../config/portal_config";
+import { getEffectiveControlId } from "./robot_route_selection";
+import { useRobotDockState } from "./robot_dock_state";
 import styles from "./portal_shell.module.css";
 
 export function PortalShell() {
   const portal_label = getPortalConfig().portal_label;
   const [is_collapsed, setIsCollapsed] = useState(false);
   const [is_drawer_open, setIsDrawerOpen] = useState(false);
-  const { control_id } = useParams();
+  const { control_id: route_control_id } = useParams();
   const location = useLocation();
-  const jogging_target =
-    control_id === undefined ? "/home" : `/robots/${control_id}/jogging`;
-  const device_target =
-    control_id === undefined ? "/home" : `/robots/${control_id}/device`;
-  const operating_target =
-    control_id === undefined ? "/home" : `/robots/${control_id}/operating`;
+  const robot_dock = useRobotDockState();
+  const control_id = getEffectiveControlId(
+    route_control_id,
+    robot_dock.preferred_control_id
+  );
+  const jogging_target = createRobotPageTarget(control_id, "jogging");
+  const device_target = createRobotPageTarget(control_id, "device");
+  const operating_target = createRobotPageTarget(control_id, "operating");
 
   return (
     <div
@@ -71,9 +75,9 @@ export function PortalShell() {
             Pilot connection will be shown here
           </p>
           <p className={styles.context}>
-            {control_id === undefined
+            {route_control_id === undefined
               ? "Fleet overview"
-              : `Control ${control_id}`}
+              : `Control ${route_control_id}`}
           </p>
         </div>
         <ThemeMenu />
@@ -85,6 +89,14 @@ export function PortalShell() {
   );
 }
 
+function createRobotPageTarget(
+  control_id: string | null,
+  page_kind: "device" | "jogging" | "operating"
+): string {
+  if (control_id === null) return "/home";
+  return `/robots/${encodeURIComponent(control_id)}/${page_kind}`;
+}
+
 function Navigation({
   control_id,
   device_target,
@@ -92,7 +104,7 @@ function Navigation({
   operating_target,
   on_navigate
 }: {
-  control_id: string | undefined;
+  control_id: string | null;
   device_target: string;
   jogging_target: string;
   operating_target: string;
@@ -105,21 +117,21 @@ function Navigation({
       </NavLink>
       <p>Robot</p>
       <NavLink
-        aria-disabled={control_id === undefined}
+        aria-disabled={control_id === null}
         onClick={on_navigate}
         to={device_target}
       >
         Device
       </NavLink>
       <NavLink
-        aria-disabled={control_id === undefined}
+        aria-disabled={control_id === null}
         onClick={on_navigate}
         to={jogging_target}
       >
         Jogging
       </NavLink>
       <NavLink
-        aria-disabled={control_id === undefined}
+        aria-disabled={control_id === null}
         onClick={on_navigate}
         to={operating_target}
       >
