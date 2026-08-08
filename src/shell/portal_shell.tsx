@@ -1,10 +1,18 @@
 import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { useState } from "react";
-import { NavLink, Outlet, useLocation, useParams } from "react-router";
+import { useState, type MouseEvent } from "react";
+import {
+  Navigate,
+  NavLink,
+  Outlet,
+  useLocation,
+  useParams
+} from "react-router";
+import { useRobotStatusStreams } from "../api/pilot/pilot_queries";
 import { Button } from "../components/actions/button";
 import { Drawer } from "../components/layout/drawer";
 import { ThemeMenu } from "../components/actions/theme_menu";
 import { getPortalConfig } from "../config/portal_config";
+import { createRobotDirectory } from "../features/robot_directory/robot_directory";
 import { getEffectiveControlId } from "./robot_route_selection";
 import { useRobotDockState } from "./robot_dock_state";
 import { RobotDock } from "./robot_dock";
@@ -17,13 +25,20 @@ export function PortalShell() {
   const { control_id: route_control_id } = useParams();
   const location = useLocation();
   const robot_dock = useRobotDockState();
-  const control_id = getEffectiveControlId(
-    route_control_id,
-    robot_dock.preferred_control_id
-  );
+  const streams = useRobotStatusStreams();
+  const directory =
+    streams.data === undefined ? null : createRobotDirectory(streams.data);
+  const has_no_discovered_robots =
+    streams.isSuccess && directory?.entries.length === 0;
+  const control_id = has_no_discovered_robots
+    ? null
+    : getEffectiveControlId(route_control_id, robot_dock.preferred_control_id);
   const jogging_target = createRobotPageTarget(control_id, "jogging");
   const device_target = createRobotPageTarget(control_id, "device");
   const operating_target = createRobotPageTarget(control_id, "operating");
+
+  if (has_no_discovered_robots && route_control_id !== undefined)
+    return <Navigate replace to="/home" />;
 
   return (
     <div
@@ -116,6 +131,14 @@ function Navigation({
   operating_target: string;
   on_navigate: () => void;
 }) {
+  function handleRobotNavigation(event: MouseEvent<HTMLAnchorElement>): void {
+    if (control_id === null) {
+      event.preventDefault();
+      return;
+    }
+    on_navigate();
+  }
+
   return (
     <nav aria-label="Portal navigation" className={styles.navigation}>
       <NavLink end onClick={on_navigate} to="/home">
@@ -124,21 +147,21 @@ function Navigation({
       <p>Robot</p>
       <NavLink
         aria-disabled={control_id === null}
-        onClick={on_navigate}
+        onClick={handleRobotNavigation}
         to={device_target}
       >
         Device
       </NavLink>
       <NavLink
         aria-disabled={control_id === null}
-        onClick={on_navigate}
+        onClick={handleRobotNavigation}
         to={jogging_target}
       >
         Jogging
       </NavLink>
       <NavLink
         aria-disabled={control_id === null}
-        onClick={on_navigate}
+        onClick={handleRobotNavigation}
         to={operating_target}
       >
         Operating

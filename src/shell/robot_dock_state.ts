@@ -64,15 +64,28 @@ function getRobotDockState(): RobotDockPresentationState {
   return state;
 }
 
-function readRobotDockState(): RobotDockPresentationState {
+export function readRobotDockState(): RobotDockPresentationState {
   if (typeof window === "undefined") return EMPTY_STATE;
-  return parseRobotDockState(
-    window.localStorage.getItem(ROBOT_DOCK_STORAGE_KEY)
-  );
+  try {
+    return parseRobotDockState(
+      window.localStorage.getItem(ROBOT_DOCK_STORAGE_KEY)
+    );
+  } catch {
+    return EMPTY_STATE;
+  }
 }
 
 function updateRobotDockState(next_state: RobotDockPresentationState): void {
   state = next_state;
-  window.localStorage.setItem(ROBOT_DOCK_STORAGE_KEY, JSON.stringify(state));
+  if (typeof window !== "undefined") {
+    try {
+      window.localStorage.setItem(
+        ROBOT_DOCK_STORAGE_KEY,
+        JSON.stringify(state)
+      );
+    } catch {
+      // 브라우저 저장소를 사용할 수 없어도 현재 Portal 세션의 선택 상태는 유지한다.
+    }
+  }
   for (const listener of listeners) listener();
 }

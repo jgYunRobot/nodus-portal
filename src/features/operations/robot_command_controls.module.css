@@ -25,16 +25,6 @@
   border-color: var(--color-accent-hover);
 }
 
-.feedback {
-  color: var(--color-text-muted);
-  flex: 1 1 0;
-  margin: 0;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 @media (max-width: 720px) {
   .commands {
     display: grid;

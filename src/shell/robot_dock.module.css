@@ -25,7 +25,7 @@
 
 .status {
   color: var(--color-text-muted);
-  flex: 1 1 0;
+  flex: 0 1 auto;
   margin: 0;
   min-width: 0;
   overflow: hidden;
@@ -37,13 +37,6 @@
   display: grid;
   gap: var(--space-1);
   min-width: 0;
-}
-
-.selector span {
-  color: var(--color-text-muted);
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
 }
 
 .selector select {
@@ -74,6 +67,10 @@
   background: var(--color-surface-soft);
 }
 
+.shared_commands {
+  margin-left: auto;
+}
+
 @media (max-width: 720px) {
   .expanded {
     display: grid;
@@ -84,12 +81,16 @@
     grid-column: 1 / -1;
   }
 
-  .expanded > :nth-child(2) {
+  .expanded > :nth-child(3) {
     grid-column: 1 / -1;
   }
 
   .expanded .selector {
     min-width: 0;
+  }
+
+  .expanded .shared_commands {
+    margin-left: 0;
   }
 
   .selector select {

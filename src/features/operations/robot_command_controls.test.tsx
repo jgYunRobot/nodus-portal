@@ -88,7 +88,7 @@ describe("RobotCommandControls", () => {
     expect(mocks.resume).toHaveBeenCalledTimes(3);
   });
 
-  it("keeps written-unconfirmed feedback factual", () => {
+  it("keeps operation feedback out of the shared command controls", () => {
     mocks.operation_snapshot.presentation = {
       state: "written_unconfirmed",
       message: "Control frame was written without execution acknowledgement.",
@@ -97,8 +97,7 @@ describe("RobotCommandControls", () => {
 
     render(<RobotCommandControls control_id="control-b" />);
 
-    expect(screen.getByRole("status").textContent).toContain(
-      "written_unconfirmed: Control frame was written without execution acknowledgement."
-    );
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByRole("button", { name: "Servo Off" })).not.toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useSyncExternalStore } from "react";
+import { type TransitionEvent, useState, useSyncExternalStore } from "react";
 import { useNavigate, useLocation, useParams } from "react-router";
 import { useRobotStatusStreams } from "../api/pilot/pilot_queries";
 import { useControlStatus } from "../api/pilot/use_control_status";
@@ -38,6 +38,29 @@ export function RobotDock() {
   );
   const mode = robot_dock.dock_mode ?? getDefaultRobotDockMode();
   const is_expanded = mode === "expanded";
+  const [show_expanded_content, setShowExpandedContent] = useState(is_expanded);
+
+  function toggleDock(): void {
+    if (is_expanded) {
+      setShowExpandedContent(false);
+      setRobotDockMode("collapsed");
+      return;
+    }
+    setShowExpandedContent(
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
+    setRobotDockMode("expanded");
+  }
+
+  function revealExpandedContent(event: TransitionEvent<HTMLElement>): void {
+    if (
+      is_expanded &&
+      event.currentTarget === event.target &&
+      event.propertyName === "width"
+    ) {
+      setShowExpandedContent(true);
+    }
+  }
 
   function selectControl(control_id: string): void {
     setPreferredControlId(control_id);
@@ -56,6 +79,7 @@ export function RobotDock() {
         is_expanded ? `${styles.dock} ${styles.expanded}` : styles.dock
       }
       data-mode={mode}
+      onTransitionEnd={revealExpandedContent}
     >
       {effective_control_id === null ? (
         <RobotDockSelector
@@ -67,7 +91,7 @@ export function RobotDock() {
         <SelectedRobotDock
           control_id={effective_control_id}
           directory={directory}
-          is_expanded={is_expanded}
+          is_expanded={is_expanded && show_expanded_content}
           on_select={selectControl}
         />
       )}
@@ -77,7 +101,7 @@ export function RobotDock() {
           is_expanded ? "Collapse robot controls" : "Expand robot controls"
         }
         className={styles.toggle}
-        onClick={() => setRobotDockMode(is_expanded ? "collapsed" : "expanded")}
+        onClick={toggleDock}
         type="button"
       >
         {is_expanded ? (
@@ -120,18 +144,18 @@ function SelectedRobotDock({
 
   return (
     <>
-      {is_expanded ? (
-        <>
-          <RobotDockStatus control_id={control_id} />
-          <RobotCommandControls control_id={control_id} />
-        </>
-      ) : null}
+      {is_expanded ? <RobotDockStatus control_id={control_id} /> : null}
       <RobotDockSelector
         control_id={control_id}
         directory={directory}
         disabled={selection_locked}
         on_select={selectDestinationControl}
       />
+      {is_expanded ? (
+        <div className={styles.shared_commands}>
+          <RobotCommandControls control_id={control_id} />
+        </div>
+      ) : null}
     </>
   );
 }
@@ -149,7 +173,6 @@ function RobotDockSelector({
 }) {
   return (
     <label className={styles.selector}>
-      <span>Robot</span>
       <select
         aria-label="Selected robot"
         disabled={disabled}

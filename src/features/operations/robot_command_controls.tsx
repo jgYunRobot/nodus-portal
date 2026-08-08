@@ -85,16 +85,6 @@ export function RobotCommandControls({ control_id }: { control_id: string }) {
           {brake_released ? "Engage Brake" : "Release Brake"}
         </button>
       </div>
-      {operation.presentation !== null ? (
-        <p
-          aria-live="polite"
-          className={styles.feedback}
-          role="status"
-          title={`${operation.presentation.state}: ${operation.presentation.message}`}
-        >
-          {`${operation.presentation.state}: ${operation.presentation.message}`}
-        </p>
-      ) : null}
     </>
   );
 }

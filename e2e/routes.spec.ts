@@ -61,6 +61,29 @@ test("redirects the root route to Home", async ({ page }) => {
   );
 });
 
+test("keeps robot-scoped pages unavailable when discovery is successfully empty", async ({
+  page
+}) => {
+  await page.route(
+    (url) => url.pathname === "/api/v1/pilot/streams",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ server_instance_id: "pilot-a", streams: [] })
+      });
+    }
+  );
+
+  await page.goto("/robots/control-alpha/jogging");
+  await expect(page).toHaveURL(/\/home$/);
+  await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
+
+  const jogging = page.getByRole("link", { name: "Jogging" });
+  await expect(jogging).toHaveAttribute("aria-disabled", "true");
+  await jogging.click();
+  await expect(page).toHaveURL(/\/home$/);
+});
+
 test("renders stable multi-robot Home cards from public stream descriptors", async ({
   page
 }) => {
@@ -406,6 +429,16 @@ test("captures Robot Dock expanded and collapsed desktop and phone states", asyn
   });
   await dock.getByLabel("Selected robot").selectOption("control-alpha");
   await expect(dock.getByRole("button", { name: "Servo On" })).toBeVisible();
+  const [status_bounds, selector_bounds, servo_bounds] = await Promise.all([
+    dock.getByText("Online", { exact: true }).boundingBox(),
+    dock.getByLabel("Selected robot").boundingBox(),
+    dock.getByRole("button", { name: "Servo On" }).boundingBox()
+  ]);
+  expect(status_bounds).not.toBeNull();
+  expect(selector_bounds).not.toBeNull();
+  expect(servo_bounds).not.toBeNull();
+  expect(status_bounds!.x).toBeLessThan(selector_bounds!.x);
+  expect(selector_bounds!.x).toBeLessThan(servo_bounds!.x);
   await page.screenshot({
     path: testInfo.outputPath("dock-desktop-expanded.png")
   });
@@ -420,6 +453,7 @@ test("captures Robot Dock expanded and collapsed desktop and phone states", asyn
     path: testInfo.outputPath("dock-phone-collapsed.png")
   });
   await dock.getByRole("button", { name: "Expand robot controls" }).click();
+  await expect(dock.getByRole("button", { name: "Servo On" })).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath("dock-phone-expanded.png")
   });

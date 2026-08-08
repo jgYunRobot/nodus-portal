@@ -109,12 +109,15 @@ selector does not jump around the viewport.
 
 Expanded order, left to right:
 
-1. concise online/stale/offline and command-result region;
-2. Servo On/Off;
-3. Fault Reset;
-4. Brake Release/Engage;
-5. robot selector; and
+1. concise online/stale/offline region;
+2. robot selector;
+3. Servo On/Off;
+4. Fault Reset;
+5. Brake Release/Engage; and
 6. collapse control at the right edge.
+
+The status and selector remain left-aligned; the shared command group is right-aligned beside the
+collapse control.
 
 Collapsed contents:
 
@@ -181,8 +184,11 @@ restores its URL Control even if local preference differs.
   does not leave Home.
 - `Open Jogging` updates the preference and navigates to that exact Control's Jogging route.
 - Device, Jogging, and Operating navigation entries use `effective_control_id`.
-- If no effective Control exists, a robot-scoped navigation action focuses/opens the Dock selector
-  rather than navigating back to an unchanged Home route.
+- If public RobotDirectory discovery succeeds with zero entries, Home is the only accessible product
+  page. Device, Jogging, and Operating navigation remains disabled, and a direct robot-scoped URL
+  redirects to Home.
+- Directory loading and discovery failure do not trigger this redirect because they do not prove
+  that the connected robot set is empty.
 
 ## 6. Robot switch transaction
 
@@ -278,7 +284,8 @@ RobotStatus validation, model loading, or hold target math.
   no request from the previous session is replayed.
 - route switch during provider/model loading: cancel page-owned work and ignore late completion for
   the prior Control.
-- command failure: keep Dock dimensions stable and show the result in its fixed feedback slot.
+- command failure: keep Dock dimensions stable; operation results remain in the existing operation
+  runtime but are not rendered beside the shared Dock commands.
 
 ## 10. Accessibility and interaction
 
@@ -286,6 +293,8 @@ RobotStatus validation, model loading, or hold target math.
 - The selector is an accessible combobox with stable Control ID in each option.
 - The collapse/expand button has explicit accessible name and `aria-expanded`.
 - Collapsed mode exposes no hidden command controls to keyboard or assistive technology.
+- When expanding, the Dock completes its width transition before mounting expanded-only status and
+  command content, preventing transient multi-row layouts at the collapsed width.
 - Keyboard focus remains visible over the translucent surface.
 - Status is not conveyed by color alone.
 - Width animation never runs under reduced-motion preference.

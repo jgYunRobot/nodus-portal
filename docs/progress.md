@@ -1,5 +1,37 @@
 # Progress
 
+## 2026-08-08 - Empty-directory route gate and resilient Dock preference
+
+### Changes
+
+- Made Home the only accessible product page when public RobotDirectory discovery succeeds with no
+  entries. Robot-scoped sidebar links remain disabled and direct Device, Jogging, or Operating URLs
+  redirect to Home.
+- Kept existing pages stable while directory discovery is loading or failing instead of treating an
+  unknown directory as a confirmed empty one.
+- Made Robot Dock preference reads and writes tolerate unavailable browser storage while preserving
+  the current Portal session's in-memory selection and Dock mode.
+- Added focused storage-failure unit coverage and an empty-directory browser route fixture.
+
+### Status
+
+- The two requested review remediations are implemented without changing the user's in-progress
+  operation-feedback removal or Home-card keyboard behavior.
+- Existing unrelated worktree changes remain preserved and uncommitted.
+
+### Validation
+
+- Targeted Prettier check passed for the owned TypeScript, CSS, E2E, design, and progress files after
+  applying the reported formatting correction.
+- Targeted ESLint passed for the owned TypeScript and E2E files, and `git diff --check` passed.
+- Full-repository format/lint, typecheck, unit, build, and Playwright commands were not run because
+  repository rules require explicit user instruction.
+
+### Next goals
+
+- Run the Portal validation suite when explicitly requested, then commit the combined Dock follow-up
+  only after reviewing the user's pre-existing feedback-removal changes together with these fixes.
+
 ## 2026-08-08 - Persistent Robot Dock D5 acceptance
 
 ### Changes
@@ -10,9 +42,15 @@
   foundation limits Dock transitions to its immediate 1 ms accessibility fallback.
 - Captured populated desktop expanded/collapsed and phone collapsed/expanded Dock states with the
   full selector, command, and collapse affordance visible in the phone overlay.
-- Corrected the reviewed visual layout: widened the bounded desktop Dock surface, hides the empty
-  command-result slot until a factual result exists, and uses a compact three-column command grid
-  plus explicit selector/toggle grid placement on phone.
+- Corrected the reviewed visual layout: widened the bounded desktop Dock surface and uses a compact
+  three-column command grid plus explicit selector/toggle grid placement on phone.
+- Follow-up simplification: removed the Dock-local command-result display, including
+  `written_unconfirmed`, and the redundant visible `Robot` selector label. The accessible selector
+  label and operation runtime state remain intact.
+- Dock expansion now finishes its horizontal width transition before rendering the expanded-only
+  status and command controls, avoiding the transient square multi-row layout.
+- Expanded Dock layout now keeps the status and robot selector together at the left, while Servo,
+  Fault Reset, Brake, and the collapse control remain right-aligned.
 
 ### Status
 
