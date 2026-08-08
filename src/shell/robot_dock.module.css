@@ -1,0 +1,99 @@
+.dock {
+  align-items: center;
+  backdrop-filter: blur(10px);
+  background: var(--color-dock-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  bottom: max(var(--dock-inset), env(safe-area-inset-bottom));
+  box-shadow: var(--shadow-dock);
+  display: flex;
+  gap: var(--space-2);
+  min-height: var(--dock-height);
+  padding: var(--space-2);
+  position: fixed;
+  right: var(--dock-inset);
+  transition: width var(--motion-fast) ease;
+  width: var(--dock-collapsed-width);
+  z-index: var(--z-index-dock);
+}
+
+.expanded {
+  width: min(var(--dock-expanded-width), calc(100vw - (2 * var(--dock-inset))));
+}
+
+.status {
+  color: var(--color-text-muted);
+  flex: 1 1 0;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selector {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.selector span {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.selector select {
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  min-height: var(--control-height);
+  min-width: 160px;
+  padding: 0 var(--space-2);
+}
+
+.toggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  display: inline-flex;
+  flex: 0 0 var(--control-height);
+  height: var(--control-height);
+  justify-content: center;
+  padding: 0;
+  width: var(--control-height);
+}
+
+.toggle:hover {
+  background: var(--color-surface-soft);
+}
+
+@media (max-width: 720px) {
+  .expanded {
+    align-items: end;
+    flex-wrap: wrap;
+  }
+
+  .expanded .status {
+    flex-basis: calc(100% - var(--control-height) - var(--space-2));
+  }
+
+  .expanded .selector {
+    flex: 1 1 auto;
+  }
+
+  .selector select {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dock {
+    transition: none;
+  }
+}

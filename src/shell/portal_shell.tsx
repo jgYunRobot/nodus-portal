@@ -7,6 +7,7 @@ import { ThemeMenu } from "../components/actions/theme_menu";
 import { getPortalConfig } from "../config/portal_config";
 import { getEffectiveControlId } from "./robot_route_selection";
 import { useRobotDockState } from "./robot_dock_state";
+import { RobotDock } from "./robot_dock";
 import styles from "./portal_shell.module.css";
 
 export function PortalShell() {
@@ -82,9 +83,14 @@ export function PortalShell() {
         </div>
         <ThemeMenu />
       </header>
-      <div className={styles.content} key={location.pathname}>
+      <div
+        className={styles.content}
+        data-testid="portal-main-content"
+        key={location.pathname}
+      >
         <Outlet />
       </div>
+      <RobotDock />
     </div>
   );
 }

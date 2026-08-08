@@ -108,6 +108,57 @@ test("keeps a Home card selection while sidebar navigation targets that Control"
   );
 });
 
+test("collapses the right-anchored Robot Dock without resizing main content", async ({
+  page
+}) => {
+  await page.route(
+    (url) => url.pathname === "/api/v1/pilot/streams",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          server_instance_id: "pilot-a",
+          streams: [
+            {
+              stream_id: "control.alpha.robot_status",
+              owner: "pilot",
+              control_id: "control-alpha",
+              stream_kind: "robot_status",
+              schema_id: "nodus.robot_status.v1",
+              schema_version: 1,
+              source_clock_domains: ["monotonic_same_host"],
+              configured_production_hz: 60,
+              retention_capacity: 64,
+              recording_grade: true
+            }
+          ]
+        })
+      });
+    }
+  );
+
+  await page.goto("/home");
+  const dock = page.getByRole("complementary", {
+    name: "Selected robot controls"
+  });
+  await expect(dock).toHaveAttribute("data-mode", "expanded");
+  await expect(dock.getByLabel("Selected robot")).toHaveCount(1);
+  const before = await page.getByTestId("portal-main-content").boundingBox();
+  await dock.getByRole("button", { name: "Collapse robot controls" }).click();
+  await expect(dock).toHaveAttribute("data-mode", "collapsed");
+  await expect(dock.getByRole("button")).toHaveCount(1);
+  const after = await page.getByTestId("portal-main-content").boundingBox();
+  expect(after).toEqual(before);
+});
+
+test("defaults the Robot Dock to collapsed on phone", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/home");
+  await expect(
+    page.getByRole("complementary", { name: "Selected robot controls" })
+  ).toHaveAttribute("data-mode", "collapsed");
+});
+
 test("restores the direct Control-scoped Jogging route", async ({ page }) => {
   await page.goto("/robots/control-alpha/jogging");
   await expect(page.getByRole("heading", { name: "Jogging" })).toBeVisible();

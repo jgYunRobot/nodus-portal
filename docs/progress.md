@@ -1,5 +1,36 @@
 # Progress
 
+## 2026-08-08 - Persistent Robot Dock D2 floating shell
+
+### Changes
+
+- Added the shell-owned, fixed bottom-right Robot Dock with a theme-tokenized nearly opaque surface,
+  safe-area inset, bounded right-anchored width, restrained shadow, and overlay stacking.
+- Added the public RobotDirectory selector and concise selected-Control status. Unknown or removed
+  route/preferred Controls remain visible as unavailable rather than being replaced automatically.
+- Added persisted expanded/collapsed behavior: desktop defaults to expanded, phone defaults to
+  selector-only collapsed mode, and an explicit mode choice wins over responsive defaults.
+- Kept the Dock outside the shell grid and route outlet; no content spacer, bottom padding, or
+  content-size calculation depends on Dock mode.
+
+### Status
+
+- D2 is complete. The expanded surface intentionally contains status and selection only; Servo,
+  Fault Reset, and Brake remain in Jogging until their D3 relocation is covered.
+
+### Validation
+
+- Passed `npm run format:check`, `npm run typecheck`, `npm run lint`, `npm test` (15 files / 56
+  tests), and `npm run build`.
+- Passed `npm run test:e2e` (8 Chromium tests) with public-contract fixtures, including right-side
+  expansion/collapse without a main-content bounding-box change and the phone collapsed default.
+- Vite retained its existing non-failing lazy robot-scene chunk-size warning.
+
+### Next goals
+
+- D3: relocate shared Servo, Fault Reset, and Brake controls into the Dock using the existing
+  app-scoped operation runtime and selected-Control RobotStatus.
+
 ## 2026-08-08 - Persistent Robot Dock D1 selection state
 
 ### Changes
