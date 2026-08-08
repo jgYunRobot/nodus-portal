@@ -1,5 +1,28 @@
 # Progress
 
+## 2026-08-08 - Pilot frame axes in the Jogging scene
+
+### Changes
+
+- Rendered each fresh public Pilot `RobotStatus.frames` pose as an X/Y/Z coordinate frame in the
+  Jogging Three.js scene, inside the same scene-coordinate group as the robot model.
+- Reused the existing `euler_type` rotation-matrix interpretation and excluded malformed frame
+  values before they reach the renderer.
+
+### Status
+
+- Axis helpers update only from fresh authoritative status, matching the existing robot-pose hold
+  behavior when status is stale or unavailable.
+
+### Validation
+
+- Not run (not requested).
+
+### Next goals
+
+- Add frame visibility selection only if multiple registered frames make the scene difficult to
+  inspect in actual use.
+
 ## 2026-08-08 - Empty-directory route gate and resilient Dock preference
 
 ### Changes
