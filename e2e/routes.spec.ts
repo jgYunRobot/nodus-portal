@@ -1,5 +1,56 @@
 import { expect, test } from "@playwright/test";
 
+function createControlStatus(
+  control_id: string,
+  options: { available?: boolean; fresh?: boolean; stale?: boolean } = {}
+) {
+  const available = options.available ?? true;
+  const fresh = options.fresh ?? true;
+  const stale = options.stale ?? false;
+  return {
+    control_id,
+    available,
+    fresh,
+    stale,
+    age_ms: stale ? 1500 : 1,
+    request_pending: false,
+    connection_generation: 1,
+    last_success_monotonic_ns: 1,
+    last_failure_monotonic_ns: null,
+    configured_polling_hz: 60,
+    measured_polling_hz: 60,
+    missed_poll_count: 0,
+    timeout_count: 0,
+    gateway_queue_high_watermark: 0,
+    sample: {
+      sample_sequence: 1,
+      connection_generation: 1,
+      source_timestamp_ns: 1,
+      pilot_receive_monotonic_ns: 1,
+      robot_state: {
+        timestamp_ns: 1,
+        real: { pos: [0, 0, 0, 0, 0, 0], vel: [], acc: [], torque: [] },
+        desired: { pos: [0, 0, 0, 0, 0, 0], vel: [], acc: [], torque: [] },
+        interface: {
+          schema_version: 1,
+          robot_type: "fixture",
+          connected: available,
+          dof: 6,
+          servo_activated: false,
+          brake_released: false,
+          brake_state_source: "fixture",
+          motion_gate_state: "fixture",
+          motion_gate_reason: "",
+          expected_wkc: 0,
+          last_wkc: 0,
+          last_error: ""
+        },
+        frames: []
+      }
+    }
+  };
+}
+
 test("redirects the root route to Home", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/home$/);
@@ -221,6 +272,157 @@ test("switches a robot-scoped route without changing its page kind", async ({
   ).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(/\/robots\/control-alpha\/operating$/);
+});
+
+test("retains stale, offline, and removed selections without auto-switching", async ({
+  page
+}) => {
+  await page.route(
+    (url) => url.pathname === "/api/v1/pilot/streams",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          server_instance_id: "pilot-a",
+          streams: [
+            {
+              stream_id: "control.alpha.robot_status",
+              owner: "pilot",
+              control_id: "control-alpha",
+              stream_kind: "robot_status",
+              schema_id: "nodus.robot_status.v1",
+              schema_version: 1,
+              source_clock_domains: ["monotonic_same_host"],
+              configured_production_hz: 60,
+              retention_capacity: 64,
+              recording_grade: true
+            },
+            {
+              stream_id: "control.bravo.robot_status",
+              owner: "pilot",
+              control_id: "control-bravo",
+              stream_kind: "robot_status",
+              schema_id: "nodus.robot_status.v1",
+              schema_version: 1,
+              source_clock_domains: ["monotonic_same_host"],
+              configured_production_hz: 60,
+              retention_capacity: 64,
+              recording_grade: true
+            }
+          ]
+        })
+      });
+    }
+  );
+  await page.route(/\/api\/v1\/controls\/[^/]+\/status$/, async (route) => {
+    const control_id = route.request().url().split("/").at(-2);
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify(
+        control_id === "control-alpha"
+          ? createControlStatus(control_id, { fresh: false, stale: true })
+          : createControlStatus(control_id ?? "unknown", { available: false })
+      )
+    });
+  });
+
+  await page.goto("/robots/control-alpha/device");
+  const dock = page.getByRole("complementary", {
+    name: "Selected robot controls"
+  });
+  await expect(dock).toContainText("Status stale");
+  await dock.getByLabel("Selected robot").selectOption("control-bravo");
+  await expect(page).toHaveURL(/\/robots\/control-bravo\/device$/);
+  await expect(dock).toContainText("Offline");
+
+  await page.goto("/robots/control-removed/device");
+  await expect(dock.getByLabel("Selected robot")).toHaveValue(
+    "control-removed"
+  );
+  await expect(
+    dock.getByRole("option", { name: /control-removed \(unavailable\)/ })
+  ).toHaveCount(1);
+});
+
+test("uses black, light, and system themes without Dock motion under reduced motion", async ({
+  page
+}) => {
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+  await page.goto("/home");
+  await page.getByRole("button", { name: "Choose theme" }).click();
+  await page.getByRole("menuitemradio", { name: "Light" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await page.getByRole("button", { name: "Choose theme" }).click();
+  await page.getByRole("menuitemradio", { name: "System" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "black");
+  await expect(
+    page.getByRole("complementary", { name: "Selected robot controls" })
+  ).toHaveCSS("transition-duration", "0.001s");
+});
+
+test("captures Robot Dock expanded and collapsed desktop and phone states", async ({
+  page
+}, testInfo) => {
+  await page.route(
+    (url) => url.pathname === "/api/v1/pilot/streams",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          server_instance_id: "pilot-a",
+          streams: [
+            {
+              stream_id: "control.alpha.robot_status",
+              owner: "pilot",
+              control_id: "control-alpha",
+              stream_kind: "robot_status",
+              schema_id: "nodus.robot_status.v1",
+              schema_version: 1,
+              source_clock_domains: ["monotonic_same_host"],
+              configured_production_hz: 60,
+              retention_capacity: 64,
+              recording_grade: true
+            }
+          ]
+        })
+      });
+    }
+  );
+  await page.route(
+    /\/api\/v1\/controls\/control-alpha\/status$/,
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify(createControlStatus("control-alpha"))
+      });
+    }
+  );
+  await page.goto("/home");
+  await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
+  const dock = page.getByRole("complementary", {
+    name: "Selected robot controls"
+  });
+  await dock.getByLabel("Selected robot").selectOption("control-alpha");
+  await expect(dock.getByRole("button", { name: "Servo On" })).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("dock-desktop-expanded.png")
+  });
+  await dock.getByRole("button", { name: "Collapse robot controls" }).click();
+  await page.screenshot({
+    path: testInfo.outputPath("dock-desktop-collapsed.png")
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("dock-phone-collapsed.png")
+  });
+  await dock.getByRole("button", { name: "Expand robot controls" }).click();
+  await page.screenshot({
+    path: testInfo.outputPath("dock-phone-expanded.png")
+  });
 });
 
 test("restores the direct Control-scoped Jogging route", async ({ page }) => {

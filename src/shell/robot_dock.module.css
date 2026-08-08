@@ -76,20 +76,29 @@
 
 @media (max-width: 720px) {
   .expanded {
-    align-items: end;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--control-height);
   }
 
   .expanded .status {
-    flex-basis: calc(100% - var(--control-height) - var(--space-2));
+    grid-column: 1 / -1;
+  }
+
+  .expanded > :nth-child(2) {
+    grid-column: 1 / -1;
   }
 
   .expanded .selector {
-    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .selector select {
     min-width: 0;
     width: 100%;
+  }
+
+  .expanded .toggle {
+    align-self: end;
   }
 }
 

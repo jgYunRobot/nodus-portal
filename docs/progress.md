@@ -1,5 +1,41 @@
 # Progress
 
+## 2026-08-08 - Persistent Robot Dock D5 acceptance
+
+### Changes
+
+- Added public-contract browser fixtures for stale, offline, and removed selections. The Dock keeps
+  those Control identities visible and never substitutes an arbitrary discovered robot.
+- Verified black, light, and system theme resolution under reduced motion. The global reduced-motion
+  foundation limits Dock transitions to its immediate 1 ms accessibility fallback.
+- Captured populated desktop expanded/collapsed and phone collapsed/expanded Dock states with the
+  full selector, command, and collapse affordance visible in the phone overlay.
+- Corrected the reviewed visual layout: widened the bounded desktop Dock surface, hides the empty
+  command-result slot until a factual result exists, and uses a compact three-column command grid
+  plus explicit selector/toggle grid placement on phone.
+
+### Status
+
+- D5 is complete. D0-D5 now provide a persistent Control selector, route-preserving multi-robot
+  handoff, one Dock-owned shared command surface, and fixture-proven theme/responsive/accessibility
+  behavior without hardware motion.
+
+### Validation
+
+- Passed `npm run format:check`, `npm run typecheck`, `npm run lint`, `npm test` (16 files / 57
+  tests), `npm run build`, and `npm run test:e2e` (12 Chromium tests).
+- Playwright recorded the four reviewed visual captures under its ignored `test-results/` output.
+- Production build: shell chunk 437.03 kB (138.10 kB gzip); lazy robot-scene chunk 977.95 kB
+  (260.39 kB gzip). The pre-existing non-failing Vite warning remains limited to that lazy scene
+  chunk; Home remains free of it.
+- Existing `PilotStreamHub` unit coverage continues to prove one canonical Control stream and
+  listener cleanup when the final subscriber leaves; the Dock only subscribes through that store.
+
+### Next goals
+
+- Future Camera, Policy, provider, and production-authority work remains outside this completed
+  Persistent Robot Dock scope.
+
 ## 2026-08-08 - Persistent Robot Dock D4 switch isolation
 
 ### Changes

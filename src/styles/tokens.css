@@ -13,7 +13,7 @@
   --motion-fast: 120ms;
   --dock-height: 64px;
   --dock-collapsed-width: 244px;
-  --dock-expanded-width: 620px;
+  --dock-expanded-width: 860px;
   --dock-inset: var(--space-4);
   --shadow-dock: 0 12px 28px rgb(0 0 0 / 0.24);
   --z-index-dock: 10;
