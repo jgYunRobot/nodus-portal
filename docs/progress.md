@@ -1,5 +1,36 @@
 # Progress
 
+## 2026-08-08 - Persistent Robot Dock D3 shared commands
+
+### Changes
+
+- Moved Servo On/Off, Fault Reset, and Brake Release/Engage presentation from Jogging to the expanded
+  Robot Dock. Joint/task jog, Home/Ready, speed, task frame, and session-recovery controls remain
+  page-owned.
+- Reused the existing app-scoped Portal operation runtime, selected-Control scheduler, lifecycle
+  session, public request encoding, and authoritative RobotStatus. The Dock creates neither a
+  session nor a queue and does not optimistically change Servo or Brake state.
+- Added Dock-local factual operation feedback, including the explicit `written_unconfirmed`
+  disposition, and kept collapsed mode free of all command controls.
+
+### Status
+
+- D3 is complete. There is one visible owner for the three shared lifecycle commands; Jogging now
+  contains only its page-owned hold-to-run and recovery functions.
+
+### Validation
+
+- Passed `npm run format:check`, `npm run typecheck`, `npm run lint`, `npm test` (16 files / 57
+  tests), and `npm run build`.
+- Passed `npm run test:e2e` (8 Chromium tests) with public-contract fixtures. Unit coverage verifies
+  all three command requests retain the passed selected `control_id` and factual operation feedback.
+- Vite retained its existing non-failing lazy robot-scene chunk-size warning.
+
+### Next goals
+
+- D4: make selecting a destination Control an ordered cancellation/remount transition and cover
+  direct URL, history, reload, unavailable selection, and per-Control isolation.
+
 ## 2026-08-08 - Persistent Robot Dock D2 floating shell
 
 ### Changes

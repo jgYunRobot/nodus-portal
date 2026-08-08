@@ -143,6 +143,14 @@ test("collapses the right-anchored Robot Dock without resizing main content", as
   });
   await expect(dock).toHaveAttribute("data-mode", "expanded");
   await expect(dock.getByLabel("Selected robot")).toHaveCount(1);
+  await dock.getByLabel("Selected robot").selectOption("control-alpha");
+  await expect(dock.getByRole("button", { name: "Servo On" })).toHaveCount(1);
+  await expect(dock.getByRole("button", { name: "Fault Reset" })).toHaveCount(
+    1
+  );
+  await expect(dock.getByRole("button", { name: "Release Brake" })).toHaveCount(
+    1
+  );
   const before = await page.getByTestId("portal-main-content").boundingBox();
   await dock.getByRole("button", { name: "Collapse robot controls" }).click();
   await expect(dock).toHaveAttribute("data-mode", "collapsed");

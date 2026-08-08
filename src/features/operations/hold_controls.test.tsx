@@ -184,32 +184,6 @@ describe("HoldControls", () => {
     expect(mocks.cancel).toHaveBeenCalledWith("control-a");
   });
 
-  it("submits robot commands through the selected Control scheduler", () => {
-    render(<HoldControls control_id="control-a" />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Servo Off" }));
-    expect(mocks.schedule).toHaveBeenLastCalledWith({
-      operation: "control.set_servo_state",
-      control_id: "control-a",
-      enabled: false
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Fault Reset" }));
-    expect(mocks.schedule).toHaveBeenLastCalledWith({
-      operation: "control.reset_fault",
-      control_id: "control-a"
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Engage Brake" }));
-    expect(mocks.schedule).toHaveBeenLastCalledWith({
-      operation: "control.set_brake_state",
-      control_id: "control-a",
-      released: false
-    });
-    expect(mocks.cancel).toHaveBeenCalledTimes(3);
-    expect(mocks.resume).toHaveBeenCalledTimes(3);
-  });
-
   it("locks conflicting controls for the complete hold lifetime", () => {
     mocks.current_intent = {
       kind: "joint",
@@ -233,9 +207,6 @@ describe("HoldControls", () => {
     expect(isDisabled(screen.getByRole("button", { name: "Ready" }))).toBe(
       true
     );
-    expect(isDisabled(screen.getByRole("button", { name: "Servo Off" }))).toBe(
-      true
-    );
     expect(isDisabled(screen.getByRole("tab", { name: "Task" }))).toBe(true);
     expect(isDisabled(screen.getByLabelText("Jog speed"))).toBe(true);
 
@@ -248,19 +219,11 @@ describe("HoldControls", () => {
     expect(isDisabled(screen.getByRole("button", { name: "Home" }))).toBe(
       false
     );
-    expect(isDisabled(screen.getByRole("button", { name: "Servo Off" }))).toBe(
-      false
-    );
     expect(isDisabled(screen.getByRole("tab", { name: "Task" }))).toBe(false);
     expect(isDisabled(screen.getByLabelText("Jog speed"))).toBe(false);
   });
 
   it("shows operation and recovery information in one stable status panel", () => {
-    mocks.operation_snapshot.presentation = {
-      state: "written_unconfirmed",
-      message: "Control frame was written without execution acknowledgement.",
-      terminal: false
-    };
     mocks.session_snapshot.phase = "recovering";
     mocks.session_snapshot.last_error =
       "Pilot session recovery is in progress.";
@@ -270,7 +233,9 @@ describe("HoldControls", () => {
     const status_panel = screen.getAllByRole("status").at(-1);
     if (status_panel === undefined)
       throw new Error("Operation status panel is unavailable.");
-    expect(status_panel.textContent).toContain("written_unconfirmed");
+    expect(status_panel.textContent).toContain(
+      "Hold-to-run controls are available."
+    );
     expect(status_panel.textContent).toContain("recovery:");
     expect(status_panel.textContent).toContain(
       "Pilot session recovery is in progress."

@@ -3,6 +3,7 @@ import { useNavigate, useLocation, useParams } from "react-router";
 import { useRobotStatusStreams } from "../api/pilot/pilot_queries";
 import { useControlStatus } from "../api/pilot/use_control_status";
 import { createRobotDirectory } from "../features/robot_directory/robot_directory";
+import { RobotCommandControls } from "../features/operations/robot_command_controls";
 import {
   getEffectiveControlId,
   getRoutePreservingRobotPath
@@ -55,7 +56,10 @@ export function RobotDock() {
       data-mode={mode}
     >
       {is_expanded && effective_control_id !== null ? (
-        <RobotDockStatus control_id={effective_control_id} />
+        <>
+          <RobotDockStatus control_id={effective_control_id} />
+          <RobotCommandControls control_id={effective_control_id} />
+        </>
       ) : null}
       <label className={styles.selector}>
         <span>Robot</span>

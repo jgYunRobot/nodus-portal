@@ -18,6 +18,8 @@
 }
 
 .expanded {
+  align-content: center;
+  flex-wrap: wrap;
   width: min(var(--dock-expanded-width), calc(100vw - (2 * var(--dock-inset))));
 }
 
@@ -75,7 +77,6 @@
 @media (max-width: 720px) {
   .expanded {
     align-items: end;
-    flex-wrap: wrap;
   }
 
   .expanded .status {

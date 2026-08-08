@@ -8,7 +8,6 @@ import {
 import { useControlStatus } from "../../api/pilot/use_control_status";
 import { usePortalOperationRuntime } from "./portal_operation_context";
 import type { HoldIntent } from "./hold_session";
-import type { OperationTarget } from "./pilot_operation_client";
 import styles from "./hold_controls.module.css";
 
 interface HoldControlsProps {
@@ -104,12 +103,6 @@ export function HoldControls({ control_id }: HoldControlsProps) {
     () => runtime.session.getSnapshot(),
     () => runtime.session.getSnapshot()
   );
-  const scheduler = runtime.getScheduler(control_id);
-  const operation = useSyncExternalStore(
-    (listener) => scheduler.subscribe(listener),
-    () => scheduler.getSnapshot(),
-    () => scheduler.getSnapshot()
-  );
   const robot_state = status.status?.sample?.robot_state;
   const frames = (robot_state?.frames ?? []).filter(
     (frame, index, all_frames) =>
@@ -132,9 +125,6 @@ export function HoldControls({ control_id }: HoldControlsProps) {
     session.phase !== "ready" || !has_authoritative_status;
   const hold_active = hold.active;
   const interaction_locked = controls_disabled || hold_active;
-  const command_pending = operation.in_flight || operation.has_pending;
-  const servo_activated = robot_state?.interface.servo_activated === true;
-  const brake_released = robot_state?.interface.brake_released === true;
   const unavailable_reason =
     session.phase !== "ready"
       ? (session.last_error ?? "Pilot component session is not ready.")
@@ -164,12 +154,6 @@ export function HoldControls({ control_id }: HoldControlsProps) {
     runtime.cancel(control_id);
   }
 
-  function submitCommand(target: OperationTarget): void {
-    stop();
-    scheduler.resume();
-    scheduler.schedule(target);
-  }
-
   function selectMode(next_mode: "joint" | "task"): void {
     stop();
     setMode(next_mode);
@@ -191,49 +175,6 @@ export function HoldControls({ control_id }: HoldControlsProps) {
       className={styles.controls}
     >
       <h2 className={styles.heading}>Jog</h2>
-
-      <div aria-label="Robot commands" className={styles.command_grid}>
-        <button
-          aria-pressed={servo_activated}
-          className={servo_activated ? styles.command_active : styles.command}
-          disabled={interaction_locked || command_pending}
-          onClick={() =>
-            submitCommand({
-              operation: "control.set_servo_state",
-              control_id,
-              enabled: !servo_activated
-            })
-          }
-          type="button"
-        >
-          {servo_activated ? "Servo Off" : "Servo On"}
-        </button>
-        <button
-          className={styles.command}
-          disabled={interaction_locked || command_pending}
-          onClick={() =>
-            submitCommand({ operation: "control.reset_fault", control_id })
-          }
-          type="button"
-        >
-          Fault Reset
-        </button>
-        <button
-          aria-pressed={!brake_released}
-          className={!brake_released ? styles.command_active : styles.command}
-          disabled={interaction_locked || command_pending}
-          onClick={() =>
-            submitCommand({
-              operation: "control.set_brake_state",
-              control_id,
-              released: !brake_released
-            })
-          }
-          type="button"
-        >
-          {brake_released ? "Engage Brake" : "Release Brake"}
-        </button>
-      </div>
 
       <div className={styles.speed_control}>
         <label htmlFor={`jog-speed-${control_id}`}>Speed</label>
@@ -435,9 +376,7 @@ export function HoldControls({ control_id }: HoldControlsProps) {
       <div aria-live="polite" className={styles.status_panel} role="status">
         <div className={styles.status_messages}>
           <p className={styles.operation_state}>
-            {operation.presentation === null
-              ? "ready: Waiting for a Control operation."
-              : `${operation.presentation.state}: ${operation.presentation.message}`}
+            ready: Hold-to-run controls are available.
           </p>
           {controls_disabled ? (
             <p className={styles.recovery_state}>
