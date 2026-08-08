@@ -15,7 +15,7 @@
 .heading h1,
 .heading p,
 .page h2,
-.details {
+.page p {
   margin: 0;
 }
 
@@ -24,25 +24,9 @@
   margin-top: var(--space-1);
 }
 
-.details {
-  display: grid;
-  gap: var(--space-3);
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  margin-top: var(--space-5);
-}
-
-.details div {
-  display: grid;
-  gap: var(--space-1);
-}
-
-.details dt {
+.page h2 + p {
   color: var(--color-text-muted);
-  font-size: 0.8125rem;
-}
-
-.details dd {
-  margin: 0;
+  margin-top: var(--space-3);
 }
 
 @media (max-width: 720px) {

@@ -17,7 +17,7 @@ describe("robot route selection", () => {
   });
 
   it("preserves supported robot page kinds while replacing only the Control ID", () => {
-    expect(getRobotPageKind("/robots/control-a/device")).toBe("device");
+    expect(getRobotPageKind("/robots/control-a/device")).toBeNull();
     expect(
       getRoutePreservingRobotPath("/robots/control-a/jogging", "control b")
     ).toBe("/robots/control%20b/jogging");

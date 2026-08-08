@@ -176,10 +176,37 @@ test("keeps a Home card selection while sidebar navigation targets that Control"
   await card.click();
   await expect(page).toHaveURL(/\/home$/);
   await expect(card).toHaveAttribute("data-selected", "true");
-  await expect(page.getByRole("link", { name: "Device" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Devices" })).toHaveAttribute(
     "href",
-    "/robots/control-alpha/device"
+    "/devices"
   );
+});
+
+test("keeps Devices global and redirects the legacy robot-scoped route", async ({
+  page
+}) => {
+  await page.route(
+    (url) => url.pathname === "/api/v1/pilot/streams",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ server_instance_id: "pilot-a", streams: [] })
+      });
+    }
+  );
+
+  await page.goto("/devices");
+  await expect(page).toHaveURL(/\/devices$/);
+  await expect(
+    page.getByRole("heading", { name: "Device directory" })
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Devices" })).toHaveAttribute(
+    "aria-current",
+    "page"
+  );
+
+  await page.goto("/robots/control-alpha/device");
+  await expect(page).toHaveURL(/\/devices$/);
 });
 
 test("collapses the right-anchored Robot Dock without resizing main content", async ({
@@ -349,16 +376,16 @@ test("retains stale, offline, and removed selections without auto-switching", as
     });
   });
 
-  await page.goto("/robots/control-alpha/device");
+  await page.goto("/robots/control-alpha/operating");
   const dock = page.getByRole("complementary", {
     name: "Selected robot controls"
   });
   await expect(dock).toContainText("Status stale");
   await dock.getByLabel("Selected robot").selectOption("control-bravo");
-  await expect(page).toHaveURL(/\/robots\/control-bravo\/device$/);
+  await expect(page).toHaveURL(/\/robots\/control-bravo\/operating$/);
   await expect(dock).toContainText("Offline");
 
-  await page.goto("/robots/control-removed/device");
+  await page.goto("/robots/control-removed/operating");
   await expect(dock.getByLabel("Selected robot")).toHaveValue(
     "control-removed"
   );

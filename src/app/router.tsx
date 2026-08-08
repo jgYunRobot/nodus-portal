@@ -45,7 +45,11 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate replace to="/home" /> },
       { path: "home", element: lazyPage(HomePage) },
-      { path: "robots/:control_id/device", element: lazyPage(DevicePage) },
+      { path: "devices", element: lazyPage(DevicePage) },
+      {
+        path: "robots/:control_id/device",
+        element: <Navigate replace to="/devices" />
+      },
       { path: "robots/:control_id/jogging", element: lazyPage(JoggingPage) },
       {
         path: "robots/:control_id/operating",

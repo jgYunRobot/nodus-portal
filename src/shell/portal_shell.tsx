@@ -34,7 +34,6 @@ export function PortalShell() {
     ? null
     : getEffectiveControlId(route_control_id, robot_dock.preferred_control_id);
   const jogging_target = createRobotPageTarget(control_id, "jogging");
-  const device_target = createRobotPageTarget(control_id, "device");
   const operating_target = createRobotPageTarget(control_id, "operating");
 
   if (has_no_discovered_robots && route_control_id !== undefined)
@@ -49,7 +48,6 @@ export function PortalShell() {
       <aside className={styles.sidebar}>
         <Navigation
           control_id={control_id}
-          device_target={device_target}
           jogging_target={jogging_target}
           operating_target={operating_target}
           on_navigate={() => undefined}
@@ -70,7 +68,6 @@ export function PortalShell() {
       >
         <Navigation
           control_id={control_id}
-          device_target={device_target}
           jogging_target={jogging_target}
           operating_target={operating_target}
           on_navigate={() => setIsDrawerOpen(false)}
@@ -91,9 +88,11 @@ export function PortalShell() {
             Pilot connection will be shown here
           </p>
           <p className={styles.context}>
-            {route_control_id === undefined
-              ? "Fleet overview"
-              : `Control ${route_control_id}`}
+            {location.pathname === "/devices"
+              ? "Device directory"
+              : route_control_id === undefined
+                ? "Fleet overview"
+                : `Control ${route_control_id}`}
           </p>
         </div>
         <ThemeMenu />
@@ -112,7 +111,7 @@ export function PortalShell() {
 
 function createRobotPageTarget(
   control_id: string | null,
-  page_kind: "device" | "jogging" | "operating"
+  page_kind: "jogging" | "operating"
 ): string {
   if (control_id === null) return "/home";
   return `/robots/${encodeURIComponent(control_id)}/${page_kind}`;
@@ -120,13 +119,11 @@ function createRobotPageTarget(
 
 function Navigation({
   control_id,
-  device_target,
   jogging_target,
   operating_target,
   on_navigate
 }: {
   control_id: string | null;
-  device_target: string;
   jogging_target: string;
   operating_target: string;
   on_navigate: () => void;
@@ -144,14 +141,10 @@ function Navigation({
       <NavLink end onClick={on_navigate} to="/home">
         Home
       </NavLink>
-      <p>Robot</p>
-      <NavLink
-        aria-disabled={control_id === null}
-        onClick={handleRobotNavigation}
-        to={device_target}
-      >
-        Device
+      <NavLink onClick={on_navigate} to="/devices">
+        Devices
       </NavLink>
+      <p>Robot</p>
       <NavLink
         aria-disabled={control_id === null}
         onClick={handleRobotNavigation}
