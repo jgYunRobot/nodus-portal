@@ -1,5 +1,31 @@
 # Progress
 
+## 2026-08-08 - Portal validation remediation
+
+### Changes
+
+- Restored baseline Portal validation before starting D1: made the mount root non-null after its
+  explicit guard, made operation-test assertions portable without undeclared matcher extensions, and
+  narrowed motion-target test access to motion operation variants.
+- Formatted the pre-existing Device and Operating pages.
+
+### Status
+
+- D0 documentation remains runtime-free. The Portal baseline now passes the required D-checkpoint
+  validation commands, so later Dock checkpoints can use a green baseline.
+
+### Validation
+
+- Passed `npm run format:check`, `npm run typecheck`, `npm run lint`, `npm test` (13 files / 51
+  tests), and `npm run build`.
+- Passed `npm run test:e2e` (5 Chromium tests) against local public-contract fixtures. Vite retained
+  its existing non-failing lazy robot-scene chunk-size warning.
+
+### Next goals
+
+- D1: add the versioned preferred-Control and Dock-mode store, route helpers, and Home/sidebar
+  selection behavior.
+
 ## 2026-08-08 - Persistent Robot Dock design
 
 ### Changes

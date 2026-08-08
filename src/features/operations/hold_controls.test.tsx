@@ -25,6 +25,10 @@ const mocks = vi.hoisted(() => ({
   }
 }));
 
+function isDisabled(element: HTMLElement): boolean {
+  return element.hasAttribute("disabled");
+}
+
 vi.mock("../../api/pilot/use_control_status", () => ({
   useControlStatus: () => ({
     control_id: "control-a",
@@ -216,23 +220,39 @@ describe("HoldControls", () => {
 
     const view = render(<HoldControls control_id="control-a" />);
 
-    expect(screen.getByRole("button", { name: "Joint 1 +" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Joint 1 −" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Joint 2 +" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Home" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Ready" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Servo Off" })).toBeDisabled();
-    expect(screen.getByRole("tab", { name: "Task" })).toBeDisabled();
-    expect(screen.getByLabelText("Jog speed")).toBeDisabled();
+    expect(isDisabled(screen.getByRole("button", { name: "Joint 1 +" }))).toBe(
+      false
+    );
+    expect(isDisabled(screen.getByRole("button", { name: "Joint 1 −" }))).toBe(
+      true
+    );
+    expect(isDisabled(screen.getByRole("button", { name: "Joint 2 +" }))).toBe(
+      true
+    );
+    expect(isDisabled(screen.getByRole("button", { name: "Home" }))).toBe(true);
+    expect(isDisabled(screen.getByRole("button", { name: "Ready" }))).toBe(
+      true
+    );
+    expect(isDisabled(screen.getByRole("button", { name: "Servo Off" }))).toBe(
+      true
+    );
+    expect(isDisabled(screen.getByRole("tab", { name: "Task" }))).toBe(true);
+    expect(isDisabled(screen.getByLabelText("Jog speed"))).toBe(true);
 
     mocks.current_intent = null;
     view.rerender(<HoldControls control_id="control-a" />);
 
-    expect(screen.getByRole("button", { name: "Joint 1 −" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Home" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Servo Off" })).toBeEnabled();
-    expect(screen.getByRole("tab", { name: "Task" })).toBeEnabled();
-    expect(screen.getByLabelText("Jog speed")).toBeEnabled();
+    expect(isDisabled(screen.getByRole("button", { name: "Joint 1 −" }))).toBe(
+      false
+    );
+    expect(isDisabled(screen.getByRole("button", { name: "Home" }))).toBe(
+      false
+    );
+    expect(isDisabled(screen.getByRole("button", { name: "Servo Off" }))).toBe(
+      false
+    );
+    expect(isDisabled(screen.getByRole("tab", { name: "Task" }))).toBe(false);
+    expect(isDisabled(screen.getByLabelText("Jog speed"))).toBe(false);
   });
 
   it("shows operation and recovery information in one stable status panel", () => {
@@ -247,7 +267,9 @@ describe("HoldControls", () => {
 
     render(<HoldControls control_id="control-a" />);
 
-    const status_panel = screen.getByRole("status");
+    const status_panel = screen.getAllByRole("status").at(-1);
+    if (status_panel === undefined)
+      throw new Error("Operation status panel is unavailable.");
     expect(status_panel.textContent).toContain("written_unconfirmed");
     expect(status_panel.textContent).toContain("recovery:");
     expect(status_panel.textContent).toContain(

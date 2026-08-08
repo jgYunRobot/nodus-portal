@@ -14,7 +14,8 @@ function getConnectionStatus(
     return { label: "Unavailable", tone: "danger" as const };
   if (state === "recovering")
     return { label: "Recovering", tone: "warning" as const };
-  if (available !== true) return { label: "Awaiting status", tone: "neutral" as const };
+  if (available !== true)
+    return { label: "Awaiting status", tone: "neutral" as const };
   if (fresh !== true || stale === true)
     return { label: "Stale", tone: "warning" as const };
   return { label: "Online", tone: "success" as const };
@@ -58,7 +59,9 @@ export function DevicePage() {
           </div>
           <div>
             <dt>DOF</dt>
-            <dd>{robot_interface === undefined ? "Unknown" : robot_interface.dof}</dd>
+            <dd>
+              {robot_interface === undefined ? "Unknown" : robot_interface.dof}
+            </dd>
           </div>
           <div>
             <dt>Servo</dt>

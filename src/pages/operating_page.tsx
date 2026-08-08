@@ -30,8 +30,8 @@ export function OperatingPage() {
         <div className={styles.introduction}>
           <h2>Robot controls</h2>
           <p>
-            Commands require a fresh authoritative RobotStatus and remain
-            active only while their controls are held.
+            Commands require a fresh authoritative RobotStatus and remain active
+            only while their controls are held.
           </p>
         </div>
         <HoldControls control_id={control_id} />
