@@ -1,5 +1,349 @@
 # Progress
 
+## 2026-08-08 - Task Jog parent-link frame eligibility
+
+### Changes
+
+- Updated the pinned Pilot OpenAPI contract to include each frame's `parent_link_id`.
+- Limited Task Jog frame choices and the active task target to frames whose parent link id is greater
+  than zero; root-attached frames are not displayed or selectable.
+
+### Status
+
+- Task Jog returns to the first eligible frame whenever the selected frame is not present in the
+  latest authoritative status.
+
+### Validation
+
+- Not run (not requested).
+
+### Next goals
+
+- Confirm parent-link frame eligibility with an integrated Pilot status stream.
+
+## 2026-08-08 - Pilot frame axes in the Jogging scene
+
+### Changes
+
+- Rendered each fresh public Pilot `RobotStatus.frames` pose as an X/Y/Z coordinate frame in the
+  Jogging Three.js scene, inside the same scene-coordinate group as the robot model.
+- Reused the existing `euler_type` rotation-matrix interpretation and excluded malformed frame
+  values before they reach the renderer.
+
+### Status
+
+- Axis helpers update only from fresh authoritative status, matching the existing robot-pose hold
+  behavior when status is stale or unavailable.
+
+### Validation
+
+- Not run (not requested).
+
+### Next goals
+
+- Add frame visibility selection only if multiple registered frames make the scene difficult to
+  inspect in actual use.
+
+## 2026-08-08 - Empty-directory route gate and resilient Dock preference
+
+### Changes
+
+- Made Home the only accessible product page when public RobotDirectory discovery succeeds with no
+  entries. Robot-scoped sidebar links remain disabled and direct Device, Jogging, or Operating URLs
+  redirect to Home.
+- Kept existing pages stable while directory discovery is loading or failing instead of treating an
+  unknown directory as a confirmed empty one.
+- Made Robot Dock preference reads and writes tolerate unavailable browser storage while preserving
+  the current Portal session's in-memory selection and Dock mode.
+- Added focused storage-failure unit coverage and an empty-directory browser route fixture.
+
+### Status
+
+- The two requested review remediations are implemented without changing the user's in-progress
+  operation-feedback removal or Home-card keyboard behavior.
+- Existing unrelated worktree changes remain preserved and uncommitted.
+
+### Validation
+
+- Targeted Prettier check passed for the owned TypeScript, CSS, E2E, design, and progress files after
+  applying the reported formatting correction.
+- Targeted ESLint passed for the owned TypeScript and E2E files, and `git diff --check` passed.
+- Full-repository format/lint, typecheck, unit, build, and Playwright commands were not run because
+  repository rules require explicit user instruction.
+
+### Next goals
+
+- Run the Portal validation suite when explicitly requested, then commit the combined Dock follow-up
+  only after reviewing the user's pre-existing feedback-removal changes together with these fixes.
+
+## 2026-08-08 - Persistent Robot Dock D5 acceptance
+
+### Changes
+
+- Added public-contract browser fixtures for stale, offline, and removed selections. The Dock keeps
+  those Control identities visible and never substitutes an arbitrary discovered robot.
+- Verified black, light, and system theme resolution under reduced motion. The global reduced-motion
+  foundation limits Dock transitions to its immediate 1 ms accessibility fallback.
+- Captured populated desktop expanded/collapsed and phone collapsed/expanded Dock states with the
+  full selector, command, and collapse affordance visible in the phone overlay.
+- Corrected the reviewed visual layout: widened the bounded desktop Dock surface and uses a compact
+  three-column command grid plus explicit selector/toggle grid placement on phone.
+- Follow-up simplification: removed the Dock-local command-result display, including
+  `written_unconfirmed`, and the redundant visible `Robot` selector label. The accessible selector
+  label and operation runtime state remain intact.
+- Dock expansion now finishes its horizontal width transition before rendering the expanded-only
+  status and command controls, avoiding the transient square multi-row layout.
+- Expanded Dock layout now keeps the status and robot selector together at the left, while Servo,
+  Fault Reset, Brake, and the collapse control remain right-aligned.
+
+### Status
+
+- D5 is complete. D0-D5 now provide a persistent Control selector, route-preserving multi-robot
+  handoff, one Dock-owned shared command surface, and fixture-proven theme/responsive/accessibility
+  behavior without hardware motion.
+
+### Validation
+
+- Passed `npm run format:check`, `npm run typecheck`, `npm run lint`, `npm test` (16 files / 57
+  tests), `npm run build`, and `npm run test:e2e` (12 Chromium tests).
+- Playwright recorded the four reviewed visual captures under its ignored `test-results/` output.
+- Production build: shell chunk 437.03 kB (138.10 kB gzip); lazy robot-scene chunk 977.95 kB
+  (260.39 kB gzip). The pre-existing non-failing Vite warning remains limited to that lazy scene
+  chunk; Home remains free of it.
+- Existing `PilotStreamHub` unit coverage continues to prove one canonical Control stream and
+  listener cleanup when the final subscriber leaves; the Dock only subscribes through that store.
+
+### Next goals
+
+- Future Camera, Policy, provider, and production-authority work remains outside this completed
+  Persistent Robot Dock scope.
+
+## 2026-08-08 - Persistent Robot Dock D4 switch isolation
+
+### Changes
+
+- Made a selected robot change cancel the prior Control's local hold and scheduler before its
+  preference/route replacement. A held or pending Control keeps the selector disabled.
+- Keyed Device and Operating workspaces by `control_id`, matching the existing keyed Jogging
+  workspace so route changes replace page-local state rather than reusing it for another Control.
+- Added browser coverage for route-kind-preserving Control changes and history return.
+
+### Status
+
+- D4 is complete. Submitted results remain in their original per-Control scheduler; a destination
+  page/Dock uses only its own status, operation state, and keyed workspace.
+
+### Validation
+
+- Passed `npm run format:check`, `npm run typecheck`, `npm run lint`, `npm test` (16 files / 57
+  tests), `npm run build`, and `npm run test:e2e` (9 Chromium tests).
+- Vite retained its existing non-failing lazy robot-scene chunk-size warning.
+
+### Next goals
+
+- D5: complete fixture, accessibility, reduced-motion, theme, visual screenshot, and cleanup
+  acceptance without hardware motion.
+
+## 2026-08-08 - Persistent Robot Dock D3 shared commands
+
+### Changes
+
+- Moved Servo On/Off, Fault Reset, and Brake Release/Engage presentation from Jogging to the expanded
+  Robot Dock. Joint/task jog, Home/Ready, speed, task frame, and session-recovery controls remain
+  page-owned.
+- Reused the existing app-scoped Portal operation runtime, selected-Control scheduler, lifecycle
+  session, public request encoding, and authoritative RobotStatus. The Dock creates neither a
+  session nor a queue and does not optimistically change Servo or Brake state.
+- Added Dock-local factual operation feedback, including the explicit `written_unconfirmed`
+  disposition, and kept collapsed mode free of all command controls.
+
+### Status
+
+- D3 is complete. There is one visible owner for the three shared lifecycle commands; Jogging now
+  contains only its page-owned hold-to-run and recovery functions.
+
+### Validation
+
+- Passed `npm run format:check`, `npm run typecheck`, `npm run lint`, `npm test` (16 files / 57
+  tests), and `npm run build`.
+- Passed `npm run test:e2e` (8 Chromium tests) with public-contract fixtures. Unit coverage verifies
+  all three command requests retain the passed selected `control_id` and factual operation feedback.
+- Vite retained its existing non-failing lazy robot-scene chunk-size warning.
+
+### Next goals
+
+- D4: make selecting a destination Control an ordered cancellation/remount transition and cover
+  direct URL, history, reload, unavailable selection, and per-Control isolation.
+
+## 2026-08-08 - Persistent Robot Dock D2 floating shell
+
+### Changes
+
+- Added the shell-owned, fixed bottom-right Robot Dock with a theme-tokenized nearly opaque surface,
+  safe-area inset, bounded right-anchored width, restrained shadow, and overlay stacking.
+- Added the public RobotDirectory selector and concise selected-Control status. Unknown or removed
+  route/preferred Controls remain visible as unavailable rather than being replaced automatically.
+- Added persisted expanded/collapsed behavior: desktop defaults to expanded, phone defaults to
+  selector-only collapsed mode, and an explicit mode choice wins over responsive defaults.
+- Kept the Dock outside the shell grid and route outlet; no content spacer, bottom padding, or
+  content-size calculation depends on Dock mode.
+
+### Status
+
+- D2 is complete. The expanded surface intentionally contains status and selection only; Servo,
+  Fault Reset, and Brake remain in Jogging until their D3 relocation is covered.
+
+### Validation
+
+- Passed `npm run format:check`, `npm run typecheck`, `npm run lint`, `npm test` (15 files / 56
+  tests), and `npm run build`.
+- Passed `npm run test:e2e` (8 Chromium tests) with public-contract fixtures, including right-side
+  expansion/collapse without a main-content bounding-box change and the phone collapsed default.
+- Vite retained its existing non-failing lazy robot-scene chunk-size warning.
+
+### Next goals
+
+- D3: relocate shared Servo, Fault Reset, and Brake controls into the Dock using the existing
+  app-scoped operation runtime and selected-Control RobotStatus.
+
+## 2026-08-08 - Persistent Robot Dock D1 selection state
+
+### Changes
+
+- Added versioned local presentation state for the preferred Control and optional Dock mode. The
+  state stores no RobotStatus, session, command, model, or authority data.
+- Added pure effective-Control and route-page helpers. A direct robot URL remains authoritative;
+  global pages use only the last explicit Home-card preference.
+- Made Home card space select a Control without leaving Home, retained `Open Jogging` as an exact
+  Control link, and updated sidebar Device/Jogging/Operating targets to use the effective Control.
+
+### Status
+
+- D1 is complete. It intentionally adds neither a Dock surface nor shared command controls; those
+  remain D2 and D3 work.
+
+### Validation
+
+- Passed `npm run format:check`, `npm run typecheck`, `npm run lint`, `npm test` (15 files / 56
+  tests), and `npm run build`.
+- Passed `npm run test:e2e` (6 Chromium tests) using public-contract fixtures, including Home
+  selection that remains on `/home` while the Device sidebar link targets the selected Control.
+- Vite retained its existing non-failing lazy robot-scene chunk-size warning.
+
+### Next goals
+
+- D2: add the fixed bottom-right Dock overlay, responsive expanded/collapsed presentation, and
+  no-reflow visual acceptance.
+
+## 2026-08-08 - Portal validation remediation
+
+### Changes
+
+- Restored baseline Portal validation before starting D1: made the mount root non-null after its
+  explicit guard, made operation-test assertions portable without undeclared matcher extensions, and
+  narrowed motion-target test access to motion operation variants.
+- Formatted the pre-existing Device and Operating pages.
+
+### Status
+
+- D0 documentation remains runtime-free. The Portal baseline now passes the required D-checkpoint
+  validation commands, so later Dock checkpoints can use a green baseline.
+
+### Validation
+
+- Passed `npm run format:check`, `npm run typecheck`, `npm run lint`, `npm test` (13 files / 51
+  tests), and `npm run build`.
+- Passed `npm run test:e2e` (5 Chromium tests) against local public-contract fixtures. Vite retained
+  its existing non-failing lazy robot-scene chunk-size warning.
+
+### Next goals
+
+- D1: add the versioned preferred-Control and Dock-mode store, route helpers, and Home/sidebar
+  selection behavior.
+
+## 2026-08-08 - Persistent Robot Dock design
+
+### Changes
+
+- Added `docs/designs/src_shell_robot_dock_design.md` for a shell-owned, bottom-right floating Robot
+  Dock that preserves robot selection across Portal pages.
+- Defined a nearly opaque black/light surface, no reserved page padding or grid row, a fixed right
+  edge, leftward expansion, and a collapsed selector-only presentation.
+- Defined route-authoritative selection with a saved presentation preference, Home card selection,
+  and page-kind-preserving Device/Jogging/Operating robot changes.
+- Moved shared Servo On/Off, Fault Reset, and Brake Release/Engage presentation ownership to the
+  Dock while retaining jog, Home/Ready, reset-origin, task-frame, and speed controls on their pages.
+- Defined ordered switch isolation for holds, pending targets, submitted results, RobotStatus,
+  model/profile, real-time values, recovery, accessibility, and D0-D5 implementation checkpoints.
+- Reconciled the navigation, migration, and detailed frontend designs with the focused Dock design.
+- Added the focused design to `docs/rules.md` as required reading before Robot Dock or shared command
+  ownership changes.
+
+### Status
+
+- The requested Robot Dock behavior is design-complete. No runtime source, dependency, Pilot
+  contract, provider integration, or hardware behavior changed.
+- Robot-scoped URLs remain authoritative; the saved selection is only a convenience for Home and
+  other global pages and cannot override a direct URL.
+
+### Validation
+
+- Documentation was reviewed for ownership, route, command, and state-isolation consistency.
+- Automated build and tests were not run because this was a documentation-only task and the user
+  did not request execution.
+
+### Next goals
+
+- Implement D1 selection/route helpers, then D2 floating expanded/collapsed presentation.
+- Relocate shared commands only at D3 after the Dock selection and visual surface are accepted.
+- Complete D4-D5 switch isolation and browser/accessibility acceptance without physical motion.
+
+## 2026-08-08 - Device robot-scoped navigation page
+
+### Changes
+
+- Added the read-only `/robots/:control_id/device` route and placed the `Device` navigation item
+  immediately above `Jogging` in the Robot section.
+- Added a Device page that shows the selected Control's public RobotStatus connection, robot type,
+  DOF, servo, brake, and freshness fields without issuing robot operations.
+
+### Status
+
+- Device navigation remains route-scoped: without an explicit Control it returns to Home instead of
+  selecting a robot implicitly. The existing Operating and Jogging worktree changes remain intact.
+
+### Validation
+
+- Automated checks were not run because this task did not explicitly request test or build execution.
+
+### Next goals
+
+- Add device-specific details only when Pilot publishes them through a public contract.
+
+## 2026-08-07 - Operating robot-scoped page
+
+### Changes
+
+- Added the robot-scoped `/robots/:control_id/operating` route and an `Operating` navigation item
+  directly below `Jogging`.
+- Added an Operating workspace that reuses the existing Pilot-only hold-to-run controls for the
+  route Control while preserving Jogging's visualization workspace.
+
+### Status
+
+- The Operating page is available only for an explicit route Control; without one, shell navigation
+  continues to lead to Home rather than choosing a Control implicitly.
+
+### Validation
+
+- Automated checks were not run because this task did not explicitly request test or build
+  execution.
+
+### Next goals
+
+- Add operating-specific presentation only when an approved ownership or operation-history contract
+  exists.
+
 ## 2026-08-07 - Detailed frontend architecture and phased implementation design
 
 ### Changes

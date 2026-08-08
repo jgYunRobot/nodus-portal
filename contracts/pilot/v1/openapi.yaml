@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Nodus Pilot Public API",
-    "version": "1.0.2"
+    "version": "1.0.3"
   },
   "paths": {
     "/api/v1/health": {
@@ -3008,9 +3008,11 @@
       },
       "RobotFrameResult": {
         "type": "object",
+        "description": "A Control frame with its pose expressed in world coordinates and its parent link identity.",
         "additionalProperties": false,
         "required": [
           "id",
+          "parent_link_id",
           "name",
           "x",
           "y",
@@ -3022,6 +3024,9 @@
         ],
         "properties": {
           "id": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "parent_link_id": {
             "$ref": "#/components/schemas/NonNegativeInt64"
           },
           "name": {

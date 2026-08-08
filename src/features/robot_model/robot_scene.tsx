@@ -1,8 +1,9 @@
 import { Bounds, Grid, OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { useEffect, useState } from "react";
-import type { Object3D } from "three";
+import { Matrix4, Quaternion, type Object3D } from "three";
 import URDFLoader, { type URDFRobot } from "urdf-loader";
+import { createRobotFrameAxes, type RobotFramePose } from "./frame_axes";
 import type { RobotProfile } from "./robot_profile";
 import styles from "./robot_scene.module.css";
 
@@ -13,10 +14,12 @@ const default_scene_camera_target: [number, number, number] = [
   0.0036, 0.3785, -0.0372
 ];
 const robot_scene_rotation: [number, number, number] = [-Math.PI / 2, 0, 0];
+const frame_axis_length_m = 0.1;
 
 interface RobotSceneProps {
   profile: RobotProfile;
   joint_positions: readonly number[] | null;
+  frames: readonly RobotFramePose[];
 }
 
 interface LoadedRobotProps {
@@ -81,7 +84,11 @@ function LoadedRobot({ profile, joint_positions, on_error }: LoadedRobotProps) {
   return robot === null ? null : <primitive object={robot} />;
 }
 
-export function RobotScene({ profile, joint_positions }: RobotSceneProps) {
+export function RobotScene({
+  profile,
+  joint_positions,
+  frames
+}: RobotSceneProps) {
   const [load_error, setLoadError] = useState<string | null>(null);
 
   return (
@@ -107,6 +114,7 @@ export function RobotScene({ profile, joint_positions }: RobotSceneProps) {
               joint_positions={joint_positions}
               on_error={setLoadError}
             />
+            <RobotFrameAxes frames={frames} />
           </group>
         </Bounds>
         <OrbitControls
@@ -122,4 +130,33 @@ export function RobotScene({ profile, joint_positions }: RobotSceneProps) {
       )}
     </div>
   );
+}
+
+function RobotFrameAxes({ frames }: { frames: readonly RobotFramePose[] }) {
+  return createRobotFrameAxes(frames).map((frame) => {
+    const rotation_matrix = new Matrix4().set(
+      frame.rotation[0][0],
+      frame.rotation[0][1],
+      frame.rotation[0][2],
+      0,
+      frame.rotation[1][0],
+      frame.rotation[1][1],
+      frame.rotation[1][2],
+      0,
+      frame.rotation[2][0],
+      frame.rotation[2][1],
+      frame.rotation[2][2],
+      0,
+      0,
+      0,
+      0,
+      1
+    );
+    const rotation = new Quaternion().setFromRotationMatrix(rotation_matrix);
+    return (
+      <group key={frame.id} position={frame.position} quaternion={rotation}>
+        <axesHelper args={[frame_axis_length_m]} />
+      </group>
+    );
+  });
 }

@@ -7,6 +7,9 @@
 - Record migration constraints and the exact source inventory before copying files from `pa_control/apps/web_ui`.
 - Keep Portal integration designs based on published Pilot contracts and direct provider endpoints; do not design against Pilot internals or Control IPC.
 - Before changing the application shell, routes, sidebar, Home robot cards, Jogging page ownership, or multi-robot status subscriptions, read and follow `docs/designs/src_nodus_portal_navigation_and_multi_robot_home_design.md`.
+- Before changing persistent robot selection, the floating Robot Dock, shared Servo/Fault/Brake
+  command ownership, or robot-switch handoff, read and follow
+  `docs/designs/src_shell_robot_dock_design.md`.
 - Before selecting frontend dependencies, creating the application layout, implementing themes, migrating `pa_control/apps/web_ui`, or starting a frontend checkpoint, read and follow `docs/designs/src_nodus_portal_frontend_detailed_architecture_and_phased_implementation_design.md` together with its two upstream designs.
 
 ## Current research deployment decision

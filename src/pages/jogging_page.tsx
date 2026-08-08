@@ -85,6 +85,7 @@ function JoggingWorkspace({ control_id }: { control_id: string }) {
                 }
               >
                 <RobotScene
+                  frames={realtime_robot_state?.frames ?? []}
                   profile={profile}
                   joint_positions={visualization.joint_positions}
                 />

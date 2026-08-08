@@ -13,10 +13,11 @@ const root_element = document.getElementById("root");
 if (root_element === null) {
   throw new Error("Portal root element is missing.");
 }
+const root = createRoot(root_element);
 
 async function startPortal(): Promise<void> {
   configurePortalConfig(await loadPortalConfig());
-  createRoot(root_element).render(
+  root.render(
     <StrictMode>
       <ThemeProvider>
         <PortalProviders>
@@ -30,7 +31,7 @@ async function startPortal(): Promise<void> {
 void startPortal().catch((error: unknown) => {
   const message =
     error instanceof Error ? error.message : "Portal configuration failed.";
-  createRoot(root_element).render(
+  root.render(
     <main role="alert">
       <h1>Portal configuration unavailable</h1>
       <p>{message}</p>

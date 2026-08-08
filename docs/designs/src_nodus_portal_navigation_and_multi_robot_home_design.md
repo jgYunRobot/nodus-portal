@@ -3,11 +3,13 @@
 ## 1. Document status
 
 - Date: 2026-08-07
+- Updated: 2026-08-08 for the approved persistent Robot Dock
 - Status: draft for review; the left navigation, Home page, and current-page-to-Jogging decisions
   are user-approved constraints.
 - Related design: `src_nodus_portal_apps_web_ui_migration_design.md`
 - Detailed implementation design:
   `src_nodus_portal_frontend_detailed_architecture_and_phased_implementation_design.md`
+- Focused Robot Dock design: `src_shell_robot_dock_design.md`
 - Scope: Portal application shell, client-side pages, robot overview, Control selection, and
   multi-robot UI data flow.
 
@@ -26,6 +28,10 @@ This document separates Portal navigation and multi-robot presentation from the 
   the initial deployment has only one configured Control.
 - Future Camera, Policy, recording, diagnostics, and settings pages extend the same shell rather
   than expanding Jogging into another all-in-one page.
+- A persistent bottom-right Robot Dock provides selected-robot context and the shared Servo, Fault
+  Reset, and Brake commands on every page.
+- The Dock floats over the page without reserving layout space, is only slightly transparent, and
+  collapses toward its fixed right edge until only robot selection remains.
 
 ## 3. Application shell
 
@@ -42,7 +48,7 @@ area.
 | [Jogging]            |                                                       |
 |                      |        Home card grid or Jogging workspace            |
 | Future sections      |                                                       |
-|                      |                                                       |
+|                      |                   [floating Robot Dock]               |
 | [collapse]           |                                                       |
 +----------------------+-------------------------------------------------------+
 ```
@@ -52,6 +58,7 @@ The shell owns:
 - the left navigation panel and collapsed/expanded state;
 - the active route and browser history integration;
 - the selected robot identity for robot-scoped navigation;
+- the persistent Robot Dock and last explicit robot-selection preference;
 - global Pilot connection and degraded/offline presentation;
 - global status/discovery/session services that must survive page changes; and
 - the main route outlet.
@@ -84,7 +91,9 @@ route contract defined here does not depend on one particular library.
 | --- | --- | --- |
 | `/` | global | redirect to `/home` |
 | `/home` | global | multi-robot summary card grid |
+| `/robots/:control_id/device` | one Control | read-only Control device/status summary |
 | `/robots/:control_id/jogging` | one Control | migrated robot operation/Jogging workspace |
+| `/robots/:control_id/operating` | one Control | robot operation controls without visualization |
 | unmatched route | global | Portal not-found page with Home action |
 
 Future routes may include:
@@ -100,13 +109,16 @@ implemented pages.
 
 ### 4.3 Robot-scoped selection
 
-The URL path parameter is the canonical selected `control_id` for a robot-scoped page. A separate
-mutable global selection must not override a direct URL.
+The URL path parameter is the canonical selected `control_id` for a robot-scoped page. The Robot
+Dock stores the last explicit selection only as a presentation preference and must not override a
+direct URL.
 
-- Selecting `Open Jogging` on a Home card navigates to that card's explicit Control ID.
-- A robot selector is shown in the shell header or navigation Robot section while a robot-scoped
-  page is active.
-- Changing the selector replaces only the Control ID portion of the current robot-scoped route.
+- Selecting non-interactive space on a Home card updates the Dock selection without leaving Home.
+- Selecting `Open Jogging` on a Home card updates the preference and navigates to that card's
+  explicit Control ID.
+- The Robot Dock selector is visible on global and robot-scoped pages.
+- Changing the selector on a robot-scoped page replaces only the Control ID portion of the current
+  Device, Jogging, or Operating route.
 - The last selected Control may be stored as a presentation convenience, but the URL remains
   authoritative.
 - If a URL references a Control no longer discoverable, the page shows a not-found/unavailable state
@@ -120,16 +132,16 @@ The initial expanded panel contains:
 
 1. Portal identity/logo area;
 2. `Home` navigation item;
-3. a `Robot` section with `Jogging`;
+3. a `Robot` section with `Device`, `Jogging`, and `Operating`;
 4. optional selected-robot summary on robot-scoped routes; and
 5. a collapse/expand control.
 
-`Home` is global. `Jogging` is robot-scoped:
+`Home` is global. `Device`, `Jogging`, and `Operating` are robot-scoped:
 
-- when a Control is already selected by the active route or saved presentation preference, the item
-  navigates directly to that Control's Jogging route;
-- when no Control is selected, activating Jogging opens the robot-selection surface or navigates to
-  Home with robot selection emphasized; and
+- when a Control is already selected by the active route or saved presentation preference, each item
+  navigates directly to that Control's corresponding route;
+- when no Control is selected, activating a robot-scoped item focuses or expands the Robot Dock
+  selector; and
 - the item must not guess an arbitrary first Control as an operation target.
 
 ### 5.2 Active and connection state
@@ -189,6 +201,7 @@ provider association, or command authority from unrelated component metadata.
 - Card updates use authoritative Pilot status and never optimistic command state.
 - Clicking non-interactive card space may select the card, but the explicit `Open Jogging` action
   remains keyboard-visible and accessible.
+- Card selection updates the Dock preference and selected styling without navigating away from Home.
 - Card state is keyed by `control_id`, not array order.
 
 ## 7. Robot discovery adapter
@@ -260,7 +273,8 @@ Jogging contains:
 - selected robot identity and current connection/status summary;
 - the URDF/Three.js robot scene;
 - joint and task telemetry;
-- servo, brake, reset fault, and reset origin controls;
+- reset origin and Jogging-owned lifecycle controls; shared Servo, Brake, and Fault Reset controls
+  are owned by the persistent Robot Dock;
 - continuous joint jog, task jog, Home, and Ready hold-to-run controls;
 - operation request/result presentation; and
 - route-relevant Camera overlay controls when the selected Camera is explicitly associated with the
@@ -289,6 +303,10 @@ The hold-to-run algorithm and authoritative-state rules are owned by
 - Keep already submitted operation results associated with their original `control_id`.
 - Release page-only Camera/point-cloud resources.
 - Preserve global Pilot connection, robot directory, and Home card summaries.
+- A Robot Dock selection change preserves the current robot-scoped page kind and replaces only its
+  route Control ID.
+- The new page instance does not display the prior Control's status, model pose, operation feedback,
+  or task-frame selection while waiting for its own data.
 
 ## 10. State ownership
 
@@ -298,7 +316,9 @@ The hold-to-run algorithm and authoritative-state rules are owned by
 | sidebar collapsed state | shell presentation store | local preference |
 | robot directory | global Pilot data service | Pilot server instance |
 | per-Control latest status | global status store keyed by Control ID | connection generation |
-| selected Control | route parameter | robot-scoped page |
+| route Control | route parameter | robot-scoped page and browser history |
+| preferred Control | Robot Dock presentation store | versioned local preference |
+| Robot Dock mode | Robot Dock presentation store | versioned local preference |
 | hold intent/projected target | Jogging operation session keyed by Control ID | pointer hold/page instance |
 | pending/submitted operation | operation store keyed by request and Control ID | bounded application history |
 | Home card render snapshot | Home view model | page instance, derived from global store |
@@ -314,12 +334,15 @@ operation sessions remain isolated.
 - The left panel is fixed and may be collapsed to an icon rail.
 - The main page uses the remaining width.
 - Home uses a multi-column card grid.
+- The Robot Dock floats at bottom-right, grows leftward from a fixed right edge, and reserves no
+  page-layout space.
 
 ### Tablet
 
 - The left panel defaults to a narrower rail or collapsible panel.
 - Home reduces card columns based on available content width.
 - Jogging retains touch-sized hold controls.
+- The Robot Dock keeps a bounded width and may use compact command labels.
 
 ### Phone
 
@@ -327,6 +350,8 @@ operation sessions remain isolated.
 - Selecting a route closes the drawer and focuses the page heading.
 - Home cards use one column.
 - Jogging may stack dense panels; it is not required to preserve the desktop arrangement unchanged.
+- The Robot Dock defaults to its collapsed selector-only presentation on first use and may expand
+  into a compact overlay without becoming a page row.
 
 Responsive mode changes presentation only. It does not create a separate mobile route or duplicate
 business logic.
@@ -355,6 +380,10 @@ src/
     portal_router
     portal_shell
     navigation_registry
+  shell/
+    robot_dock
+    robot_dock_state
+    robot_route_selection
   pages/
     home/
       home_page
@@ -409,6 +438,16 @@ and file names follow lowercase `snake_case`.
   selected-Jogging detail consumption.
 - Prove one slow/unavailable robot does not block other cards or the active Jogging page.
 
+### Checkpoint N5: persistent Robot Dock
+
+- Add route-aware preferred robot selection and the fixed bottom-right overlay.
+- Add right-anchored expanded/collapsed modes; collapsed mode retains only robot selection.
+- Move Servo, Fault Reset, and Brake presentation into the Dock while reusing the existing public
+  operation runtime.
+- Prove Control switching cancels page holds and isolates model, telemetry, command, and result state.
+
+Detailed ordering and acceptance are defined by `src_shell_robot_dock_design.md`.
+
 Later Camera, Policy, recorder, diagnostics, and settings pages receive separate focused designs and
 checkpoints.
 
@@ -421,7 +460,10 @@ checkpoints.
 - one/many/empty/unavailable robot directories render deterministically;
 - card state remains keyed to the correct Control across reorder and updates;
 - clicking one card opens only that Control's Jogging page;
+- selecting Home card space updates the Dock without leaving Home;
+- changing the Dock selector preserves the Device/Jogging/Operating page kind;
 - route robot switching resets robot-specific operation and hold state;
+- collapsed Dock exposes no command buttons, and Dock mode changes do not reflow the main content;
 - Home card rendering does not mount per-robot Three.js scenes;
 - multiplexed samples preserve independent stream generation and sequence handling;
 - one robot's gap or failure does not invalidate unrelated cards;

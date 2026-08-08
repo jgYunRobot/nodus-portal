@@ -25,6 +25,10 @@ const mocks = vi.hoisted(() => ({
   }
 }));
 
+function isDisabled(element: HTMLElement): boolean {
+  return element.hasAttribute("disabled");
+}
+
 vi.mock("../../api/pilot/use_control_status", () => ({
   useControlStatus: () => ({
     control_id: "control-a",
@@ -76,6 +80,7 @@ vi.mock("../../api/pilot/use_control_status", () => ({
           frames: [
             {
               id: 0,
+              parent_link_id: 0,
               name: "Base",
               x: 0.11,
               y: 0,
@@ -87,6 +92,7 @@ vi.mock("../../api/pilot/use_control_status", () => ({
             },
             {
               id: 1,
+              parent_link_id: 6,
               name: "Tool",
               x: 0,
               y: 0,
@@ -153,7 +159,9 @@ describe("HoldControls", () => {
     expect(screen.getByRole("button", { name: "Task Rz −" })).not.toBeNull();
     expect(
       (screen.getByLabelText("Task jog frame") as HTMLSelectElement).value
-    ).toBe("Base");
+    ).toBe("Tool");
+    expect(screen.queryByRole("option", { name: "Base" })).toBeNull();
+    expect(screen.getByRole("option", { name: "Tool" })).not.toBeNull();
   });
 
   it("uses the selected speed/frame and cancels on global keyboard release", () => {
@@ -180,32 +188,6 @@ describe("HoldControls", () => {
     expect(mocks.cancel).toHaveBeenCalledWith("control-a");
   });
 
-  it("submits robot commands through the selected Control scheduler", () => {
-    render(<HoldControls control_id="control-a" />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Servo Off" }));
-    expect(mocks.schedule).toHaveBeenLastCalledWith({
-      operation: "control.set_servo_state",
-      control_id: "control-a",
-      enabled: false
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Fault Reset" }));
-    expect(mocks.schedule).toHaveBeenLastCalledWith({
-      operation: "control.reset_fault",
-      control_id: "control-a"
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Engage Brake" }));
-    expect(mocks.schedule).toHaveBeenLastCalledWith({
-      operation: "control.set_brake_state",
-      control_id: "control-a",
-      released: false
-    });
-    expect(mocks.cancel).toHaveBeenCalledTimes(3);
-    expect(mocks.resume).toHaveBeenCalledTimes(3);
-  });
-
   it("locks conflicting controls for the complete hold lifetime", () => {
     mocks.current_intent = {
       kind: "joint",
@@ -216,39 +198,48 @@ describe("HoldControls", () => {
 
     const view = render(<HoldControls control_id="control-a" />);
 
-    expect(screen.getByRole("button", { name: "Joint 1 +" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Joint 1 −" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Joint 2 +" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Home" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Ready" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Servo Off" })).toBeDisabled();
-    expect(screen.getByRole("tab", { name: "Task" })).toBeDisabled();
-    expect(screen.getByLabelText("Jog speed")).toBeDisabled();
+    expect(isDisabled(screen.getByRole("button", { name: "Joint 1 +" }))).toBe(
+      false
+    );
+    expect(isDisabled(screen.getByRole("button", { name: "Joint 1 −" }))).toBe(
+      true
+    );
+    expect(isDisabled(screen.getByRole("button", { name: "Joint 2 +" }))).toBe(
+      true
+    );
+    expect(isDisabled(screen.getByRole("button", { name: "Home" }))).toBe(true);
+    expect(isDisabled(screen.getByRole("button", { name: "Ready" }))).toBe(
+      true
+    );
+    expect(isDisabled(screen.getByRole("tab", { name: "Task" }))).toBe(true);
+    expect(isDisabled(screen.getByLabelText("Jog speed"))).toBe(true);
 
     mocks.current_intent = null;
     view.rerender(<HoldControls control_id="control-a" />);
 
-    expect(screen.getByRole("button", { name: "Joint 1 −" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Home" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Servo Off" })).toBeEnabled();
-    expect(screen.getByRole("tab", { name: "Task" })).toBeEnabled();
-    expect(screen.getByLabelText("Jog speed")).toBeEnabled();
+    expect(isDisabled(screen.getByRole("button", { name: "Joint 1 −" }))).toBe(
+      false
+    );
+    expect(isDisabled(screen.getByRole("button", { name: "Home" }))).toBe(
+      false
+    );
+    expect(isDisabled(screen.getByRole("tab", { name: "Task" }))).toBe(false);
+    expect(isDisabled(screen.getByLabelText("Jog speed"))).toBe(false);
   });
 
   it("shows operation and recovery information in one stable status panel", () => {
-    mocks.operation_snapshot.presentation = {
-      state: "written_unconfirmed",
-      message: "Control frame was written without execution acknowledgement.",
-      terminal: false
-    };
     mocks.session_snapshot.phase = "recovering";
     mocks.session_snapshot.last_error =
       "Pilot session recovery is in progress.";
 
     render(<HoldControls control_id="control-a" />);
 
-    const status_panel = screen.getByRole("status");
-    expect(status_panel.textContent).toContain("written_unconfirmed");
+    const status_panel = screen.getAllByRole("status").at(-1);
+    if (status_panel === undefined)
+      throw new Error("Operation status panel is unavailable.");
+    expect(status_panel.textContent).toContain(
+      "Hold-to-run controls are available."
+    );
     expect(status_panel.textContent).toContain("recovery:");
     expect(status_panel.textContent).toContain(
       "Pilot session recovery is in progress."

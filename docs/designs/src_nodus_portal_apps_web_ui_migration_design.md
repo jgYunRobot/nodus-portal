@@ -8,6 +8,7 @@
 - Source application: `pa_control/apps/web_ui`
 - Target application: `nodus-portal`
 - Focused navigation design: `src_nodus_portal_navigation_and_multi_robot_home_design.md`
+- Focused Robot Dock design: `src_shell_robot_dock_design.md`
 - Detailed frontend implementation design:
   `src_nodus_portal_frontend_detailed_architecture_and_phased_implementation_design.md`
 - Control-plane dependency: published `nodus-pilot` HTTP, SSE, endpoint-directory, operation, and
@@ -135,6 +136,9 @@ directly from explicitly selected endpoints discovered through Pilot.
 The existing single-page workspace becomes the robot-scoped `Jogging` page. The persistent shell,
 left navigation, default Home page, multi-robot cards, routes, and subscription strategy are owned
 by `src_nodus_portal_navigation_and_multi_robot_home_design.md`.
+Shared Servo, Fault Reset, and Brake presentation plus persistent robot selection are owned by the
+floating Robot Dock. Joint/task jog, Home/Ready, reset origin, task-frame, and speed controls remain
+inside their robot-scoped page.
 
 ### 5.2 Retain the user experience but replace the integration
 
@@ -144,7 +148,8 @@ by `src_nodus_portal_navigation_and_multi_robot_home_design.md`.
 - the simulated Connect Pilot action becomes a real Portal component session and heartbeat owner
   when command-capable mode is active;
 - servo, brake, reset fault, reset origin, and motion commands become typed
-  `POST /api/v1/operations` requests;
+  `POST /api/v1/operations` requests; the Robot Dock owns Servo/Brake/Fault Reset presentation while
+  robot-scoped pages own reset origin and motion;
 - Camera registry polling becomes Pilot endpoint-directory discovery followed by direct provider
   connections;
 - Policy presentation remains reusable, but its client becomes a future discovered Policy provider
@@ -348,6 +353,7 @@ same public Pilot operation path as other command sources.
 ```text
 src/
   app/                        router, persistent shell and navigation registry
+  shell/                      floating Robot Dock, route-aware selection and shell presentation
   pages/home/                 multi-robot overview and robot cards
   pages/jogging/              migrated robot operation workspace
   api/pilot/                  Pilot public HTTP/SSE clients and session owner
@@ -394,9 +400,12 @@ must not depend on PA-CPU response types.
 ### Checkpoint 4: Portal controller integration
 
 - Add Portal component session ownership and typed operation requests.
-- Add servo, brake, reset, joint/task jog, Home, and Ready controls.
+- Add Servo, Brake, and Fault Reset to the persistent Robot Dock; keep reset origin, joint/task jog,
+  Home, and Ready in the robot-scoped workspace.
 - Implement the status-reconciled hold-to-run engine without making Phase B a checkpoint
   dependency.
+- Preserve the current page kind while switching robots and cancel the prior Control's local hold
+  before route replacement.
 
 ### Checkpoint 5: external Policy and recording providers
 

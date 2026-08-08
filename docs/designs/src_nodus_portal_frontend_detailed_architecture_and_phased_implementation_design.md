@@ -6,6 +6,7 @@
 - Status: draft for review; no implementation is authorized by this document alone.
 - Upstream migration design: `src_nodus_portal_apps_web_ui_migration_design.md`
 - Upstream navigation design: `src_nodus_portal_navigation_and_multi_robot_home_design.md`
+- Focused Robot Dock design: `src_shell_robot_dock_design.md`
 - Visual reference: [Sphere UI Charts UIKIT](https://dribbble.com/shots/23224018-Sphere-UI-Charts-UIKIT)
 - Default visual mode: black theme.
 - Source application reference: `/home/jgy/workspace/ai_work/pa_control/apps/web_ui`.
@@ -29,6 +30,8 @@ The implementation must:
 - default to a near-black visual system inspired by the layout language of the Sphere reference;
 - support black, light, and system theme preferences without a first-paint theme flash;
 - implement a route-based left navigation shell, multi-robot Home, and robot-scoped Jogging page;
+- provide a slightly translucent, bottom-right floating Robot Dock for persistent selection and
+  shared Servo, Fault Reset, and Brake commands;
 - consume only published Pilot HTTP, SSE, endpoint-directory, operation, and stream contracts;
 - obtain Camera, Policy, and other high-bandwidth payloads directly from their owning providers;
 - preserve the valuable robot model, jog, Camera, and Policy domain knowledge from the existing
@@ -77,6 +80,8 @@ The navigation design supplies the product shell and initial route contract:
 - the left navigation persists across page changes;
 - `control_id` is the route identity and never a display-label substitute; and
 - Home uses bounded multi-Control status while Jogging may use the selected robot's detailed rate.
+- The focused Robot Dock design defines the shell-wide selection preference, route-preserving robot
+  switch transaction, overlay presentation, and shared command ownership.
 
 ### 3.3 Visual-reference interpretation
 
@@ -258,9 +263,14 @@ nodus-portal/
 │   ├── shell/
 │   │   ├── portal_shell.tsx
 │   │   ├── portal_sidebar.tsx
-│   │   └── portal_header.tsx
+│   │   ├── portal_header.tsx
+│   │   ├── robot_dock.tsx
+│   │   ├── robot_dock.module.css
+│   │   ├── robot_dock_state.ts
+│   │   └── robot_route_selection.ts
 │   ├── stores/
 │   │   ├── robot_directory.ts
+│   │   ├── robot_selection_store.ts
 │   │   └── theme_store.ts
 │   ├── styles/
 │   │   ├── layers.css
@@ -327,7 +337,9 @@ Initial route objects are:
     ├── index                 -> redirect /home
     ├── home                  -> HomePage
     ├── robots/:control_id/
-    │   └── jogging           -> JoggingPage
+    │   ├── device            -> DevicePage
+    │   ├── jogging           -> JoggingPage
+    │   └── operating         -> OperatingPage
     └── *                     -> NotFoundPage
 ```
 
@@ -370,6 +382,11 @@ Tokens are split into three levels:
 1. primitive values: palette, spacing, radii, type scale, shadow, and duration;
 2. semantic values: canvas, surface, text, border, action, focus, success, warning, and danger; and
 3. component values: sidebar width, card radius, control height, chart grid, and robot-scene surface.
+
+Robot Dock component tokens include nearly opaque theme surfaces, fixed height, expanded/collapsed
+width bounds, viewport insets, border, shadow, and overlay z-index. The black theme targets
+approximately 94% surface opacity and the light theme approximately 96%; optional backdrop blur is
+progressive enhancement rather than a legibility dependency.
 
 Feature modules consume semantic or component tokens, never raw theme palette names. For example,
 `--color-status-danger` is valid while `--red-500` is not a feature-level dependency.
@@ -445,6 +462,12 @@ Below the responsive breakpoint the sidebar becomes a focus-managed drawer. The 
 selected robot, Pilot connection summary, and high-priority fault indicator remain in the header.
 Main content owns independent scrolling; navigation does not jump when a card updates.
 
+The persistent Robot Dock is fixed above the bottom-right page content and is not a shell grid row.
+No Dock-sized bottom padding, spacer, or content-height subtraction is added. Its right edge remains
+fixed and its expanded command surface grows leftward. Collapsing it leaves only robot selection and
+the expand affordance; hidden commands are not focusable. The Dock therefore changes neither the
+main-content dimensions nor scroll position.
+
 ### 7.7 Home composition
 
 Home uses a responsive `repeat(auto-fit, minmax(280px, 1fr))` card grid. Each robot card presents:
@@ -455,6 +478,9 @@ Home uses a responsive `repeat(auto-fit, minmax(280px, 1fr))` card grid. Each ro
 - last accepted update time;
 - an optional small, non-authoritative visual summary only when data exists; and
 - one explicit `Open Jogging` action.
+
+Clicking non-interactive card space may update the Dock's preferred Control while Home remains the
+active route. The explicit action still opens that exact Control and never relies on array order.
 
 Cards use large quiet surfaces and clear vertical rhythm. Offline, never-seen, stale, malformed,
 and healthy states have dedicated variants. Home does not render the URDF scene for every robot.
@@ -467,8 +493,13 @@ single-page grid. The first desktop layout contains:
 - a large robot-scene card;
 - an operation/status summary strip;
 - joint/task jog cards;
-- command and lifecycle cards; and
+- reset-origin and Jogging-specific lifecycle cards; and
 - a bounded event/activity panel.
+
+Servo On/Off, Fault Reset, and Brake Release/Engage are rendered once by the persistent Robot Dock,
+not duplicated inside Jogging. Changing the Dock selector replaces only the route Control ID, so the
+Jogging workspace remounts its model/profile, RobotStatus detail, real-time values, and operation
+session for the destination Control.
 
 Controls remain visually stable while values update. A current command, pending acknowledgement,
 degraded stream, and Control-reported state are distinct visual states. Camera and Policy panels
@@ -621,7 +652,7 @@ buttons.
 | `src/lib/robot_model*.ts` | Retain domain parsing/loading; remove sibling paths | Portal-owned robot assets and repository |
 | `src/lib/joint_state.ts` | Retain tested unit/target knowledge; use public types | `features/robot_status` and `features/jogging/domain` |
 | `src/lib/robot_operation_session.ts` | Split; remove bridge and stale-render ownership | adapter, projector, hold session, scheduler, operation client |
-| jog/task/command panels | Recompose into accessible feature cards | `features/jogging/components` |
+| jog/task/command panels | Split shared Servo/Fault/Brake into Robot Dock; keep hold and page-specific actions in Jogging | `shell/robot_dock` and `features/jogging/components` |
 | Camera components/config | Defer; retain renderer/config knowledge | `features/camera` direct provider adapter |
 | Policy components/contracts | Defer; retain presentation states only | `features/policy` public provider contract |
 | `src/lib/pa_cpu_client.ts` | Exclude | no Portal equivalent |
@@ -644,6 +675,8 @@ read-only throughout.
 - dialogs/drawers trap and restore focus through tested primitives;
 - color is never the sole status signal;
 - icon-only controls have stable accessible names;
+- the Robot Dock selector and expand/collapse control remain keyboard reachable in both modes;
+- collapsed Dock command controls are unmounted or inert rather than visually hidden only;
 - live regions announce connection/fault changes without narrating every telemetry sample;
 - all hold controls support pointer and keyboard release semantics; and
 - reduced motion removes nonessential animation.
@@ -838,6 +871,30 @@ Later checkpoints do not begin by assumption when an earlier acceptance conditio
 - no click-once fixed-distance replacement appears; and
 - public Pilot black-box operation fixtures pass.
 
+### F8D - Persistent Robot Dock retrofit
+
+**Work**
+
+- add versioned preferred-Control and Dock expanded/collapsed presentation state;
+- implement effective route/preference selection and page-kind-preserving robot navigation;
+- add the fixed bottom-right, slightly translucent overlay without page-layout reservation;
+- move Servo On/Off, Fault Reset, and Brake Release/Engage into the Dock without creating another
+  Pilot component session or operation queue;
+- cancel local holds and drop unsent targets before Control replacement; and
+- remount robot-scoped model, telemetry, and operation state by destination `control_id`.
+
+**Validation and exit**
+
+- Home selection no longer requires entering Jogging and sidebar routes use the selected Control;
+- Jogging robot changes update URL, model/profile, status, real-time values, and operation ownership
+  together;
+- no prior-Control value or result is presented under the destination identity;
+- collapsed mode exposes only robot selection and the expand control;
+- expand/collapse causes no main-content reflow or scroll jump;
+- black/light surfaces remain legible over representative page content; and
+- direct URL, reload, back/forward, stale/offline selection, hold cancellation, and command targeting
+  pass without physical hardware motion.
+
 ### F9 - Camera integration
 
 **Work**
@@ -900,13 +957,16 @@ F0 Design approval
                      ├─ F6 Home
                      └─ F7 Jogging visualization
                          └─ F8 Operations and hold-to-run
-                             ├─ F9 Camera
-                             └─ F10 Policy and recording
-                                 └─ F11 Acceptance
+                             └─ F8D Persistent Robot Dock
+                                 ├─ F9 Camera
+                                 ├─ F10 Policy and recording
+                                 └─ F11 Acceptance after F9/F10
 ```
 
 F6 and the non-mutating part of F7 may proceed in parallel only after F5 is accepted and only when
 their files and owners do not overlap. F8 never starts before the selected-status path is proven.
+F8D reuses the accepted F8 operation runtime and does not begin by creating a second session or
+scheduler.
 Provider checkpoints do not block the core Home/Jogging release unless the user explicitly makes
 them release requirements.
 

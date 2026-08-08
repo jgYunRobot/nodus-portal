@@ -4,6 +4,17 @@ import { HoldSession } from "./hold_session";
 import { OperationScheduler } from "./operation_scheduler";
 import type { OperationTarget } from "./pilot_operation_client";
 
+function getMotionTarget(
+  target: OperationTarget | undefined
+): readonly number[] | undefined {
+  if (
+    target?.operation !== "control.move_joint_online" &&
+    target?.operation !== "control.move_task_online"
+  )
+    return undefined;
+  return target.target_position;
+}
+
 function status(generation = 1, fresh = true): ControlStatusSnapshot {
   return {
     control_id: "control-a",
@@ -50,6 +61,7 @@ function status(generation = 1, fresh = true): ControlStatusSnapshot {
           frames: [
             {
               id: 0,
+              parent_link_id: 6,
               name: "Base",
               x: 0,
               y: 0,
@@ -98,7 +110,7 @@ describe("HoldSession", () => {
     now = 50;
     tick?.();
     await Promise.resolve();
-    expect(sent.at(-1)?.target_position[0]).toBeGreaterThan(0);
+    expect(getMotionTarget(sent.at(-1))?.[0]).toBeGreaterThan(0);
 
     hold.start({
       kind: "task",
@@ -114,8 +126,8 @@ describe("HoldSession", () => {
     expect(sent.at(-1)).toMatchObject({
       operation: "control.move_task_online"
     });
-    expect(sent.at(-1)?.target_position[0]).toBeGreaterThan(0);
-    expect(sent.at(-1)?.target_position).toHaveLength(7);
+    expect(getMotionTarget(sent.at(-1))?.[0]).toBeGreaterThan(0);
+    expect(getMotionTarget(sent.at(-1))).toHaveLength(7);
 
     hold.start({
       kind: "task",
@@ -128,9 +140,9 @@ describe("HoldSession", () => {
     now = 150;
     tick?.();
     await Promise.resolve();
-    expect(sent.at(-1)?.target_position).toHaveLength(7);
-    expect(sent.at(-1)?.target_position.slice(3, 6)).toEqual([1, 0, 0]);
-    expect(sent.at(-1)?.target_position[6]).toBeGreaterThan(0);
+    expect(getMotionTarget(sent.at(-1))).toHaveLength(7);
+    expect(getMotionTarget(sent.at(-1))?.slice(3, 6)).toEqual([1, 0, 0]);
+    expect(getMotionTarget(sent.at(-1))?.[6]).toBeGreaterThan(0);
   });
 
   it("keeps Home and Ready as progressive holds and stops on generation change", async () => {
@@ -160,11 +172,11 @@ describe("HoldSession", () => {
     now = 50;
     tick?.();
     await Promise.resolve();
-    const first_ready = sent.at(-1)?.target_position[2] ?? 0;
+    const first_ready = getMotionTarget(sent.at(-1))?.[2] ?? 0;
     now = 100;
     tick?.();
     await Promise.resolve();
-    expect(sent.at(-1)?.target_position[2]).toBeGreaterThan(first_ready);
+    expect(getMotionTarget(sent.at(-1))?.[2]).toBeGreaterThan(first_ready);
 
     hold.start({ kind: "home", speed_percent: 100 });
     await Promise.resolve();

@@ -55,6 +55,10 @@
   background: var(--color-surface-elevated);
   color: var(--color-accent-hover);
 }
+.navigation a[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
 .navigation p {
   color: var(--color-text-muted);
   font-size: 0.75rem;

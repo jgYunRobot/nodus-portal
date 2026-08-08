@@ -17,6 +17,7 @@
   --color-warning: #ffb84d;
   --color-danger: #ff626d;
   --color-focus: #91aeff;
+  --color-dock-surface: rgb(23 27 35 / 0.94);
 }
 
 :root[data-theme="light"] {
@@ -37,4 +38,5 @@
   --color-warning: #a85d00;
   --color-danger: #c83442;
   --color-focus: #1c57e8;
+  --color-dock-surface: rgb(255 255 255 / 0.96);
 }
