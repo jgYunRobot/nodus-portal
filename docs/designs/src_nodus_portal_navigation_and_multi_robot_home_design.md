@@ -84,6 +84,7 @@ route contract defined here does not depend on one particular library.
 | --- | --- | --- |
 | `/` | global | redirect to `/home` |
 | `/home` | global | multi-robot summary card grid |
+| `/robots/:control_id/device` | one Control | read-only Control device/status summary |
 | `/robots/:control_id/jogging` | one Control | migrated robot operation/Jogging workspace |
 | unmatched route | global | Portal not-found page with Home action |
 
@@ -120,15 +121,15 @@ The initial expanded panel contains:
 
 1. Portal identity/logo area;
 2. `Home` navigation item;
-3. a `Robot` section with `Jogging`;
+3. a `Robot` section with `Device` followed by `Jogging`;
 4. optional selected-robot summary on robot-scoped routes; and
 5. a collapse/expand control.
 
-`Home` is global. `Jogging` is robot-scoped:
+`Home` is global. `Device` and `Jogging` are robot-scoped:
 
-- when a Control is already selected by the active route or saved presentation preference, the item
-  navigates directly to that Control's Jogging route;
-- when no Control is selected, activating Jogging opens the robot-selection surface or navigates to
+- when a Control is already selected by the active route or saved presentation preference, each item
+  navigates directly to that Control's corresponding route;
+- when no Control is selected, activating either item opens the robot-selection surface or navigates to
   Home with robot selection emphasized; and
 - the item must not guess an arbitrary first Control as an operation target.
 

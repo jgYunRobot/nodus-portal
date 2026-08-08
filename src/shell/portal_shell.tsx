@@ -15,6 +15,10 @@ export function PortalShell() {
   const location = useLocation();
   const jogging_target =
     control_id === undefined ? "/home" : `/robots/${control_id}/jogging`;
+  const device_target =
+    control_id === undefined ? "/home" : `/robots/${control_id}/device`;
+  const operating_target =
+    control_id === undefined ? "/home" : `/robots/${control_id}/operating`;
 
   return (
     <div
@@ -25,7 +29,9 @@ export function PortalShell() {
       <aside className={styles.sidebar}>
         <Navigation
           control_id={control_id}
+          device_target={device_target}
           jogging_target={jogging_target}
+          operating_target={operating_target}
           on_navigate={() => undefined}
         />
         <Button
@@ -44,7 +50,9 @@ export function PortalShell() {
       >
         <Navigation
           control_id={control_id}
+          device_target={device_target}
           jogging_target={jogging_target}
+          operating_target={operating_target}
           on_navigate={() => setIsDrawerOpen(false)}
         />
       </Drawer>
@@ -79,11 +87,15 @@ export function PortalShell() {
 
 function Navigation({
   control_id,
+  device_target,
   jogging_target,
+  operating_target,
   on_navigate
 }: {
   control_id: string | undefined;
+  device_target: string;
   jogging_target: string;
+  operating_target: string;
   on_navigate: () => void;
 }) {
   return (
@@ -95,9 +107,23 @@ function Navigation({
       <NavLink
         aria-disabled={control_id === undefined}
         onClick={on_navigate}
+        to={device_target}
+      >
+        Device
+      </NavLink>
+      <NavLink
+        aria-disabled={control_id === undefined}
+        onClick={on_navigate}
         to={jogging_target}
       >
         Jogging
+      </NavLink>
+      <NavLink
+        aria-disabled={control_id === undefined}
+        onClick={on_navigate}
+        to={operating_target}
+      >
+        Operating
       </NavLink>
     </nav>
   );

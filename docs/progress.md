@@ -1,5 +1,51 @@
 # Progress
 
+## 2026-08-08 - Device robot-scoped navigation page
+
+### Changes
+
+- Added the read-only `/robots/:control_id/device` route and placed the `Device` navigation item
+  immediately above `Jogging` in the Robot section.
+- Added a Device page that shows the selected Control's public RobotStatus connection, robot type,
+  DOF, servo, brake, and freshness fields without issuing robot operations.
+
+### Status
+
+- Device navigation remains route-scoped: without an explicit Control it returns to Home instead of
+  selecting a robot implicitly. The existing Operating and Jogging worktree changes remain intact.
+
+### Validation
+
+- Automated checks were not run because this task did not explicitly request test or build execution.
+
+### Next goals
+
+- Add device-specific details only when Pilot publishes them through a public contract.
+
+## 2026-08-07 - Operating robot-scoped page
+
+### Changes
+
+- Added the robot-scoped `/robots/:control_id/operating` route and an `Operating` navigation item
+  directly below `Jogging`.
+- Added an Operating workspace that reuses the existing Pilot-only hold-to-run controls for the
+  route Control while preserving Jogging's visualization workspace.
+
+### Status
+
+- The Operating page is available only for an explicit route Control; without one, shell navigation
+  continues to lead to Home rather than choosing a Control implicitly.
+
+### Validation
+
+- Automated checks were not run because this task did not explicitly request test or build
+  execution.
+
+### Next goals
+
+- Add operating-specific presentation only when an approved ownership or operation-history contract
+  exists.
+
 ## 2026-08-07 - Detailed frontend architecture and phased implementation design
 
 ### Changes

@@ -10,6 +10,16 @@ const JoggingPage = lazy(() =>
     default: module.JoggingPage
   }))
 );
+const DevicePage = lazy(() =>
+  import("../pages/device_page").then((module) => ({
+    default: module.DevicePage
+  }))
+);
+const OperatingPage = lazy(() =>
+  import("../pages/operating_page").then((module) => ({
+    default: module.OperatingPage
+  }))
+);
 const NotFoundPage = lazy(() =>
   import("../pages/not_found_page").then((module) => ({
     default: module.NotFoundPage
@@ -35,7 +45,12 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate replace to="/home" /> },
       { path: "home", element: lazyPage(HomePage) },
+      { path: "robots/:control_id/device", element: lazyPage(DevicePage) },
       { path: "robots/:control_id/jogging", element: lazyPage(JoggingPage) },
+      {
+        path: "robots/:control_id/operating",
+        element: lazyPage(OperatingPage)
+      },
       { path: "*", element: lazyPage(NotFoundPage) }
     ]
   }
