@@ -104,13 +104,17 @@ export function HoldControls({ control_id }: HoldControlsProps) {
     () => runtime.session.getSnapshot()
   );
   const robot_state = status.status?.sample?.robot_state;
-  const frames = (robot_state?.frames ?? []).filter(
-    (frame, index, all_frames) =>
-      all_frames.findIndex((item) => item.name === frame.name) === index
-  );
-  const active_frame = frames.some((frame) => frame.name === selected_frame)
+  const task_frames = (robot_state?.frames ?? [])
+    .filter((frame) => frame.parent_link_id > 0)
+    .filter(
+      (frame, index, all_frames) =>
+        all_frames.findIndex((item) => item.name === frame.name) === index
+    );
+  const active_frame = task_frames.some(
+    (frame) => frame.name === selected_frame
+  )
     ? selected_frame
-    : (frames[0]?.name ?? "");
+    : (task_frames[0]?.name ?? "");
   const joint_count = Math.max(
     DEFAULT_JOINT_COUNT,
     robot_state?.real.pos.length ?? 0
@@ -296,15 +300,15 @@ export function HoldControls({ control_id }: HoldControlsProps) {
             <label htmlFor={`task-frame-${control_id}`}>Task frame</label>
             <select
               aria-label="Task jog frame"
-              disabled={interaction_locked || frames.length === 0}
+              disabled={interaction_locked || task_frames.length === 0}
               id={`task-frame-${control_id}`}
               onChange={(event) => changeFrame(event.target.value)}
               value={active_frame}
             >
-              {frames.length === 0 ? (
+              {task_frames.length === 0 ? (
                 <option value="">No authoritative task frame</option>
               ) : (
-                frames.map((frame) => (
+                task_frames.map((frame) => (
                   <option key={frame.name} value={frame.name}>
                     {frame.name}
                   </option>

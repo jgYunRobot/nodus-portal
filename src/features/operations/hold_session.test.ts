@@ -61,6 +61,7 @@ function status(generation = 1, fresh = true): ControlStatusSnapshot {
           frames: [
             {
               id: 0,
+              parent_link_id: 6,
               name: "Base",
               x: 0,
               y: 0,

@@ -80,6 +80,7 @@ vi.mock("../../api/pilot/use_control_status", () => ({
           frames: [
             {
               id: 0,
+              parent_link_id: 0,
               name: "Base",
               x: 0.11,
               y: 0,
@@ -91,6 +92,7 @@ vi.mock("../../api/pilot/use_control_status", () => ({
             },
             {
               id: 1,
+              parent_link_id: 6,
               name: "Tool",
               x: 0,
               y: 0,
@@ -157,7 +159,9 @@ describe("HoldControls", () => {
     expect(screen.getByRole("button", { name: "Task Rz −" })).not.toBeNull();
     expect(
       (screen.getByLabelText("Task jog frame") as HTMLSelectElement).value
-    ).toBe("Base");
+    ).toBe("Tool");
+    expect(screen.queryByRole("option", { name: "Base" })).toBeNull();
+    expect(screen.getByRole("option", { name: "Tool" })).not.toBeNull();
   });
 
   it("uses the selected speed/frame and cancels on global keyboard release", () => {

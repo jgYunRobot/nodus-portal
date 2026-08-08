@@ -1,5 +1,26 @@
 # Progress
 
+## 2026-08-08 - Task Jog parent-link frame eligibility
+
+### Changes
+
+- Updated the pinned Pilot OpenAPI contract to include each frame's `parent_link_id`.
+- Limited Task Jog frame choices and the active task target to frames whose parent link id is greater
+  than zero; root-attached frames are not displayed or selectable.
+
+### Status
+
+- Task Jog returns to the first eligible frame whenever the selected frame is not present in the
+  latest authoritative status.
+
+### Validation
+
+- Not run (not requested).
+
+### Next goals
+
+- Confirm parent-link frame eligibility with an integrated Pilot status stream.
+
 ## 2026-08-08 - Pilot frame axes in the Jogging scene
 
 ### Changes

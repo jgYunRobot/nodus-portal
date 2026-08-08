@@ -1339,8 +1339,10 @@ export interface components {
             last_wkc: components["schemas"]["NonNegativeInt64"];
             last_error: string;
         };
+        /** @description A Control frame with its pose expressed in world coordinates and its parent link identity. */
         RobotFrameResult: {
             id: components["schemas"]["NonNegativeInt64"];
+            parent_link_id: components["schemas"]["NonNegativeInt64"];
             name: string;
             x: components["schemas"]["FiniteNumber"];
             y: components["schemas"]["FiniteNumber"];
