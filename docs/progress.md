@@ -1,5 +1,42 @@
 # Progress
 
+## 2026-08-08 - Persistent Robot Dock design
+
+### Changes
+
+- Added `docs/designs/src_shell_robot_dock_design.md` for a shell-owned, bottom-right floating Robot
+  Dock that preserves robot selection across Portal pages.
+- Defined a nearly opaque black/light surface, no reserved page padding or grid row, a fixed right
+  edge, leftward expansion, and a collapsed selector-only presentation.
+- Defined route-authoritative selection with a saved presentation preference, Home card selection,
+  and page-kind-preserving Device/Jogging/Operating robot changes.
+- Moved shared Servo On/Off, Fault Reset, and Brake Release/Engage presentation ownership to the
+  Dock while retaining jog, Home/Ready, reset-origin, task-frame, and speed controls on their pages.
+- Defined ordered switch isolation for holds, pending targets, submitted results, RobotStatus,
+  model/profile, real-time values, recovery, accessibility, and D0-D5 implementation checkpoints.
+- Reconciled the navigation, migration, and detailed frontend designs with the focused Dock design.
+- Added the focused design to `docs/rules.md` as required reading before Robot Dock or shared command
+  ownership changes.
+
+### Status
+
+- The requested Robot Dock behavior is design-complete. No runtime source, dependency, Pilot
+  contract, provider integration, or hardware behavior changed.
+- Robot-scoped URLs remain authoritative; the saved selection is only a convenience for Home and
+  other global pages and cannot override a direct URL.
+
+### Validation
+
+- Documentation was reviewed for ownership, route, command, and state-isolation consistency.
+- Automated build and tests were not run because this was a documentation-only task and the user
+  did not request execution.
+
+### Next goals
+
+- Implement D1 selection/route helpers, then D2 floating expanded/collapsed presentation.
+- Relocate shared commands only at D3 after the Dock selection and visual surface are accepted.
+- Complete D4-D5 switch isolation and browser/accessibility acceptance without physical motion.
+
 ## 2026-08-08 - Device robot-scoped navigation page
 
 ### Changes
