@@ -14,9 +14,10 @@ import { StatusBadge } from "../components/feedback/status_badge";
 import { selectVisionCameraEndpoints } from "../features/camera/vision_camera";
 import { useVisionCamera } from "../features/camera/use_vision_camera";
 import { resolveDeviceDeckSelection } from "../features/device_directory/device_deck";
-import type {
-  DeviceDeckSlot,
-  DeviceDirectoryEntry
+import {
+  createDeviceDeckSlots,
+  type DeviceDeckSlot,
+  type DeviceDirectoryEntry
 } from "../features/device_directory/device_directory";
 import { useDeviceDirectory } from "../features/device_directory/use_device_directory";
 import styles from "./device_page.module.css";
@@ -29,7 +30,11 @@ interface PointerStart {
 }
 
 export function DevicePage() {
-  const { directory, error, is_loading } = useDeviceDirectory();
+  const { directory, error, is_loading, refresh_directory } =
+    useDeviceDirectory();
+  const fallback_slots = useMemo(() => createDeviceDeckSlots([]), []);
+  const has_error = error !== null && error !== undefined;
+  const slots = directory?.slots ?? (has_error ? fallback_slots : null);
   return (
     <main className={styles.page}>
       <div className={styles.heading}>
@@ -39,18 +44,26 @@ export function DevicePage() {
         </div>
       </div>
       {is_loading && <Card>Loading the public device directory…</Card>}
-      {error !== null && error !== undefined && (
+      {has_error && (
         <Card>
-          <h2>Device directory unavailable</h2>
-          <p>{getErrorMessage(error)}</p>
+          <h2>Device directory is reconnecting</h2>
+          <p>Pilot device discovery is temporarily unavailable.</p>
         </Card>
       )}
-      {directory !== undefined && <DeviceDeck slots={directory.slots} />}
+      {slots !== null && (
+        <DeviceDeck on_provider_failure={refresh_directory} slots={slots} />
+      )}
     </main>
   );
 }
 
-function DeviceDeck({ slots }: { slots: DeviceDeckSlot[] }) {
+function DeviceDeck({
+  slots,
+  on_provider_failure
+}: {
+  slots: DeviceDeckSlot[];
+  on_provider_failure: () => Promise<void>;
+}) {
   const [search_params, setSearchParams] = useSearchParams();
   const [selected_empty_index, setSelectedEmptyIndex] = useState<number | null>(
     null
@@ -64,20 +77,40 @@ function DeviceDeck({ slots }: { slots: DeviceDeckSlot[] }) {
   );
   const active_index = selection.active_index;
 
+  useEffect(() => {
+    if (selection.removed_component_id === null) return;
+    setSelectedEmptyIndex(active_index);
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete("device");
+        return next;
+      },
+      { replace: true }
+    );
+  }, [active_index, selection.removed_component_id, setSearchParams]);
+
   function selectIndex(index: number): void {
     const slot = slots[index];
     if (slot === undefined) return;
     if (slot.kind === "connected") {
-      setSearchParams({ device: slot.entry.component_id });
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current);
+        next.set("device", slot.entry.component_id);
+        return next;
+      });
       return;
     }
     setSelectedEmptyIndex(index);
-    setSearchParams({});
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete("device");
+      return next;
+    });
   }
 
   function selectRelative(offset: number): void {
-    const base_index = active_index ?? 0;
-    const destination_index = base_index + offset;
+    const destination_index = active_index + offset;
     if (destination_index < 0 || destination_index >= slots.length) return;
     selectIndex(destination_index);
   }
@@ -120,22 +153,15 @@ function DeviceDeck({ slots }: { slots: DeviceDeckSlot[] }) {
     >
       <div className={styles.deck_controls}>
         <p aria-live="polite" className={styles.deck_position}>
-          {active_index === null
-            ? "Unavailable device"
-            : `${active_index + 1} / ${slots.length}`}
+          {`${active_index + 1} / ${slots.length}`}
         </p>
         <label className={styles.picker_label}>
           Device picker
           <select
             aria-label="Device picker"
             onChange={(event) => selectIndex(Number(event.target.value))}
-            value={active_index ?? "unavailable"}
+            value={active_index}
           >
-            {selection.unavailable_component_id !== null && (
-              <option value="unavailable">
-                {selection.unavailable_component_id} (unavailable)
-              </option>
-            )}
             {slots.map((slot, index) => (
               <option key={getSlotKey(slot)} value={index}>
                 {getSlotLabel(slot)}
@@ -149,44 +175,42 @@ function DeviceDeck({ slots }: { slots: DeviceDeckSlot[] }) {
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
       >
-        {active_index === null ? (
-          <UnavailableCard component_id={selection.unavailable_component_id} />
-        ) : (
-          slots.map((slot, index) => {
-            const offset = index - active_index;
-            return (
-              <div
-                aria-hidden={offset !== 0}
-                className={styles.deck_card}
-                data-active={offset === 0}
-                data-offset={offset}
-                inert={offset !== 0}
-                key={getSlotKey(slot)}
-                style={
-                  {
-                    "--deck-offset": offset,
-                    zIndex: 10 - Math.abs(offset)
-                  } as CSSProperties
-                }
-              >
-                {offset === 0 ? (
-                  slot.kind === "connected" ? (
-                    <DeviceCard
-                      entry={slot.entry}
-                      position={index + 1}
-                      total={slots.length}
-                    />
-                  ) : (
-                    <EmptySlotCard slot_number={slot.slot_number} />
-                  )
+        {slots.map((slot, index) => {
+          const offset = index - active_index;
+          return (
+            <div
+              aria-hidden={offset !== 0}
+              className={styles.deck_card}
+              data-active={offset === 0}
+              data-offset={offset}
+              inert={offset !== 0}
+              key={getSlotKey(slot)}
+              style={
+                {
+                  "--deck-offset": offset,
+                  zIndex: 10 - Math.abs(offset)
+                } as CSSProperties
+              }
+            >
+              {offset === 0 ? (
+                slot.kind === "connected" ? (
+                  <DeviceCard
+                    entry={slot.entry}
+                    key={slot.entry.runtime_key}
+                    on_provider_failure={on_provider_failure}
+                    position={index + 1}
+                    total={slots.length}
+                  />
                 ) : (
-                  <InactiveCard slot={slot} />
-                )}
-              </div>
-            );
-          })
-        )}
-        {active_index !== null && active_index > 0 && (
+                  <EmptySlotCard slot_number={slot.slot_number} />
+                )
+              ) : (
+                <InactiveCard slot={slot} />
+              )}
+            </div>
+          );
+        })}
+        {active_index > 0 && (
           <button
             aria-label={`Select ${getSlotLabel(slots[active_index - 1])}`}
             className={`${styles.deck_edge} ${styles.previous_edge}`}
@@ -194,7 +218,7 @@ function DeviceDeck({ slots }: { slots: DeviceDeckSlot[] }) {
             type="button"
           />
         )}
-        {active_index !== null && active_index < slots.length - 1 && (
+        {active_index < slots.length - 1 && (
           <button
             aria-label={`Select ${getSlotLabel(slots[active_index + 1])}`}
             className={`${styles.deck_edge} ${styles.next_edge}`}
@@ -206,7 +230,7 @@ function DeviceDeck({ slots }: { slots: DeviceDeckSlot[] }) {
       <div className={styles.deck_actions}>
         <Button
           aria-label="Previous device"
-          disabled={active_index === null || active_index === 0}
+          disabled={active_index === 0}
           onClick={() => selectRelative(-1)}
           tone="secondary"
         >
@@ -214,7 +238,7 @@ function DeviceDeck({ slots }: { slots: DeviceDeckSlot[] }) {
         </Button>
         <Button
           aria-label="Next device"
-          disabled={active_index === null || active_index === slots.length - 1}
+          disabled={active_index === slots.length - 1}
           onClick={() => selectRelative(1)}
           tone="secondary"
         >
@@ -227,15 +251,24 @@ function DeviceDeck({ slots }: { slots: DeviceDeckSlot[] }) {
 
 function DeviceCard({
   entry,
+  on_provider_failure,
   position,
   total
 }: {
   entry: DeviceDirectoryEntry;
+  on_provider_failure: () => Promise<void>;
   position: number;
   total: number;
 }) {
   if (entry.card_kind === "camera")
-    return <CameraDeviceCard entry={entry} position={position} total={total} />;
+    return (
+      <CameraDeviceCard
+        entry={entry}
+        on_provider_failure={on_provider_failure}
+        position={position}
+        total={total}
+      />
+    );
   return (
     <Card className={styles.device_card}>
       <div aria-live="polite" className={styles.card_heading}>
@@ -279,17 +312,20 @@ function DeviceCard({
 
 function CameraDeviceCard({
   entry,
+  on_provider_failure,
   position,
   total
 }: {
   entry: DeviceDirectoryEntry;
+  on_provider_failure: () => Promise<void>;
   position: number;
   total: number;
 }) {
   const endpoints = useMemo(() => selectVisionCameraEndpoints(entry), [entry]);
   const { error, is_loading, runtime } = useVisionCamera(
     entry.runtime_key,
-    endpoints
+    endpoints,
+    on_provider_failure
   );
   const is_narrow_viewport = useNarrowViewport();
   const [selected_preview, setSelectedPreview] = useState<"color" | "depth">(
@@ -304,7 +340,7 @@ function CameraDeviceCard({
         </p>
       ) : error !== null ? (
         <p className={styles.warning}>
-          Direct Camera connection failed: {error}
+          Camera connection is recovering. Preview will resume automatically.
         </p>
       ) : is_loading ? (
         <p className={styles.read_only}>Loading direct Camera information…</p>
@@ -416,18 +452,6 @@ function EmptySlotCard({ slot_number }: { slot_number: number }) {
   );
 }
 
-function UnavailableCard({ component_id }: { component_id: string | null }) {
-  return (
-    <Card className={styles.unavailable_card}>
-      <h2>Device unavailable</h2>
-      <p>
-        {component_id} is no longer in the live Pilot device directory. Select a
-        listed device to return to the directory.
-      </p>
-    </Card>
-  );
-}
-
 function InactiveCard({ slot }: { slot: DeviceDeckSlot }) {
   return (
     <Card className={styles.inactive_card}>
@@ -484,12 +508,6 @@ function getLifecycleTone(
   if (state === "degraded" || state === "stopping") return "warning";
   if (state === "faulted") return "danger";
   return "neutral";
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error
-    ? error.message
-    : "Pilot did not provide a usable device directory.";
 }
 
 function useNarrowViewport(): boolean {

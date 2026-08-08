@@ -91,14 +91,13 @@ route contract defined here does not depend on one particular library.
 | --- | --- | --- |
 | `/` | global | redirect to `/home` |
 | `/home` | global | multi-robot summary card grid |
-| `/robots/:control_id/device` | one Control | read-only Control device/status summary |
+| `/devices?device=:component_id` | global | provider Device card deck; no RobotStatus ownership |
 | `/robots/:control_id/jogging` | one Control | migrated robot operation/Jogging workspace |
 | `/robots/:control_id/operating` | one Control | robot operation controls without visualization |
 | unmatched route | global | Portal not-found page with Home action |
 
 Future routes may include:
 
-- `/robots/:control_id/cameras`;
 - `/robots/:control_id/diagnostics`;
 - `/policies` or `/robots/:control_id/policies` after the ownership contract is decided;
 - `/recording` after the recorder/MetaGate contract exists; and
@@ -118,7 +117,7 @@ direct URL.
   explicit Control ID.
 - The Robot Dock selector is visible on global and robot-scoped pages.
 - Changing the selector on a robot-scoped page replaces only the Control ID portion of the current
-  Device, Jogging, or Operating route.
+  Jogging or Operating route. Device is global and remains unchanged.
 - The last selected Control may be stored as a presentation convenience, but the URL remains
   authoritative.
 - If a URL references a Control no longer discoverable, the page shows a not-found/unavailable state
@@ -132,14 +131,15 @@ The initial expanded panel contains:
 
 1. Portal identity/logo area;
 2. `Home` navigation item;
-3. a `Robot` section with `Device`, `Jogging`, and `Operating`;
-4. optional selected-robot summary on robot-scoped routes; and
-5. a collapse/expand control.
+3. a global `Devices` navigation item;
+4. a `Robot` section with `Jogging` and `Operating`;
+5. optional selected-robot summary on robot-scoped routes; and
+6. a collapse/expand control.
 
-`Home` is global. `Device`, `Jogging`, and `Operating` are robot-scoped:
+`Home` and `Devices` are global. `Jogging` and `Operating` are robot-scoped:
 
-- when a Control is already selected by the active route or saved presentation preference, each item
-  navigates directly to that Control's corresponding route;
+- when a Control is already selected by the active route or saved presentation preference, each
+  robot-scoped item navigates directly to that Control's corresponding route;
 - when no Control is selected, activating a robot-scoped item focuses or expands the Robot Dock
   selector; and
 - the item must not guess an arbitrary first Control as an operation target.
@@ -461,7 +461,8 @@ checkpoints.
 - card state remains keyed to the correct Control across reorder and updates;
 - clicking one card opens only that Control's Jogging page;
 - selecting Home card space updates the Dock without leaving Home;
-- changing the Dock selector preserves the Device/Jogging/Operating page kind;
+- changing the Dock selector preserves the Jogging/Operating page kind and leaves global Devices
+  unchanged;
 - route robot switching resets robot-specific operation and hold state;
 - collapsed Dock exposes no command buttons, and Dock mode changes do not reflow the main content;
 - Home card rendering does not mount per-robot Three.js scenes;

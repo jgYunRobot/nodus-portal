@@ -1,5 +1,41 @@
 # Progress
 
+## 2026-08-08 - Live Device directory recovery
+
+### Changes
+
+- Added one Device-page refresh owner that coalesces relevant public Pilot lifecycle, endpoint-
+  catalog, gap, and SSE error events into component/endpoint directory invalidation.
+- Added a five-second fallback refresh for event loss, SSE capacity exhaustion, and Pilot restart.
+- Changed removed or unknown selected-device URLs to clear the stale `device` query with replace
+  navigation and activate the first empty slot instead of rendering an error card.
+- Kept transient Pilot/provider failures user-facing as a stable recovering state without exposing
+  raw transport error strings, while preserving the five empty placeholders when no directory
+  snapshot is available.
+- Qualified active Camera runtime by Pilot/session/catalog identity and tightened Vision 1.3.0
+  endpoint selection to exact unique descriptor ids, service methods, and matching URL protocols.
+- Added focused unit and browser fixtures for lifecycle/catalog invalidation, endpoint rejection,
+  removed selection fallback, and disconnect-to-empty behavior without page reload.
+
+### Status
+
+- The reported stale Device cards and removed-device error presentation are corrected in source.
+- Direct Camera health/metadata recovery remains read-only and re-queries Pilot when a provider
+  failure may indicate a stale endpoint. Vision CORS/LAN product work remains outside this change.
+- Existing unrelated design and progress edits remain preserved and uncommitted.
+
+### Validation
+
+- Scoped Prettier check passed for the owned TypeScript, CSS, E2E, design, and progress files, and
+  `git diff --check` passed.
+- Typecheck, lint, unit, build, and Playwright commands were not run because repository rules
+  require explicit user instruction.
+
+### Next goals
+
+- Run the Portal validation suite when explicitly requested and exercise the live Vision stop/start
+  flow against Pilot on the target LAN setup.
+
 ## 2026-08-08 - Task Jog parent-link frame eligibility
 
 ### Changes
@@ -1064,3 +1100,95 @@
 
 - Confirm the same isolation after a future production static-host deployment.
 - Add command authority separately when its Pilot contract is approved.
+
+## 2026-08-08 - Interim Camera and Device integration baseline
+
+### Changes
+
+- Recorded the verified Vision-Pilot-Portal ownership and data-flow boundary for future Device-page
+  Camera work.
+- Cataloged the current Vision 1.3.0 health, metadata, preview, query, point-cloud, and optional
+  recording endpoints without treating them as implemented Portal features.
+- Captured the remaining LAN advertised-address, browser CORS, Camera-to-Control association,
+  Portal contract-pinning, and settings-mutation decisions.
+- Split the future Device-page design into incremental decisions so unresolved behavior is not
+  guessed during implementation.
+
+### Status
+
+- The integration baseline is documented as an interim design only; no Portal, Pilot, or Vision
+  runtime source was changed.
+- Fake-provider investigation has shown that Vision can register a Camera endpoint catalog with
+  Pilot and serve payloads directly, while the Portal Device page remains Control-status-only.
+
+### Validation
+
+- Reviewed the new documentation diff and whitespace only.
+- Build, lint, typecheck, and test commands were not run because this change is documentation-only
+  and repository rules require explicit user instruction before running them.
+
+### Next goals
+
+- Design the Device page information architecture and Camera placement first.
+- Decide Camera-to-Control association and global Camera behavior before defining directory
+  filtering or selection.
+- Pin the approved Vision provider contract and design LAN/CORS support only after the Device-page
+  design is accepted.
+
+## 2026-08-08 - Global Device card-deck design
+
+### Changes
+
+- Replaced the former robot-scoped Device product direction with a global `/devices` page that has
+  no RobotStatus ownership and remains accessible without a connected robot.
+- Designed a device-per-card overlapping deck with swipe, pointer, keyboard, adjacent-card, and
+  direct-picker navigation.
+- Added a minimum-five-slot rule: connected devices fill the leading cards, empty placeholders keep
+  the deck at five, and connections beyond five append cards without a maximum implied by the UI.
+- Defined common card information/settings boundaries, a direct Vision Camera card with optional
+  depth presentation, and an Operator/input-source card limited by its currently published
+  lifecycle contract.
+- Updated navigation, Robot Dock, frontend route, and interim Camera integration designs so global
+  Device selection remains independent from the selected Control.
+
+### Status
+
+- The Device page product and technical design is documented; implementation has not started.
+- Camera can support read-only information and previews after its contract, LAN, and CORS
+  checkpoints. Operator can initially show generic lifecycle information but requires an
+  Operator-owned provider contract before Portal exposes configuration or activation controls.
+- Existing runtime source and current robot-scoped Device implementation remain unchanged.
+
+### Validation
+
+- Reviewed documentation consistency and whitespace only.
+- Build, lint, typecheck, and test commands were not run because this change is documentation-only
+  and repository rules require explicit user instruction before running them.
+
+### Next goals
+
+- Review and approve the minimum-five-card deck geometry and Device navigation behavior.
+
+## 2026-08-08 - Device DV0 global route baseline
+
+### Result
+
+- Replaced the robot-scoped Device route with the global `/devices` route and redirect the legacy
+  `/robots/:control_id/device` URL without retaining the Control identity.
+- Moved `Devices` into the global Portal navigation, so it remains available when RobotDirectory is
+  empty, and label the shell context `Device directory`.
+- Removed the Device page's RobotStatus subscription and Control-status presentation. The temporary
+  empty view now describes provider device discovery only.
+
+### Validation
+
+- Passed `npm run format:check`, `npm run typecheck`, and `npm test` (17 files, 64 tests).
+- Passed focused Chromium route coverage for the global link, zero-robot access, legacy redirect,
+  and Robot Dock route isolation.
+
+### Next
+
+- DV1: join public lifecycle and paginated endpoint-directory data into a stable, minimum-five-slot
+  device directory.
+- Decide the first Camera card's exact information hierarchy and color/depth layout.
+- Implement DV0 only after explicit implementation approval.

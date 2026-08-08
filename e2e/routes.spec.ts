@@ -289,7 +289,14 @@ test("builds the minimum-five-slot directory from public device records", async 
                 protocol: "http",
                 endpoint: "http://vision.test/health",
                 media_type: "application/json",
-                schema_id: "nodus.vision.health.response.v1"
+                schema_id: "nodus.vision.health.response.v1",
+                metadata: {},
+                service: {
+                  method: "GET",
+                  request_schema_id: null,
+                  response_schema_id: "nodus.vision.health.response.v1"
+                },
+                stream: null
               }
             },
             {
@@ -306,7 +313,14 @@ test("builds the minimum-five-slot directory from public device records", async 
                 protocol: "http",
                 endpoint: "http://vision.test/metadata",
                 media_type: "application/json",
-                schema_id: "nodus.vision.metadata.response.v1"
+                schema_id: "nodus.vision.metadata.response.v1",
+                metadata: {},
+                service: {
+                  method: "GET",
+                  request_schema_id: null,
+                  response_schema_id: "nodus.vision.metadata.response.v1"
+                },
+                stream: null
               }
             },
             {
@@ -316,14 +330,20 @@ test("builds the minimum-five-slot directory from public device records", async 
               session_generation: 1,
               catalog_generation: 1,
               descriptor: {
-                descriptor_id: "color",
+                descriptor_id: "color-preview",
                 kind: "stream",
                 capability: "camera.stream.color.preview",
                 contract_version: 1,
                 protocol: "http",
                 endpoint: "http://vision.test/stream/color.mjpg",
                 media_type: "multipart/x-mixed-replace",
-                schema_id: "nodus.vision.mjpeg.color_part.v1"
+                schema_id: "nodus.vision.mjpeg.color_part.v1",
+                metadata: {},
+                service: null,
+                stream: {
+                  clock_domain: "provider_defined",
+                  stream_group_id: "camera.top.capture"
+                }
               }
             },
             {
@@ -333,14 +353,20 @@ test("builds the minimum-five-slot directory from public device records", async 
               session_generation: 1,
               catalog_generation: 1,
               descriptor: {
-                descriptor_id: "depth",
+                descriptor_id: "depth-preview",
                 kind: "stream",
                 capability: "camera.stream.depth.preview",
                 contract_version: 1,
                 protocol: "http",
                 endpoint: "http://vision.test/stream/depth.mjpg",
                 media_type: "multipart/x-mixed-replace",
-                schema_id: "nodus.vision.mjpeg.depth_part.v1"
+                schema_id: "nodus.vision.mjpeg.depth_part.v1",
+                metadata: {},
+                service: null,
+                stream: {
+                  clock_domain: "provider_defined",
+                  stream_group_id: "camera.top.capture"
+                }
               }
             }
           ],
@@ -524,9 +550,102 @@ test("navigates the overlapping device deck through URL, keyboard, picker, and c
 
   await page.goto("/devices?device=removed.camera");
   await expect(
-    deck.getByRole("heading", { name: "Device unavailable" })
+    deck.getByRole("heading", { name: "Empty slot 1" })
   ).toBeVisible();
-  await expect(page).toHaveURL(/\/devices\?device=removed\.camera$/);
+  await expect(page).toHaveURL(/\/devices$/);
+});
+
+test("replaces a disconnected selected device with an empty slot without reload", async ({
+  page
+}) => {
+  let camera_connected = true;
+  let release_directory_event: (() => void) | undefined;
+  const directory_event = new Promise<void>((resolve) => {
+    release_directory_event = resolve;
+  });
+  let event_sent = false;
+
+  await page.route(
+    (url) => url.pathname === "/api/v1/pilot/streams",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ server_instance_id: "pilot-a", streams: [] })
+      });
+    }
+  );
+  await page.route(
+    (url) => url.pathname === "/api/v1/components",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          snapshot_revision: camera_connected ? 1 : 2,
+          components: camera_connected
+            ? [
+                {
+                  component_id: "camera.top",
+                  instance_id: "camera.top.instance",
+                  component_type: "camera",
+                  session_generation: 1,
+                  capabilities: [],
+                  service_endpoints: {},
+                  state: { health: "ready", reason: null, details: {} },
+                  metadata: { display_name: "Top camera" },
+                  registered_at_ns: 1,
+                  last_heartbeat_ns: 1,
+                  expires_at_ns: 2,
+                  last_sequence: 1,
+                  clock_domain: "monotonic_same_host",
+                  available: true
+                }
+              ]
+            : []
+        })
+      });
+    }
+  );
+  await page.route(
+    (url) => url.pathname === "/api/v1/endpoints",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          server_instance_id: "pilot-a",
+          catalog_revision: camera_connected ? 1 : 2,
+          endpoints: [],
+          next_cursor: null
+        })
+      });
+    }
+  );
+  await page.route(
+    (url) => url.pathname === "/api/v1/events/stream",
+    async (route) => {
+      if (event_sent) {
+        await route.abort();
+        return;
+      }
+      await directory_event;
+      event_sent = true;
+      await route.fulfill({
+        contentType: "text/event-stream",
+        body: "event: component_disconnected\ndata: {}\n\n"
+      });
+    }
+  );
+
+  await page.goto("/devices?device=camera.top");
+  const deck = page.getByRole("region", { name: "Device carousel" });
+  await expect(deck.getByRole("heading", { name: "Top camera" })).toBeVisible();
+
+  camera_connected = false;
+  release_directory_event?.();
+
+  await expect(
+    deck.getByRole("heading", { name: "Empty slot 1" })
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/devices$/);
 });
 
 test("collapses the right-anchored Robot Dock without resizing main content", async ({

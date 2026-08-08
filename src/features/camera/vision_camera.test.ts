@@ -10,8 +10,14 @@ function endpoint(
   schema_id: string,
   kind: DeviceEndpoint["kind"] = "stream"
 ): DeviceEndpoint {
+  const descriptor_ids: Record<string, string> = {
+    "camera.health.get": "health",
+    "camera.metadata.get": "metadata",
+    "camera.stream.color.preview": "color-preview",
+    "camera.stream.depth.preview": "depth-preview"
+  };
   return {
-    descriptor_id: capability,
+    descriptor_id: descriptor_ids[capability] ?? capability,
     kind,
     capability,
     contract_version: 1,
@@ -19,7 +25,8 @@ function endpoint(
     endpoint: `http://vision.test/${capability}`,
     media_type:
       kind === "stream" ? "multipart/x-mixed-replace" : "application/json",
-    schema_id
+    schema_id,
+    service_method: kind === "service" ? "GET" : null
   };
 }
 
@@ -86,6 +93,37 @@ describe("selectVisionCameraEndpoints", () => {
             "service"
           ),
           endpoint("camera.stream.color.preview", "not-vision")
+        ])
+      )
+    ).toBeNull();
+  });
+
+  it("rejects duplicate or protocol-mismatched pinned descriptors", () => {
+    const health = endpoint(
+      "camera.health.get",
+      "nodus.vision.health.response.v1",
+      "service"
+    );
+    const metadata = endpoint(
+      "camera.metadata.get",
+      "nodus.vision.metadata.response.v1",
+      "service"
+    );
+    const color = endpoint(
+      "camera.stream.color.preview",
+      "nodus.vision.mjpeg.color_part.v1"
+    );
+    expect(
+      selectVisionCameraEndpoints(
+        camera([health, metadata, color, { ...color }])
+      )
+    ).toBeNull();
+    expect(
+      selectVisionCameraEndpoints(
+        camera([
+          health,
+          metadata,
+          { ...color, protocol: "https", endpoint: "http://vision.test/color" }
         ])
       )
     ).toBeNull();

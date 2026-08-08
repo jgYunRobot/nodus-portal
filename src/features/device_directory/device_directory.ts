@@ -38,6 +38,7 @@ export interface DeviceEndpoint {
   endpoint: string;
   media_type: string;
   schema_id: string | null;
+  service_method: "GET" | "POST" | "PUT" | "DELETE" | null;
 }
 
 export interface EmptyDeviceSlot {
@@ -228,15 +229,36 @@ function parseEndpointDescriptor(value: unknown): DeviceEndpoint | null {
   ) {
     return null;
   }
+  let endpoint_url: URL;
   try {
-    new URL(descriptor.endpoint);
+    endpoint_url = new URL(descriptor.endpoint);
   } catch {
     return null;
   }
+  if (endpoint_url.protocol !== `${descriptor.protocol as string}:`)
+    return null;
   if (
     (descriptor.kind !== "service" && descriptor.kind !== "stream") ||
-    (typeof descriptor.schema_id !== "string" && descriptor.schema_id !== null)
+    (typeof descriptor.schema_id !== "string" &&
+      descriptor.schema_id !== null) ||
+    !isRecord(descriptor.metadata)
   ) {
+    return null;
+  }
+  let service_method: DeviceEndpoint["service_method"] = null;
+  if (descriptor.kind === "service") {
+    if (
+      !isRecord(descriptor.service) ||
+      descriptor.stream !== null ||
+      !["GET", "POST", "PUT", "DELETE"].includes(
+        descriptor.service.method as string
+      )
+    ) {
+      return null;
+    }
+    service_method = descriptor.service
+      .method as DeviceEndpoint["service_method"];
+  } else if (descriptor.service !== null || !isRecord(descriptor.stream)) {
     return null;
   }
   return {
@@ -247,7 +269,8 @@ function parseEndpointDescriptor(value: unknown): DeviceEndpoint | null {
     protocol: descriptor.protocol as "http" | "https",
     endpoint: descriptor.endpoint,
     media_type: descriptor.media_type,
-    schema_id: descriptor.schema_id
+    schema_id: descriptor.schema_id,
+    service_method
   };
 }
 

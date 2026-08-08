@@ -120,6 +120,27 @@ describe("createDeviceDirectory", () => {
     });
   });
 
+  it("rejects an endpoint whose declared protocol differs from its URL", () => {
+    const mismatched_endpoint = endpoint("camera.bad");
+    mismatched_endpoint.descriptor.protocol = "https";
+    const directory = createDeviceDirectory(
+      {
+        snapshot_revision: 1,
+        components: [component("camera.bad", "camera")]
+      },
+      {
+        server_instance_id: "pilot-a",
+        catalog_revision: 1,
+        endpoints: [mismatched_endpoint]
+      }
+    );
+
+    expect(directory.entries[0]).toMatchObject({
+      endpoint_count: 0,
+      malformed_endpoint_count: 1
+    });
+  });
+
   it("appends every connected device and returns to five slots after removal", () => {
     const entries = Array.from({ length: 6 }, (_, index) => ({
       component_id: `camera.${index}`,

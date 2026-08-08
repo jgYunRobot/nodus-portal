@@ -10,7 +10,8 @@
   - `src_nodus_portal_frontend_detailed_architecture_and_phased_implementation_design.md`
   - `src_nodus_portal_apps_web_ui_migration_design.md`
 - Scope: persistent robot selection, shared robot commands, floating/collapsible presentation, and
-  robot-switch handoff across Home, Device, Jogging, Operating, and future Portal pages
+  robot-switch handoff across Home, global Devices, robot-scoped Jogging/Operating, and future
+  Portal pages
 
 This document replaces the workflow in which Home's `Open Jogging` action is the only practical way
 to establish a selected robot. It does not replace route-first navigation: a robot-scoped URL remains
@@ -170,7 +171,7 @@ Changing the selector follows the active route class:
 | Current route | Select `control-b` | Result |
 | --- | --- | --- |
 | `/home` | preference update | remain `/home` |
-| `/robots/control-a/device` | route navigation | `/robots/control-b/device` |
+| `/devices?device=camera-a` | preference update | remain on the same Device card |
 | `/robots/control-a/jogging` | route navigation | `/robots/control-b/jogging` |
 | `/robots/control-a/operating` | route navigation | `/robots/control-b/operating` |
 | global future page | preference update | remain on the global page |
@@ -183,9 +184,9 @@ restores its URL Control even if local preference differs.
 - Clicking non-interactive Home card space updates `preferred_control_id` and selected styling but
   does not leave Home.
 - `Open Jogging` updates the preference and navigates to that exact Control's Jogging route.
-- Device, Jogging, and Operating navigation entries use `effective_control_id`.
-- If public RobotDirectory discovery succeeds with zero entries, Home is the only accessible product
-  page. Device, Jogging, and Operating navigation remains disabled, and a direct robot-scoped URL
+- Jogging and Operating navigation entries use `effective_control_id`; Devices is a global entry.
+- If public RobotDirectory discovery succeeds with zero entries, Home and Devices remain
+  accessible. Jogging and Operating navigation remains disabled and a direct robot-scoped URL
   redirects to Home.
 - Directory loading and discovery failure do not trigger this redirect because they do not prove
   that the connected robot set is empty.
@@ -329,7 +330,8 @@ RobotStatus validation, model loading, or hold target math.
 ### D4 - Robot-switch isolation
 
 - implement the ordered switch transaction and hold cancellation;
-- remount Device/Jogging/Operating state by destination Control;
+- remount Jogging/Operating state by destination Control while leaving global Device selection
+  unchanged;
 - verify model/profile, real-time values, pending results, and resource cleanup; and
 - cover direct URL, back/forward, reload, and unavailable-selection behavior.
 
@@ -343,7 +345,7 @@ RobotStatus validation, model loading, or hold target math.
 ## 12. Acceptance matrix
 
 - Home card selection updates the Dock without leaving Home.
-- Sidebar Device/Jogging/Operating routes use the explicit selected Control.
+- Sidebar Jogging/Operating routes use the explicit selected Control; Devices does not require one.
 - Jogging `control-a` to `control-b` switch preserves the Jogging page kind and updates the URL.
 - No `control-a` telemetry or model pose is rendered beneath `control-b` identity.
 - An active hold is ended and its unsent target is discarded before Control replacement.

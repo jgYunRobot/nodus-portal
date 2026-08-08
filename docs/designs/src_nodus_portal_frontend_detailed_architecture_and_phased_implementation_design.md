@@ -336,16 +336,18 @@ Initial route objects are:
 └── PortalShell
     ├── index                 -> redirect /home
     ├── home                  -> HomePage
+    ├── devices               -> DevicePage
     ├── robots/:control_id/
-    │   ├── device            -> DevicePage
     │   ├── jogging           -> JoggingPage
     │   └── operating         -> OperatingPage
     └── *                     -> NotFoundPage
 ```
 
 Page modules are lazy-loaded. The Three.js and URDF graph are imported only by the Jogging page,
-not by Home or the shell. Future Camera, Policy, recordings, diagnostics, and settings routes join
-this tree without changing the current route semantics.
+not by Home or the shell. Device is a global provider-card deck defined by
+`src_pages_device_page_design.md`; it does not own RobotStatus. Future Policy, recordings,
+diagnostics, and settings routes join this tree without changing the remaining robot-scoped route
+semantics.
 
 Route error elements distinguish:
 

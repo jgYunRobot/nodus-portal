@@ -160,7 +160,6 @@
 
 .device_card,
 .empty_slot,
-.unavailable_card,
 .inactive_card {
   block-size: 100%;
   box-sizing: border-box;
@@ -174,10 +173,6 @@
 .empty_slot {
   border-style: dashed;
   color: var(--color-text-muted);
-}
-
-.unavailable_card {
-  border-color: var(--color-warning);
 }
 
 .card_heading {
@@ -289,7 +284,6 @@
   .deck_frame,
   .device_card,
   .empty_slot,
-  .unavailable_card,
   .inactive_card {
     min-block-size: 28rem;
   }

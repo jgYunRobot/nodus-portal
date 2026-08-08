@@ -30,21 +30,21 @@ describe("device deck selection", () => {
   it("uses an exact requested component without relying on slot order", () => {
     expect(resolveDeviceDeckSelection(slots, "camera.top", 2)).toEqual({
       active_index: 0,
-      unavailable_component_id: null
+      removed_component_id: null
     });
   });
 
-  it("preserves an unknown URL component as unavailable", () => {
+  it("returns an unknown URL component to the first empty slot", () => {
     expect(resolveDeviceDeckSelection(slots, "camera.removed", 0)).toEqual({
-      active_index: null,
-      unavailable_component_id: "camera.removed"
+      active_index: 1,
+      removed_component_id: "camera.removed"
     });
   });
 
   it("keeps empty selection local and clamps it after directory removal", () => {
     expect(resolveDeviceDeckSelection(slots, null, 2)).toEqual({
       active_index: 2,
-      unavailable_component_id: null
+      removed_component_id: null
     });
     expect(clampDeckIndex(4, 2)).toBe(1);
   });

@@ -1,8 +1,8 @@
 import type { DeviceDeckSlot } from "./device_directory";
 
 export interface DeviceDeckSelection {
-  active_index: number | null;
-  unavailable_component_id: string | null;
+  active_index: number;
+  removed_component_id: string | null;
 }
 
 export function resolveDeviceDeckSelection(
@@ -16,15 +16,20 @@ export function resolveDeviceDeckSelection(
         slot.kind === "connected" &&
         slot.entry.component_id === requested_component_id
     );
+    if (active_index !== -1)
+      return { active_index, removed_component_id: null };
+    const first_empty_index = slots.findIndex((slot) => slot.kind === "empty");
     return {
-      active_index: active_index === -1 ? null : active_index,
-      unavailable_component_id:
-        active_index === -1 ? requested_component_id : null
+      active_index: clampDeckIndex(
+        first_empty_index === -1 ? 0 : first_empty_index,
+        slots.length
+      ),
+      removed_component_id: requested_component_id
     };
   }
   return {
     active_index: clampDeckIndex(selected_empty_index ?? 0, slots.length),
-    unavailable_component_id: null
+    removed_component_id: null
   };
 }
 
