@@ -80,7 +80,7 @@ test("keeps robot-scoped pages unavailable when discovery is successfully empty"
 
   const jogging = page.getByRole("link", { name: "Jogging" });
   await expect(jogging).toHaveAttribute("aria-disabled", "true");
-  await jogging.click();
+  await jogging.click({ force: true });
   await expect(page).toHaveURL(/\/home$/);
 });
 
@@ -274,12 +274,112 @@ test("builds the minimum-five-slot directory from public device records", async 
         body: JSON.stringify({
           server_instance_id: "pilot-a",
           catalog_revision: 1,
-          endpoints: [],
+          endpoints: [
+            {
+              component_id: "camera.top",
+              instance_id: "camera.top.instance",
+              component_type: "camera",
+              session_generation: 1,
+              catalog_generation: 1,
+              descriptor: {
+                descriptor_id: "health",
+                kind: "service",
+                capability: "camera.health.get",
+                contract_version: 1,
+                protocol: "http",
+                endpoint: "http://vision.test/health",
+                media_type: "application/json",
+                schema_id: "nodus.vision.health.response.v1"
+              }
+            },
+            {
+              component_id: "camera.top",
+              instance_id: "camera.top.instance",
+              component_type: "camera",
+              session_generation: 1,
+              catalog_generation: 1,
+              descriptor: {
+                descriptor_id: "metadata",
+                kind: "service",
+                capability: "camera.metadata.get",
+                contract_version: 1,
+                protocol: "http",
+                endpoint: "http://vision.test/metadata",
+                media_type: "application/json",
+                schema_id: "nodus.vision.metadata.response.v1"
+              }
+            },
+            {
+              component_id: "camera.top",
+              instance_id: "camera.top.instance",
+              component_type: "camera",
+              session_generation: 1,
+              catalog_generation: 1,
+              descriptor: {
+                descriptor_id: "color",
+                kind: "stream",
+                capability: "camera.stream.color.preview",
+                contract_version: 1,
+                protocol: "http",
+                endpoint: "http://vision.test/stream/color.mjpg",
+                media_type: "multipart/x-mixed-replace",
+                schema_id: "nodus.vision.mjpeg.color_part.v1"
+              }
+            },
+            {
+              component_id: "camera.top",
+              instance_id: "camera.top.instance",
+              component_type: "camera",
+              session_generation: 1,
+              catalog_generation: 1,
+              descriptor: {
+                descriptor_id: "depth",
+                kind: "stream",
+                capability: "camera.stream.depth.preview",
+                contract_version: 1,
+                protocol: "http",
+                endpoint: "http://vision.test/stream/depth.mjpg",
+                media_type: "multipart/x-mixed-replace",
+                schema_id: "nodus.vision.mjpeg.depth_part.v1"
+              }
+            }
+          ],
           next_cursor: null
         })
       });
     }
   );
+  await page.route("http://vision.test/**", async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    const body =
+      pathname === "/health"
+        ? {
+            schema_version: 1,
+            state: "ready",
+            camera: { state: "streaming" }
+          }
+        : pathname === "/metadata"
+          ? {
+              schema_version: 1,
+              api_version: "1.3.0",
+              device_id: "camera-serial",
+              adapter: "fake",
+              calibration: {
+                calibration_id: "calibration-a",
+                sensor_frame: "camera_color_optical",
+                mount_frame: "camera_mount"
+              }
+            }
+          : "preview";
+    await route.fulfill({
+      body: typeof body === "string" ? body : JSON.stringify(body),
+      contentType:
+        pathname === "/health" || pathname === "/metadata"
+          ? "application/json"
+          : "image/jpeg",
+      headers: { "access-control-allow-origin": "*" }
+    });
+  });
 
   await page.goto("/devices");
   const directory = page.getByRole("region", { name: "Device carousel" });
@@ -290,6 +390,16 @@ test("builds the minimum-five-slot directory from public device records", async 
   await expect(
     directory.getByLabel("Device picker").locator("option")
   ).toHaveCount(5);
+  await page.goto("/devices?device=camera.top");
+  await expect(
+    directory.getByText("camera-serial", { exact: true })
+  ).toBeVisible();
+  await expect(
+    directory.getByAltText("Top camera color preview")
+  ).toHaveAttribute("src", "http://vision.test/stream/color.mjpg");
+  await expect(
+    directory.getByAltText("Top camera depth preview")
+  ).toHaveAttribute("src", "http://vision.test/stream/depth.mjpg");
 });
 
 test("navigates the overlapping device deck through URL, keyboard, picker, and card edge", async ({

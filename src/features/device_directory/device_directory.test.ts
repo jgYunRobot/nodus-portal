@@ -132,6 +132,7 @@ describe("createDeviceDirectory", () => {
       session_generation: 1,
       catalog_generation: null,
       capabilities: [],
+      endpoints: [],
       endpoint_count: 0,
       malformed_endpoint_count: 0,
       runtime_key: `camera.${index}`

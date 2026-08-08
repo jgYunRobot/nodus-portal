@@ -222,6 +222,39 @@
   overflow-wrap: anywhere;
 }
 
+.camera_media {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: var(--space-5);
+}
+
+.camera_media figure {
+  margin: 0;
+}
+
+.preview_segments {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.camera_media img {
+  aspect-ratio: 4 / 3;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  display: block;
+  inline-size: 100%;
+  object-fit: contain;
+}
+
+.camera_media figcaption {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  margin-top: var(--space-2);
+}
+
 .warning {
   color: var(--color-warning);
   margin-top: var(--space-4);
@@ -270,5 +303,13 @@
   .deck_card[data-offset="1"] {
     opacity: 0.28;
     transform: scale(0.94);
+  }
+
+  .camera_media {
+    display: block;
+  }
+
+  .camera_media figure + figure {
+    margin-top: var(--space-4);
   }
 }

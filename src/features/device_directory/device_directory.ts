@@ -23,9 +23,21 @@ export interface DeviceDirectoryEntry {
   session_generation: number;
   catalog_generation: number | null;
   capabilities: string[];
+  endpoints: DeviceEndpoint[];
   endpoint_count: number;
   malformed_endpoint_count: number;
   runtime_key: string;
+}
+
+export interface DeviceEndpoint {
+  descriptor_id: string;
+  kind: "service" | "stream";
+  capability: string;
+  contract_version: number;
+  protocol: "http" | "https";
+  endpoint: string;
+  media_type: string;
+  schema_id: string | null;
 }
 
 export interface EmptyDeviceSlot {
@@ -57,6 +69,7 @@ interface ParsedEndpoint {
   instance_id: string;
   session_generation: number;
   catalog_generation: number;
+  descriptor: DeviceEndpoint;
 }
 
 export function createDeviceDirectory(
@@ -89,6 +102,8 @@ export function createDeviceDirectory(
         session_generation: component.session_generation,
         catalog_generation,
         capabilities: [...component.capabilities].sort(),
+        endpoints:
+          matched_endpoints?.map((endpoint) => endpoint.descriptor) ?? [],
         endpoint_count: matched_endpoints?.length ?? 0,
         malformed_endpoint_count:
           endpoint_summary?.malformed_endpoint_count ?? 0,
@@ -180,12 +195,13 @@ function parseEndpoint(value: unknown): ParsedEndpoint | null {
   if (value === null || typeof value !== "object" || Array.isArray(value))
     return null;
   const entry = value as Record<string, unknown>;
+  const descriptor = parseEndpointDescriptor(entry.descriptor);
   if (
     typeof entry.instance_id !== "string" ||
     !isComponentType(entry.component_type) ||
     !isPositiveInteger(entry.session_generation) ||
     !isPositiveInteger(entry.catalog_generation) ||
-    !isEndpointDescriptor(entry.descriptor)
+    descriptor === null
   ) {
     return null;
   }
@@ -193,13 +209,14 @@ function parseEndpoint(value: unknown): ParsedEndpoint | null {
     component_type: entry.component_type,
     instance_id: entry.instance_id,
     session_generation: entry.session_generation,
-    catalog_generation: entry.catalog_generation
+    catalog_generation: entry.catalog_generation,
+    descriptor
   };
 }
 
-function isEndpointDescriptor(value: unknown): boolean {
+function parseEndpointDescriptor(value: unknown): DeviceEndpoint | null {
   if (value === null || typeof value !== "object" || Array.isArray(value))
-    return false;
+    return null;
   const descriptor = value as Record<string, unknown>;
   if (
     typeof descriptor.descriptor_id !== "string" ||
@@ -209,14 +226,29 @@ function isEndpointDescriptor(value: unknown): boolean {
     typeof descriptor.endpoint !== "string" ||
     typeof descriptor.media_type !== "string"
   ) {
-    return false;
+    return null;
   }
   try {
     new URL(descriptor.endpoint);
   } catch {
-    return false;
+    return null;
   }
-  return descriptor.kind === "service" || descriptor.kind === "stream";
+  if (
+    (descriptor.kind !== "service" && descriptor.kind !== "stream") ||
+    (typeof descriptor.schema_id !== "string" && descriptor.schema_id !== null)
+  ) {
+    return null;
+  }
+  return {
+    descriptor_id: descriptor.descriptor_id,
+    kind: descriptor.kind,
+    capability: descriptor.capability,
+    contract_version: descriptor.contract_version,
+    protocol: descriptor.protocol as "http" | "https",
+    endpoint: descriptor.endpoint,
+    media_type: descriptor.media_type,
+    schema_id: descriptor.schema_id
+  };
 }
 
 function getDisplayName(

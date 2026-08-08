@@ -1,4 +1,6 @@
 import {
+  useEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -9,6 +11,8 @@ import { useSearchParams } from "react-router";
 import { Button } from "../components/actions/button";
 import { Card } from "../components/feedback/card";
 import { StatusBadge } from "../components/feedback/status_badge";
+import { selectVisionCameraEndpoints } from "../features/camera/vision_camera";
+import { useVisionCamera } from "../features/camera/use_vision_camera";
 import { resolveDeviceDeckSelection } from "../features/device_directory/device_deck";
 import type {
   DeviceDeckSlot,
@@ -230,6 +234,8 @@ function DeviceCard({
   position: number;
   total: number;
 }) {
+  if (entry.card_kind === "camera")
+    return <CameraDeviceCard entry={entry} position={position} total={total} />;
   return (
     <Card className={styles.device_card}>
       <div aria-live="polite" className={styles.card_heading}>
@@ -268,6 +274,136 @@ function DeviceCard({
       )}
       <p className={styles.read_only}>Read-only information</p>
     </Card>
+  );
+}
+
+function CameraDeviceCard({
+  entry,
+  position,
+  total
+}: {
+  entry: DeviceDirectoryEntry;
+  position: number;
+  total: number;
+}) {
+  const endpoints = useMemo(() => selectVisionCameraEndpoints(entry), [entry]);
+  const { error, is_loading, runtime } = useVisionCamera(
+    entry.runtime_key,
+    endpoints
+  );
+  const is_narrow_viewport = useNarrowViewport();
+  const [selected_preview, setSelectedPreview] = useState<"color" | "depth">(
+    "color"
+  );
+  return (
+    <Card className={styles.device_card}>
+      <DeviceCardHeader entry={entry} position={position} total={total} />
+      {endpoints === null ? (
+        <p className={styles.warning}>
+          No exact Vision 1.3.0 Color preview contract is advertised.
+        </p>
+      ) : error !== null ? (
+        <p className={styles.warning}>
+          Direct Camera connection failed: {error}
+        </p>
+      ) : is_loading ? (
+        <p className={styles.read_only}>Loading direct Camera information…</p>
+      ) : runtime !== null ? (
+        <>
+          <div className={styles.camera_media}>
+            {is_narrow_viewport && endpoints.depth !== null && (
+              <div className={styles.preview_segments}>
+                <Button
+                  aria-pressed={selected_preview === "color"}
+                  onClick={() => setSelectedPreview("color")}
+                  tone="secondary"
+                >
+                  Color
+                </Button>
+                <Button
+                  aria-pressed={selected_preview === "depth"}
+                  onClick={() => setSelectedPreview("depth")}
+                  tone="secondary"
+                >
+                  Depth
+                </Button>
+              </div>
+            )}
+            {(!is_narrow_viewport || selected_preview === "color") && (
+              <figure>
+                <img
+                  alt={`${entry.display_name} color preview`}
+                  src={endpoints.color.endpoint}
+                />
+                <figcaption>Color</figcaption>
+              </figure>
+            )}
+            {endpoints.depth !== null &&
+              (!is_narrow_viewport || selected_preview === "depth") && (
+                <figure>
+                  <img
+                    alt={`${entry.display_name} depth preview`}
+                    src={endpoints.depth.endpoint}
+                  />
+                  <figcaption>Depth</figcaption>
+                </figure>
+              )}
+          </div>
+          <dl className={styles.details}>
+            <div>
+              <dt>Device</dt>
+              <dd>{runtime.metadata.device_id}</dd>
+            </div>
+            <div>
+              <dt>Adapter</dt>
+              <dd>{runtime.metadata.adapter}</dd>
+            </div>
+            <div>
+              <dt>Calibration</dt>
+              <dd>{runtime.metadata.calibration_id}</dd>
+            </div>
+            <div>
+              <dt>Frames</dt>
+              <dd>
+                {runtime.metadata.sensor_frame} → {runtime.metadata.mount_frame}
+              </dd>
+            </div>
+            <div>
+              <dt>Capture health</dt>
+              <dd>{runtime.health.camera_state}</dd>
+            </div>
+          </dl>
+        </>
+      ) : null}
+      <p className={styles.read_only}>Read-only information</p>
+    </Card>
+  );
+}
+
+function DeviceCardHeader({
+  entry,
+  position,
+  total
+}: {
+  entry: DeviceDirectoryEntry;
+  position: number;
+  total: number;
+}) {
+  return (
+    <div aria-live="polite" className={styles.card_heading}>
+      <div>
+        <p className={styles.type_label}>{getCardTypeLabel(entry)}</p>
+        <h2>{entry.display_name}</h2>
+        <p className={styles.component_id}>{entry.component_id}</p>
+        <p className={styles.position_label}>
+          Device {position} of {total}
+        </p>
+      </div>
+      <StatusBadge
+        label={getLifecycleLabel(entry.lifecycle_state)}
+        tone={getLifecycleTone(entry.lifecycle_state)}
+      />
+    </div>
   );
 }
 
@@ -354,4 +490,16 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error
     ? error.message
     : "Pilot did not provide a usable device directory.";
+}
+
+function useNarrowViewport(): boolean {
+  const [is_narrow, setIsNarrow] = useState(false);
+  useEffect(() => {
+    const media_query = window.matchMedia("(max-width: 720px)");
+    const updateNarrow = () => setIsNarrow(media_query.matches);
+    updateNarrow();
+    media_query.addEventListener("change", updateNarrow);
+    return () => media_query.removeEventListener("change", updateNarrow);
+  }, []);
+  return is_narrow;
 }

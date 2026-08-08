@@ -16,6 +16,7 @@ const slots: DeviceDeckSlot[] = [
       session_generation: 1,
       catalog_generation: 1,
       capabilities: [],
+      endpoints: [],
       endpoint_count: 1,
       malformed_endpoint_count: 0,
       runtime_key: "camera.top"
