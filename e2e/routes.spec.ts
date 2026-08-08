@@ -167,6 +167,62 @@ test("defaults the Robot Dock to collapsed on phone", async ({ page }) => {
   ).toHaveAttribute("data-mode", "collapsed");
 });
 
+test("switches a robot-scoped route without changing its page kind", async ({
+  page
+}) => {
+  await page.route(
+    (url) => url.pathname === "/api/v1/pilot/streams",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          server_instance_id: "pilot-a",
+          streams: [
+            {
+              stream_id: "control.alpha.robot_status",
+              owner: "pilot",
+              control_id: "control-alpha",
+              stream_kind: "robot_status",
+              schema_id: "nodus.robot_status.v1",
+              schema_version: 1,
+              source_clock_domains: ["monotonic_same_host"],
+              configured_production_hz: 60,
+              retention_capacity: 64,
+              recording_grade: true
+            },
+            {
+              stream_id: "control.bravo.robot_status",
+              owner: "pilot",
+              control_id: "control-bravo",
+              stream_kind: "robot_status",
+              schema_id: "nodus.robot_status.v1",
+              schema_version: 1,
+              source_clock_domains: ["monotonic_same_host"],
+              configured_production_hz: 60,
+              retention_capacity: 64,
+              recording_grade: true
+            }
+          ]
+        })
+      });
+    }
+  );
+
+  await page.goto("/robots/control-alpha/operating");
+  const dock = page.getByRole("complementary", {
+    name: "Selected robot controls"
+  });
+  await dock.getByLabel("Selected robot").selectOption("control-bravo");
+  await expect(page).toHaveURL(/\/robots\/control-bravo\/operating$/);
+  await expect(
+    page.getByTestId("portal-main-content").getByText("control-bravo", {
+      exact: true
+    })
+  ).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/robots\/control-alpha\/operating$/);
+});
+
 test("restores the direct Control-scoped Jogging route", async ({ page }) => {
   await page.goto("/robots/control-alpha/jogging");
   await expect(page.getByRole("heading", { name: "Jogging" })).toBeVisible();

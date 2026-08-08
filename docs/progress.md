@@ -1,5 +1,31 @@
 # Progress
 
+## 2026-08-08 - Persistent Robot Dock D4 switch isolation
+
+### Changes
+
+- Made a selected robot change cancel the prior Control's local hold and scheduler before its
+  preference/route replacement. A held or pending Control keeps the selector disabled.
+- Keyed Device and Operating workspaces by `control_id`, matching the existing keyed Jogging
+  workspace so route changes replace page-local state rather than reusing it for another Control.
+- Added browser coverage for route-kind-preserving Control changes and history return.
+
+### Status
+
+- D4 is complete. Submitted results remain in their original per-Control scheduler; a destination
+  page/Dock uses only its own status, operation state, and keyed workspace.
+
+### Validation
+
+- Passed `npm run format:check`, `npm run typecheck`, `npm run lint`, `npm test` (16 files / 57
+  tests), `npm run build`, and `npm run test:e2e` (9 Chromium tests).
+- Vite retained its existing non-failing lazy robot-scene chunk-size warning.
+
+### Next goals
+
+- D5: complete fixture, accessibility, reduced-motion, theme, visual screenshot, and cleanup
+  acceptance without hardware motion.
+
 ## 2026-08-08 - Persistent Robot Dock D3 shared commands
 
 ### Changes

@@ -15,6 +15,10 @@ function getStatusLabel(
 export function OperatingPage() {
   const { control_id: route_control_id } = useParams();
   const control_id = route_control_id ?? "unresolved-control";
+  return <OperatingWorkspace key={control_id} control_id={control_id} />;
+}
+
+function OperatingWorkspace({ control_id }: { control_id: string }) {
   const snapshot = useControlStatus(control_id);
 
   return (

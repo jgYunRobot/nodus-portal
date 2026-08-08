@@ -31,6 +31,10 @@ function formatAge(age_ms: number | null | undefined): string {
 export function DevicePage() {
   const { control_id: route_control_id } = useParams();
   const control_id = route_control_id ?? "unresolved-control";
+  return <DeviceWorkspace key={control_id} control_id={control_id} />;
+}
+
+function DeviceWorkspace({ control_id }: { control_id: string }) {
   const snapshot = useControlStatus(control_id);
   const status = snapshot.status;
   const robot_interface = status?.sample?.robot_state.interface;

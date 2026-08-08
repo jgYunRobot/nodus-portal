@@ -1,9 +1,11 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useSyncExternalStore } from "react";
 import { useNavigate, useLocation, useParams } from "react-router";
 import { useRobotStatusStreams } from "../api/pilot/pilot_queries";
 import { useControlStatus } from "../api/pilot/use_control_status";
 import { createRobotDirectory } from "../features/robot_directory/robot_directory";
 import { RobotCommandControls } from "../features/operations/robot_command_controls";
+import { usePortalOperationRuntime } from "../features/operations/portal_operation_context";
 import {
   getEffectiveControlId,
   getRoutePreservingRobotPath
@@ -55,37 +57,20 @@ export function RobotDock() {
       }
       data-mode={mode}
     >
-      {is_expanded && effective_control_id !== null ? (
-        <>
-          <RobotDockStatus control_id={effective_control_id} />
-          <RobotCommandControls control_id={effective_control_id} />
-        </>
-      ) : null}
-      <label className={styles.selector}>
-        <span>Robot</span>
-        <select
-          aria-label="Selected robot"
-          onChange={(event) => selectControl(event.target.value)}
-          value={effective_control_id ?? ""}
-        >
-          {effective_control_id === null ? (
-            <option value="">Select robot</option>
-          ) : null}
-          {effective_control_id !== null &&
-          !directory?.entries.some(
-            (entry) => entry.control_id === effective_control_id
-          ) ? (
-            <option value={effective_control_id}>
-              {effective_control_id} (unavailable)
-            </option>
-          ) : null}
-          {directory?.entries.map((entry) => (
-            <option key={entry.control_id} value={entry.control_id}>
-              {entry.control_id}
-            </option>
-          ))}
-        </select>
-      </label>
+      {effective_control_id === null ? (
+        <RobotDockSelector
+          control_id={null}
+          directory={directory}
+          on_select={selectControl}
+        />
+      ) : (
+        <SelectedRobotDock
+          control_id={effective_control_id}
+          directory={directory}
+          is_expanded={is_expanded}
+          on_select={selectControl}
+        />
+      )}
       <button
         aria-expanded={is_expanded}
         aria-label={
@@ -102,6 +87,87 @@ export function RobotDock() {
         )}
       </button>
     </aside>
+  );
+}
+
+function SelectedRobotDock({
+  control_id,
+  directory,
+  is_expanded,
+  on_select
+}: {
+  control_id: string;
+  directory: ReturnType<typeof createRobotDirectory> | null;
+  is_expanded: boolean;
+  on_select: (control_id: string) => void;
+}) {
+  const runtime = usePortalOperationRuntime();
+  const hold = runtime.getHold(control_id);
+  const scheduler = runtime.getScheduler(control_id);
+  const operation = useSyncExternalStore(
+    (listener) => scheduler.subscribe(listener),
+    () => scheduler.getSnapshot(),
+    () => scheduler.getSnapshot()
+  );
+  const selection_locked =
+    hold.active || operation.in_flight || operation.has_pending;
+
+  function selectDestinationControl(destination_control_id: string): void {
+    if (destination_control_id === control_id || selection_locked) return;
+    runtime.cancel(control_id);
+    on_select(destination_control_id);
+  }
+
+  return (
+    <>
+      {is_expanded ? (
+        <>
+          <RobotDockStatus control_id={control_id} />
+          <RobotCommandControls control_id={control_id} />
+        </>
+      ) : null}
+      <RobotDockSelector
+        control_id={control_id}
+        directory={directory}
+        disabled={selection_locked}
+        on_select={selectDestinationControl}
+      />
+    </>
+  );
+}
+
+function RobotDockSelector({
+  control_id,
+  directory,
+  disabled = false,
+  on_select
+}: {
+  control_id: string | null;
+  directory: ReturnType<typeof createRobotDirectory> | null;
+  disabled?: boolean;
+  on_select: (control_id: string) => void;
+}) {
+  return (
+    <label className={styles.selector}>
+      <span>Robot</span>
+      <select
+        aria-label="Selected robot"
+        disabled={disabled}
+        onChange={(event) => on_select(event.target.value)}
+        value={control_id ?? ""}
+      >
+        {control_id === null ? <option value="">Select robot</option> : null}
+        {control_id !== null &&
+        !directory?.entries.some((entry) => entry.control_id === control_id) ? (
+          <option value={control_id}>{control_id} (unavailable)</option>
+        ) : null}
+        {directory?.entries.map((entry) => (
+          <option key={entry.control_id} value={entry.control_id}>
+            {entry.control_id}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
