@@ -2,7 +2,7 @@
   display: grid;
   gap: var(--space-6);
   margin: 0 auto;
-  max-inline-size: 64rem;
+  max-inline-size: 72rem;
 }
 
 .heading {
@@ -19,25 +19,156 @@
   margin: 0;
 }
 
-.heading p {
+.heading p,
+.component_id,
+.position_label,
+.read_only,
+.warning {
   color: var(--color-text-muted);
+}
+
+.heading p {
   margin-top: var(--space-1);
 }
 
-.page h2 + p {
-  color: var(--color-text-muted);
-  margin-top: var(--space-3);
-}
-
-.directory {
+.deck {
   display: grid;
   gap: var(--space-4);
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  outline: none;
+}
+
+.deck:focus-visible {
+  border-radius: var(--radius-card);
+  outline: 2px solid var(--color-accent);
+  outline-offset: var(--space-1);
+}
+
+.deck_controls,
+.deck_actions {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+}
+
+.deck_position,
+.picker_label,
+.type_label,
+.component_id,
+.position_label,
+.read_only,
+.warning {
+  font-size: 0.8125rem;
+}
+
+.picker_label {
+  align-items: center;
+  color: var(--color-text-muted);
+  display: flex;
+  gap: var(--space-2);
+}
+
+.picker_label select {
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  min-block-size: 2.75rem;
+  padding: 0 var(--space-3);
+}
+
+.deck_frame {
+  min-block-size: 31rem;
+  overflow: clip;
+  position: relative;
+  touch-action: pan-y;
+}
+
+.deck_card {
+  inline-size: 88%;
+  inset-block: 0;
+  opacity: 0.12;
+  pointer-events: none;
+  position: absolute;
+  transform: scale(0.9);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.deck_card[data-offset="-2"],
+.deck_card[data-offset="2"] {
+  inline-size: 78%;
+  opacity: 0.2;
+}
+
+.deck_card[data-offset="-2"] {
+  inset-inline-start: 0;
+}
+
+.deck_card[data-offset="2"] {
+  inset-inline-start: 22%;
+}
+
+.deck_card[data-offset="-1"],
+.deck_card[data-offset="1"] {
+  cursor: pointer;
+  opacity: 0.46;
+  pointer-events: auto;
+  transform: scale(0.94);
+}
+
+.deck_card[data-offset="-1"] {
+  inset-inline-start: 0;
+}
+
+.deck_card[data-offset="1"] {
+  inset-inline-start: 12%;
+}
+
+.deck_card[data-active="true"] {
+  inset-inline-start: 6%;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0) scale(1);
+  z-index: 2;
+}
+
+.deck_edge {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  inset-block: 0;
+  min-inline-size: 2.75rem;
+  padding: 0;
+  position: absolute;
+  z-index: 3;
+}
+
+.deck_edge:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -4px;
+}
+
+.previous_edge {
+  inset-inline-start: 0;
+}
+
+.next_edge {
+  inset-inline-end: 0;
 }
 
 .device_card,
-.empty_slot {
-  min-block-size: 17rem;
+.empty_slot,
+.unavailable_card,
+.inactive_card {
+  block-size: 100%;
+  box-sizing: border-box;
+  min-block-size: 31rem;
+}
+
+.inactive_card {
+  background: var(--color-surface-elevated);
 }
 
 .empty_slot {
@@ -45,19 +176,15 @@
   color: var(--color-text-muted);
 }
 
+.unavailable_card {
+  border-color: var(--color-warning);
+}
+
 .card_heading {
   align-items: start;
   display: flex;
   gap: var(--space-3);
   justify-content: space-between;
-}
-
-.type_label,
-.component_id,
-.read_only,
-.warning {
-  color: var(--color-text-muted);
-  font-size: 0.8125rem;
 }
 
 .type_label {
@@ -68,6 +195,10 @@
 .component_id {
   margin-top: var(--space-1);
   overflow-wrap: anywhere;
+}
+
+.position_label {
+  margin-top: var(--space-3);
 }
 
 .details {
@@ -100,9 +231,44 @@
   margin-top: var(--space-4);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .deck_card {
+    transition-duration: 0.001s;
+  }
+}
+
 @media (max-width: 720px) {
   .heading {
     align-items: start;
     flex-direction: column;
+  }
+
+  .deck_controls,
+  .deck_actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .picker_label {
+    justify-content: space-between;
+  }
+
+  .deck_frame,
+  .device_card,
+  .empty_slot,
+  .unavailable_card,
+  .inactive_card {
+    min-block-size: 28rem;
+  }
+
+  .deck_card[data-offset="-2"],
+  .deck_card[data-offset="2"] {
+    display: none;
+  }
+
+  .deck_card[data-offset="-1"],
+  .deck_card[data-offset="1"] {
+    opacity: 0.28;
+    transform: scale(0.94);
   }
 }

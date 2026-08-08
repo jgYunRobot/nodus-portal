@@ -282,17 +282,141 @@ test("builds the minimum-five-slot directory from public device records", async 
   );
 
   await page.goto("/devices");
-  const directory = page.getByRole("region", { name: "Device directory" });
-  await expect(directory.getByRole("heading")).toHaveCount(5);
-  await expect(
-    directory.getByRole("heading", { name: "Top camera" })
-  ).toBeVisible();
+  const directory = page.getByRole("region", { name: "Device carousel" });
+  await expect(directory.locator("[data-offset]")).toHaveCount(5);
   await expect(
     directory.getByRole("heading", { name: "operator.leader" })
   ).toBeVisible();
   await expect(
-    directory.getByRole("heading", { name: "Empty slot 1" })
+    directory.getByLabel("Device picker").locator("option")
+  ).toHaveCount(5);
+});
+
+test("navigates the overlapping device deck through URL, keyboard, picker, and card edge", async ({
+  page
+}) => {
+  await page.route(
+    (url) => url.pathname === "/api/v1/pilot/streams",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ server_instance_id: "pilot-a", streams: [] })
+      });
+    }
+  );
+  await page.route(
+    (url) => url.pathname === "/api/v1/components",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          snapshot_revision: 1,
+          components: [
+            {
+              component_id: "camera.top",
+              instance_id: "camera.top.instance",
+              component_type: "camera",
+              session_generation: 1,
+              capabilities: [],
+              service_endpoints: {},
+              state: { health: "ready", reason: null, details: {} },
+              metadata: { display_name: "Top camera" },
+              registered_at_ns: 1,
+              last_heartbeat_ns: 1,
+              expires_at_ns: 2,
+              last_sequence: 1,
+              clock_domain: "monotonic_same_host",
+              available: true
+            },
+            {
+              component_id: "operator.leader",
+              instance_id: "operator.leader.instance",
+              component_type: "input_source",
+              session_generation: 1,
+              capabilities: ["control.operation.v1"],
+              service_endpoints: {},
+              state: { health: "ready", reason: null, details: {} },
+              metadata: { display_name: "Operator" },
+              registered_at_ns: 1,
+              last_heartbeat_ns: 1,
+              expires_at_ns: 2,
+              last_sequence: 1,
+              clock_domain: "monotonic_same_host",
+              available: true
+            }
+          ]
+        })
+      });
+    }
+  );
+  await page.route(
+    (url) => url.pathname === "/api/v1/endpoints",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          server_instance_id: "pilot-a",
+          catalog_revision: 1,
+          endpoints: [],
+          next_cursor: null
+        })
+      });
+    }
+  );
+
+  await page.goto("/devices?device=camera.top");
+  const deck = page.getByRole("region", { name: "Device carousel" });
+  await expect(deck.getByRole("heading", { name: "Top camera" })).toBeVisible();
+  await deck.press("ArrowLeft");
+  await expect(page).toHaveURL(/\/devices\?device=operator\.leader$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/devices\?device=camera\.top$/);
+  await page.goForward();
+  await expect(page).toHaveURL(/\/devices\?device=operator\.leader$/);
+
+  const active_card = deck.locator('[data-active="true"]');
+  const adjacent_card = deck.locator('[data-offset="1"]');
+  await expect(adjacent_card).toBeVisible();
+  await expect(adjacent_card).toHaveAttribute("inert", "");
+  const active_box = await active_card.boundingBox();
+  const adjacent_box = await adjacent_card.boundingBox();
+  expect(active_box).not.toBeNull();
+  expect(adjacent_box).not.toBeNull();
+  expect(
+    (adjacent_box?.x ?? 0) < (active_box?.x ?? 0) + (active_box?.width ?? 0)
+  ).toBe(true);
+  await deck.getByRole("button", { name: "Select Top camera" }).click();
+  await expect(page).toHaveURL(/\/devices\?device=camera\.top$/);
+
+  const swipable_card = deck.locator('[data-active="true"]');
+  const swipable_box = await swipable_card.boundingBox();
+  expect(swipable_box).not.toBeNull();
+  await page.mouse.move(
+    (swipable_box?.x ?? 0) + (swipable_box?.width ?? 0) / 2,
+    (swipable_box?.y ?? 0) + 120
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    (swipable_box?.x ?? 0) + (swipable_box?.width ?? 0) / 2 - 100,
+    (swipable_box?.y ?? 0) + 120
+  );
+  await page.mouse.up();
+  await expect(page).toHaveURL(/\/devices$/);
+  await expect(
+    deck.getByRole("heading", { name: "Empty slot 1" })
   ).toBeVisible();
+
+  await deck.getByLabel("Device picker").selectOption("4");
+  await expect(page).toHaveURL(/\/devices$/);
+  await expect(
+    deck.getByRole("heading", { name: "Empty slot 3" })
+  ).toBeVisible();
+
+  await page.goto("/devices?device=removed.camera");
+  await expect(
+    deck.getByRole("heading", { name: "Device unavailable" })
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/devices\?device=removed\.camera$/);
 });
 
 test("collapses the right-anchored Robot Dock without resizing main content", async ({
