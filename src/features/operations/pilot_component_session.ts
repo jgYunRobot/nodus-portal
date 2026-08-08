@@ -35,13 +35,17 @@ interface SessionRecord {
 interface PortalComponentSessionOptions {
   client?: PilotHttpClient;
   clock?: MonotonicClock;
+  component_id?: string;
   instance_id?: string;
+  storage?: Pick<Storage, "getItem" | "setItem">;
   set_timeout?: typeof window.setTimeout;
   clear_timeout?: typeof window.clearTimeout;
   on_invalidate?: () => void;
 }
 
-const COMPONENT_ID = "nodus-portal";
+const COMPONENT_ID_PREFIX = "nodus-portal.";
+const COMPONENT_ID_STORAGE_KEY = "nodus.portal.component_id.v1";
+const COMPONENT_ID_MAX_LENGTH = 128;
 const OBSERVATION_CAPABILITY = "control.robot_status.v1";
 const OPERATION_CAPABILITY = "control.operation.v1";
 const NANOSECONDS_PER_MILLISECOND = 1_000_000;
@@ -50,13 +54,64 @@ function browserClock(): MonotonicClock {
   return { now: () => performance.now() };
 }
 
+function createRandomUuid(): string {
+  if (typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  const random_bytes = crypto.getRandomValues(new Uint8Array(16));
+  random_bytes[6] = (random_bytes[6] & 0x0f) | 0x40;
+  random_bytes[8] = (random_bytes[8] & 0x3f) | 0x80;
+  const hexadecimal = Array.from(random_bytes, (value) =>
+    value.toString(16).padStart(2, "0")
+  ).join("");
+  const uuid = [
+    hexadecimal.slice(0, 8),
+    hexadecimal.slice(8, 12),
+    hexadecimal.slice(12, 16),
+    hexadecimal.slice(16, 20),
+    hexadecimal.slice(20)
+  ].join("-");
+  return uuid;
+}
+
 function createInstanceId(): string {
-  return `portal-${crypto.randomUUID()}`;
+  return `portal-${createRandomUuid()}`;
+}
+
+function createComponentId(
+  storage?: Pick<Storage, "getItem" | "setItem">
+): string {
+  let active_storage: Pick<Storage, "getItem" | "setItem">;
+  try {
+    active_storage = storage ?? window.localStorage;
+    const stored_component_id = active_storage.getItem(
+      COMPONENT_ID_STORAGE_KEY
+    );
+    if (
+      stored_component_id !== null &&
+      stored_component_id.startsWith(COMPONENT_ID_PREFIX) &&
+      stored_component_id.length <= COMPONENT_ID_MAX_LENGTH
+    ) {
+      return stored_component_id;
+    }
+  } catch {
+    return `${COMPONENT_ID_PREFIX}${createRandomUuid()}`;
+  }
+
+  const component_id = `${COMPONENT_ID_PREFIX}${createRandomUuid()}`;
+  try {
+    active_storage.setItem(COMPONENT_ID_STORAGE_KEY, component_id);
+  } catch {
+    // The runtime-scoped ID still prevents cross-device replacement.
+  }
+  return component_id;
 }
 
 export class PortalComponentSession {
   private readonly client: PilotHttpClient;
   private readonly clock: MonotonicClock;
+  private readonly component_id: string;
   private readonly instance_id: string;
   private readonly set_timeout: typeof window.setTimeout;
   private readonly clear_timeout: typeof window.clearTimeout;
@@ -77,6 +132,8 @@ export class PortalComponentSession {
   constructor(options: PortalComponentSessionOptions = {}) {
     this.client = options.client ?? new PilotHttpClient();
     this.clock = options.clock ?? browserClock();
+    this.component_id =
+      options.component_id ?? createComponentId(options.storage);
     this.instance_id = options.instance_id ?? createInstanceId();
     this.set_timeout = options.set_timeout ?? window.setTimeout.bind(window);
     this.clear_timeout =
@@ -187,7 +244,7 @@ export class PortalComponentSession {
       registration_requested_ms * NANOSECONDS_PER_MILLISECOND
     );
     const request: components["schemas"]["ComponentRegistrationRequest"] = {
-      component_id: COMPONENT_ID,
+      component_id: this.component_id,
       instance_id: this.instance_id,
       component_type: "ui",
       protocol_version: 1,

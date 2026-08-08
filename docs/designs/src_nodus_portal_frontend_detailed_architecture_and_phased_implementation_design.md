@@ -858,6 +858,9 @@ Later checkpoints do not begin by assumption when an earlier acceptance conditio
 - implement typed public Pilot operation requests and response/error mapping;
 - add pure projector, HoldSession, and one-in-flight newest-target scheduler;
 - bind joint jog, task jog, Home, Ready, and other approved command controls;
+- persist one randomly generated public `component_id` per browser profile while keeping the
+  `instance_id` unique per page runtime, so independent devices do not replace each other's Pilot
+  lifecycle sessions;
 - reconcile every target with the newest accepted authoritative status;
 - implement pointer capture, keyboard lifecycle, blur/visibility/route cleanup; and
 - expose factual pending/accepted/failed/degraded states without claiming Phase B authority.
@@ -870,6 +873,12 @@ Later checkpoints do not begin by assumption when an earlier acceptance conditio
 - all release/cancel paths stop local emission;
 - no click-once fixed-distance replacement appears; and
 - public Pilot black-box operation fixtures pass.
+
+The browser-profile identity is presentation-client lifecycle identity, not command authority. A
+reload replaces only the previous runtime from the same browser profile. Different devices retain
+independent heartbeat, session generation, and operation cursors while consuming the same
+Pilot-owned RobotStatus source. If persistent browser storage is unavailable, Portal uses a
+runtime-scoped random component ID rather than falling back to the shared legacy ID.
 
 ### F8D - Persistent Robot Dock retrofit
 

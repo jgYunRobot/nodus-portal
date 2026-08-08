@@ -1017,3 +1017,50 @@
 
 - Run the Portal validation suite when explicitly requested, then confirm that Pilot logs one
   Portal registration followed by heartbeats without periodic `component.replaced` events.
+
+## 2026-08-08 - LAN HTTP instance identity fallback
+
+### Changes
+
+- Kept `crypto.randomUUID()` as the preferred Portal component instance-ID generator.
+- Added an RFC 4122 version 4 fallback based on `crypto.getRandomValues()` for browsers where
+  `randomUUID()` is unavailable, including private-LAN HTTP origins that are not secure contexts.
+- Added deterministic regression coverage for the fallback UUID version and variant bits.
+
+### Status
+
+- Portal application initialization no longer depends on the secure-context-only
+  `crypto.randomUUID()` API; HTTPS and localhost retain the native path.
+- Prettier and a live LAN-HTTP Chromium render check passed with no page or request errors; build,
+  lint, typecheck, and test commands were not run because they were not explicitly requested.
+
+### Next goals
+
+- Confirm the Portal shell renders from a tablet over the current private-LAN HTTP development
+  origin.
+- Keep cross-host mutating-operation clock-domain support as a separate Pilot contract decision.
+
+## 2026-08-08 - Browser-profile Portal component identity
+
+### Changes
+
+- Replaced the shared `nodus-portal` registration identity with a random browser-profile component
+  ID persisted under a versioned `localStorage` key.
+- Kept page-runtime `instance_id` generation independent so a reload replaces only the stale
+  runtime from the same browser profile instead of replacing Portal sessions on other devices.
+- Added a runtime-random fallback when browser storage is unavailable and deterministic coverage
+  proving one browser profile reuses its component ID.
+- Documented that per-browser lifecycle isolation does not provide or claim command authority.
+
+### Status
+
+- Multiple devices can maintain independent Pilot lifecycle sessions and monitor the same
+  Pilot-owned RobotStatus source without cross-device component replacement loops.
+- Prettier, whitespace checks, and live multi-client validation passed: two LAN browser profiles
+  retained distinct component IDs, stable session generations, advancing heartbeats, and `ready`
+  state. Build, lint, typecheck, and test commands were not explicitly requested and were not run.
+
+### Next goals
+
+- Confirm the same isolation after a future production static-host deployment.
+- Add command authority separately when its Pilot contract is approved.

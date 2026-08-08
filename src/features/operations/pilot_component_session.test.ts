@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { PortalComponentSession } from "./pilot_component_session";
 
 function response(
@@ -31,6 +31,83 @@ async function flush(): Promise<void> {
 }
 
 describe("PortalComponentSession", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("creates an RFC 4122 instance ID when randomUUID is unavailable", async () => {
+    const random_bytes = Uint8Array.from({ length: 16 }, (_, index) => index);
+    vi.stubGlobal("crypto", {
+      getRandomValues: (target: Uint8Array) => {
+        target.set(random_bytes);
+        return target;
+      }
+    });
+    let instance_id = "";
+    const session = new PortalComponentSession({
+      client: {
+        registerComponent: async (request: { instance_id: string }) => {
+          instance_id = request.instance_id;
+          return response();
+        },
+        updateComponentState: async () => lifecycleResponse(),
+        heartbeat: async () => lifecycleResponse()
+      } as never
+    });
+
+    session.start();
+    await flush();
+
+    expect(instance_id).toBe("portal-00010203-0405-4607-8809-0a0b0c0d0e0f");
+  });
+
+  it("reuses one component ID for the same browser profile", async () => {
+    vi.stubGlobal("crypto", {
+      randomUUID: () => "browser-profile-id"
+    });
+    const values = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        values.set(key, value);
+      }
+    };
+    const component_ids: string[] = [];
+    const client = {
+      registerComponent: async (request: { component_id: string }) => {
+        component_ids.push(request.component_id);
+        return response();
+      },
+      updateComponentState: async () => lifecycleResponse(),
+      heartbeat: async () => lifecycleResponse()
+    };
+
+    const first_session = new PortalComponentSession({
+      client: client as never,
+      component_id: undefined,
+      instance_id: "portal-first",
+      storage
+    });
+    first_session.start();
+    await flush();
+    first_session.stop();
+
+    const second_session = new PortalComponentSession({
+      client: client as never,
+      component_id: undefined,
+      instance_id: "portal-second",
+      storage
+    });
+    second_session.start();
+    await flush();
+    second_session.stop();
+
+    expect(component_ids).toEqual([
+      "nodus-portal.browser-profile-id",
+      "nodus-portal.browser-profile-id"
+    ]);
+  });
+
   it("serializes lifecycle writes while keeping operation sequence separate", async () => {
     const calls: string[] = [];
     let heartbeat: (() => void) | undefined;
@@ -52,6 +129,7 @@ describe("PortalComponentSession", () => {
     const session = new PortalComponentSession({
       client: client as never,
       clock: { now: () => now_ms },
+      component_id: "nodus-portal.test",
       instance_id: "portal-test",
       set_timeout: ((callback: () => void) => {
         heartbeat = callback;
@@ -90,6 +168,7 @@ describe("PortalComponentSession", () => {
         }
       } as never,
       clock: { now: () => now_ms },
+      component_id: "nodus-portal.test",
       instance_id: "portal-test",
       set_timeout: ((callback: () => void) => {
         heartbeat = callback;
@@ -120,6 +199,7 @@ describe("PortalComponentSession", () => {
         heartbeat: async () => lifecycleResponse()
       } as never,
       clock: { now: () => 10 },
+      component_id: "nodus-portal.test",
       instance_id: "portal-test",
       on_invalidate: () => {
         invalidations += 1;
@@ -147,6 +227,7 @@ describe("PortalComponentSession", () => {
         heartbeat: async () => lifecycleResponse()
       } as never,
       clock: { now: () => 10 },
+      component_id: "nodus-portal.test",
       instance_id: "portal-test"
     });
     session.start();
