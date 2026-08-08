@@ -12,6 +12,9 @@
 - Scope: persistent robot selection, shared robot commands, floating/collapsible presentation, and
   robot-switch handoff across Home, global Devices, robot-scoped Jogging/Operating, and future
   Portal pages
+- Superseding route decision: as of 2026-08-09,
+  `src_app_operation_page_consolidation_design.md` replaces both robot page kinds with one canonical
+  Operation page; the Dock preserves that page kind when switching Controls.
 
 This document replaces the workflow in which Home's `Open Jogging` action is the only practical way
 to establish a selected robot. It does not replace route-first navigation: a robot-scoped URL remains

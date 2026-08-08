@@ -43,8 +43,7 @@
   outline-offset: var(--space-1);
 }
 
-.deck_controls,
-.deck_actions {
+.deck_controls {
   align-items: center;
   display: flex;
   gap: var(--space-3);
@@ -271,8 +270,7 @@
     flex-direction: column;
   }
 
-  .deck_controls,
-  .deck_actions {
+  .deck_controls {
     align-items: stretch;
     flex-direction: column;
   }

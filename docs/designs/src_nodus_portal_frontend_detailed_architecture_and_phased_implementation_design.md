@@ -10,6 +10,9 @@
 - Visual reference: [Sphere UI Charts UIKIT](https://dribbble.com/shots/23224018-Sphere-UI-Charts-UIKIT)
 - Default visual mode: black theme.
 - Source application reference: `/home/jgy/workspace/ai_work/pa_control/apps/web_ui`.
+- Superseding route decision: as of 2026-08-09,
+  `src_app_operation_page_consolidation_design.md` replaces the Jogging/Operating page naming and
+  routes with one Operation page while retaining the existing Jog feature implementation.
 
 This document turns the two upstream product and migration designs into an implementable frontend
 architecture, target file layout, technology baseline, visual system, and ordered checkpoints. The

@@ -64,9 +64,9 @@ export function RobotCard({ entry }: { entry: RobotDirectoryEntry }) {
       <Link
         className={styles.action}
         onClick={selectRobot}
-        to={`/robots/${encodeURIComponent(robot.control_id)}/jogging`}
+        to={`/robots/${encodeURIComponent(robot.control_id)}/operation`}
       >
-        Open Jogging
+        Open Operation
       </Link>
     </Card>
   );

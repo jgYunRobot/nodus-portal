@@ -10,7 +10,7 @@ import {
   type RobotProfile
 } from "../features/robot_model/robot_profile";
 import { HoldControls } from "../features/operations/hold_controls";
-import styles from "./jogging_page.module.css";
+import styles from "./operation_page.module.css";
 
 const RobotScene = lazy(() =>
   import("../features/robot_model/robot_scene").then((module) => ({
@@ -24,13 +24,13 @@ function formatValue(value: number | undefined, unit: string): string {
     : "—";
 }
 
-export function JoggingPage() {
+export function OperationPage() {
   const { control_id: route_control_id } = useParams();
   const control_id = route_control_id ?? "unresolved-control";
-  return <JoggingWorkspace key={control_id} control_id={control_id} />;
+  return <OperationWorkspace key={control_id} control_id={control_id} />;
 }
 
-function JoggingWorkspace({ control_id }: { control_id: string }) {
+function OperationWorkspace({ control_id }: { control_id: string }) {
   const snapshot = useControlStatus(control_id);
   const visualization = adaptRobotVisualizationState(snapshot);
   const robot_state = snapshot.status?.sample?.robot_state;
@@ -54,7 +54,7 @@ function JoggingWorkspace({ control_id }: { control_id: string }) {
     <main className={styles.page}>
       <div className={styles.title_row}>
         <div>
-          <h1>Jogging</h1>
+          <h1>Operation</h1>
           <p className={styles.eyebrow}>{control_id}</p>
         </div>
       </div>

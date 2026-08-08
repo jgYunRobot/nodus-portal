@@ -1,6 +1,6 @@
-export type RobotPageKind = "jogging" | "operating";
+export type RobotPageKind = "operation";
 
-const ROBOT_PAGE_KINDS = new Set<RobotPageKind>(["jogging", "operating"]);
+const ROBOT_PAGE_KINDS = new Set<RobotPageKind>(["operation"]);
 
 export function getEffectiveControlId(
   route_control_id: string | undefined,
@@ -10,7 +10,7 @@ export function getEffectiveControlId(
 }
 
 export function getRobotPageKind(pathname: string): RobotPageKind | null {
-  const match = /^\/robots\/[^/]+\/(jogging|operating)$/.exec(pathname);
+  const match = /^\/robots\/[^/]+\/(operation)$/.exec(pathname);
   if (match === null || !ROBOT_PAGE_KINDS.has(match[1] as RobotPageKind))
     return null;
   return match[1] as RobotPageKind;

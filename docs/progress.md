@@ -1,5 +1,83 @@
 # Progress
 
+## 2026-08-09 - Operation page consolidation
+
+### Changes
+
+- Consolidated the robot-scoped Jogging and Operating page model into one canonical Operation page.
+- Preserved the existing Jog remote, hold-to-run behavior, 3D visualization, real-time values,
+  RobotStatus ownership, and Robot Dock command ownership.
+- Defined `/robots/:control_id/operation` as canonical and retained replace redirects from the two
+  legacy robot page routes.
+
+### Status
+
+- The focused design is recorded in
+  `docs/designs/src_app_operation_page_consolidation_design.md` and supersedes only the route/page
+  naming portions of the older navigation, Robot Dock, and frontend architecture designs.
+- Existing Device page worktree changes remain out of scope and preserved.
+
+### Validation
+
+- Reviewed the current router, shell navigation, Home card, Robot Dock route-selection helper,
+  Jogging/Operating page modules, route fixtures, and applicable Portal designs.
+- Scoped Prettier formatting and `git diff --check` passed.
+- Typecheck, lint, unit, build, and Playwright commands have not been run because repository rules
+  require an explicit request.
+
+### Next goals
+
+- Keep Operation as the single robot workspace while adding future operation-owned features without
+  recreating a second duplicate robot-control page.
+
+## 2026-08-09 - Device deck controls simplification
+
+### Changes
+
+- Removed the redundant Previous and Next buttons below the Device card deck.
+- Kept direct selection through the device picker, visible adjacent card edges, horizontal drag,
+  and keyboard Left/Right Arrow navigation.
+
+### Status
+
+- Device deck navigation remains available without dedicated previous/next controls.
+
+### Validation
+
+- Added Playwright coverage that confirms the removed buttons are not exposed.
+- Test commands were not run because repository rules require explicit user instruction.
+
+### Next goals
+
+- Complete Vision LAN address and browser CORS integration for tablet Camera previews.
+
+## 2026-08-08 - Device active-selection retention
+
+### Changes
+
+- Kept deterministic card ordering and non-persistent slot numbers, but made the initially active
+  connected device authoritative by recording its `component_id` in the URL with replace
+  navigation.
+- Prevented a newly connected device that sorts before the current card from taking over the active
+  Device presentation.
+- Preserved page-local empty-slot selection and the existing removed-device fallback behavior.
+
+### Status
+
+- Device card numbers may still change as the directory is deterministically re-sorted, but the
+  device the user is viewing remains selected until it is removed or the user selects another card.
+
+### Validation
+
+- Scoped Prettier check passed for the owned TypeScript, E2E, design, and progress files, and
+  `git diff --check` passed.
+- Typecheck, lint, unit, build, and Playwright commands were not run because repository rules
+  require explicit user instruction.
+
+### Next goals
+
+- Complete Vision LAN address and browser CORS integration for tablet Camera previews.
+
 ## 2026-08-08 - Live Device directory recovery
 
 ### Changes

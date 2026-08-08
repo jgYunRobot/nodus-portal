@@ -90,6 +90,27 @@ function DeviceDeck({
     );
   }, [active_index, selection.removed_component_id, setSearchParams]);
 
+  useEffect(() => {
+    if (requested_component_id !== null || selected_empty_index !== null)
+      return;
+    const active_slot = slots[active_index];
+    if (active_slot?.kind !== "connected") return;
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.set("device", active_slot.entry.component_id);
+        return next;
+      },
+      { replace: true }
+    );
+  }, [
+    active_index,
+    requested_component_id,
+    selected_empty_index,
+    setSearchParams,
+    slots
+  ]);
+
   function selectIndex(index: number): void {
     const slot = slots[index];
     if (slot === undefined) return;
@@ -226,24 +247,6 @@ function DeviceDeck({
             type="button"
           />
         )}
-      </div>
-      <div className={styles.deck_actions}>
-        <Button
-          aria-label="Previous device"
-          disabled={active_index === 0}
-          onClick={() => selectRelative(-1)}
-          tone="secondary"
-        >
-          Previous
-        </Button>
-        <Button
-          aria-label="Next device"
-          disabled={active_index === slots.length - 1}
-          onClick={() => selectRelative(1)}
-          tone="secondary"
-        >
-          Next
-        </Button>
       </div>
     </section>
   );

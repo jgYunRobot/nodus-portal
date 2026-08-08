@@ -33,8 +33,7 @@ export function PortalShell() {
   const control_id = has_no_discovered_robots
     ? null
     : getEffectiveControlId(route_control_id, robot_dock.preferred_control_id);
-  const jogging_target = createRobotPageTarget(control_id, "jogging");
-  const operating_target = createRobotPageTarget(control_id, "operating");
+  const operation_target = createRobotPageTarget(control_id);
 
   if (has_no_discovered_robots && route_control_id !== undefined)
     return <Navigate replace to="/home" />;
@@ -48,8 +47,7 @@ export function PortalShell() {
       <aside className={styles.sidebar}>
         <Navigation
           control_id={control_id}
-          jogging_target={jogging_target}
-          operating_target={operating_target}
+          operation_target={operation_target}
           on_navigate={() => undefined}
         />
         <Button
@@ -68,8 +66,7 @@ export function PortalShell() {
       >
         <Navigation
           control_id={control_id}
-          jogging_target={jogging_target}
-          operating_target={operating_target}
+          operation_target={operation_target}
           on_navigate={() => setIsDrawerOpen(false)}
         />
       </Drawer>
@@ -109,23 +106,18 @@ export function PortalShell() {
   );
 }
 
-function createRobotPageTarget(
-  control_id: string | null,
-  page_kind: "jogging" | "operating"
-): string {
+function createRobotPageTarget(control_id: string | null): string {
   if (control_id === null) return "/home";
-  return `/robots/${encodeURIComponent(control_id)}/${page_kind}`;
+  return `/robots/${encodeURIComponent(control_id)}/operation`;
 }
 
 function Navigation({
   control_id,
-  jogging_target,
-  operating_target,
+  operation_target,
   on_navigate
 }: {
   control_id: string | null;
-  jogging_target: string;
-  operating_target: string;
+  operation_target: string;
   on_navigate: () => void;
 }) {
   function handleRobotNavigation(event: MouseEvent<HTMLAnchorElement>): void {
@@ -148,16 +140,9 @@ function Navigation({
       <NavLink
         aria-disabled={control_id === null}
         onClick={handleRobotNavigation}
-        to={jogging_target}
+        to={operation_target}
       >
-        Jogging
-      </NavLink>
-      <NavLink
-        aria-disabled={control_id === null}
-        onClick={handleRobotNavigation}
-        to={operating_target}
-      >
-        Operating
+        Operation
       </NavLink>
     </nav>
   );

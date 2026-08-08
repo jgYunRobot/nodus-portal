@@ -19,11 +19,10 @@ describe("robot route selection", () => {
   it("preserves supported robot page kinds while replacing only the Control ID", () => {
     expect(getRobotPageKind("/robots/control-a/device")).toBeNull();
     expect(
-      getRoutePreservingRobotPath("/robots/control-a/jogging", "control b")
-    ).toBe("/robots/control%20b/jogging");
-    expect(
-      getRoutePreservingRobotPath("/robots/control-a/operating", "control-b")
-    ).toBe("/robots/control-b/operating");
+      getRoutePreservingRobotPath("/robots/control-a/operation", "control b")
+    ).toBe("/robots/control%20b/operation");
+    expect(getRobotPageKind("/robots/control-a/jogging")).toBeNull();
+    expect(getRobotPageKind("/robots/control-a/operating")).toBeNull();
   });
 
   it("does not turn global or unsupported paths into robot-scoped routes", () => {

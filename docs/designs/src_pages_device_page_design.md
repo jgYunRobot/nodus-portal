@@ -76,8 +76,10 @@ identity; `instance_id`, session generation, and catalog generation identify the
 behind that logical device.
 
 - On initial `/devices` entry, the page selects the first connected device in stable directory order
-  for presentation only. If no device is connected, it presents the first empty slot without adding
-  a device query value. A user may subsequently navigate to another empty slot in page-local state.
+  and records that identity in the query with replace navigation. This prevents a newly connected
+  device that sorts earlier from taking over the active card. If no device is connected, it
+  presents the first empty slot without adding a device query value. A user may subsequently
+  navigate to another empty slot in page-local state.
 - A user selection updates the query and browser history.
 - Direct links, reload, and back/forward restore the requested device.
 - An unknown or authoritatively removed query identity clears the stale `device` query with replace
@@ -176,9 +178,9 @@ max(5, connected_device_count)
   empty cards to make up the difference.
 - Empty slots are presentation placeholders, not Pilot components. They have no `component_id`,
   endpoint, provider query, settings draft, health poll, or lifecycle state.
-- Empty cards participate in swipe, picker, Previous/Next, and keyboard navigation so the stacked
-  five-card shape remains real and predictable, but their bodies contain no interactive device
-  controls.
+- Empty cards participate in swipe, picker, visible-card-edge, and keyboard navigation so the
+  stacked five-card shape remains real and predictable, but their bodies contain no interactive
+  device controls.
 - A connected device never inherits state from the empty slot it replaces. The device card mounts
   from its own current component/session/catalog identity.
 
@@ -204,7 +206,6 @@ The deck uses CSS layout and transforms, not a canvas or WebGL scene.
    +---|   +--------------------------------+   |---+
        +----------------------------------------+
 
-             Previous                 Next
 ```
 
 - the active card is frontmost, full-scale, and visually opaque;
@@ -223,7 +224,6 @@ The overlap is a navigation affordance, not a way to operate several devices at 
 Equivalent selection is available through:
 
 - horizontal swipe or pointer drag on non-interactive card space;
-- Previous and Next buttons;
 - Left and Right Arrow while focus is in the deck navigation region;
 - clicking a visible adjacent card edge; and
 - a device picker that directly selects any device when the deck becomes large.
@@ -239,8 +239,8 @@ gesture.
 - The active card announces device name, type, position, and connection state.
 - Inactive cards are `inert` and excluded from the tab order; decorative duplicate content is
   hidden from assistive technology.
-- Selection never moves focus into a hidden card. After explicit Previous/Next navigation, focus
-  remains on the navigation control unless the user enters the active card.
+- Selection never moves focus into a hidden card. After keyboard or visible-card-edge selection,
+  focus remains on the navigation control unless the user enters the active card.
 - The picker provides a non-gesture path to every device.
 - Status is never communicated by color alone.
 

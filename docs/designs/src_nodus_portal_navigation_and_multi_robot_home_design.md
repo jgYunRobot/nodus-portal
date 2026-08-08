@@ -12,6 +12,9 @@
 - Focused Robot Dock design: `src_shell_robot_dock_design.md`
 - Scope: Portal application shell, client-side pages, robot overview, Control selection, and
   multi-robot UI data flow.
+- Superseding route decision: as of 2026-08-09,
+  `src_app_operation_page_consolidation_design.md` replaces the Jogging/Operating page names and
+  routes below with one canonical robot-scoped Operation page while retaining the Jog controls.
 
 This document separates Portal navigation and multi-robot presentation from the detailed
 `apps/web_ui` migration and hold-to-run motion design.

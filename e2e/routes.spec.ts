@@ -74,13 +74,13 @@ test("keeps robot-scoped pages unavailable when discovery is successfully empty"
     }
   );
 
-  await page.goto("/robots/control-alpha/jogging");
+  await page.goto("/robots/control-alpha/operation");
   await expect(page).toHaveURL(/\/home$/);
   await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
 
-  const jogging = page.getByRole("link", { name: "Jogging" });
-  await expect(jogging).toHaveAttribute("aria-disabled", "true");
-  await jogging.click({ force: true });
+  const operation = page.getByRole("link", { name: "Operation" });
+  await expect(operation).toHaveAttribute("aria-disabled", "true");
+  await operation.click({ force: true });
   await expect(page).toHaveURL(/\/home$/);
 });
 
@@ -137,8 +137,8 @@ test("renders stable multi-robot Home cards from public stream descriptors", asy
       )
   ).toEqual(["control-alpha", "control-bravo"]);
   await expect(
-    page.getByRole("link", { name: "Open Jogging" }).first()
-  ).toHaveAttribute("href", "/robots/control-alpha/jogging");
+    page.getByRole("link", { name: "Open Operation" }).first()
+  ).toHaveAttribute("href", "/robots/control-alpha/operation");
   await expect(page.locator("canvas")).toHaveCount(0);
 });
 
@@ -413,6 +413,7 @@ test("builds the minimum-five-slot directory from public device records", async 
   await expect(
     directory.getByRole("heading", { name: "operator.leader" })
   ).toBeVisible();
+  await expect(page).toHaveURL(/\/devices\?device=operator\.leader$/);
   await expect(
     directory.getByLabel("Device picker").locator("option")
   ).toHaveCount(5);
@@ -503,6 +504,12 @@ test("navigates the overlapping device deck through URL, keyboard, picker, and c
   await page.goto("/devices?device=camera.top");
   const deck = page.getByRole("region", { name: "Device carousel" });
   await expect(deck.getByRole("heading", { name: "Top camera" })).toBeVisible();
+  await expect(
+    deck.getByRole("button", { name: "Previous device" })
+  ).toHaveCount(0);
+  await expect(deck.getByRole("button", { name: "Next device" })).toHaveCount(
+    0
+  );
   await deck.press("ArrowLeft");
   await expect(page).toHaveURL(/\/devices\?device=operator\.leader$/);
   await page.goBack();
@@ -748,19 +755,19 @@ test("switches a robot-scoped route without changing its page kind", async ({
     }
   );
 
-  await page.goto("/robots/control-alpha/operating");
+  await page.goto("/robots/control-alpha/operation");
   const dock = page.getByRole("complementary", {
     name: "Selected robot controls"
   });
   await dock.getByLabel("Selected robot").selectOption("control-bravo");
-  await expect(page).toHaveURL(/\/robots\/control-bravo\/operating$/);
+  await expect(page).toHaveURL(/\/robots\/control-bravo\/operation$/);
   await expect(
     page.getByTestId("portal-main-content").getByText("control-bravo", {
       exact: true
     })
   ).toBeVisible();
   await page.goBack();
-  await expect(page).toHaveURL(/\/robots\/control-alpha\/operating$/);
+  await expect(page).toHaveURL(/\/robots\/control-alpha\/operation$/);
 });
 
 test("retains stale, offline, and removed selections without auto-switching", async ({
@@ -815,16 +822,16 @@ test("retains stale, offline, and removed selections without auto-switching", as
     });
   });
 
-  await page.goto("/robots/control-alpha/operating");
+  await page.goto("/robots/control-alpha/operation");
   const dock = page.getByRole("complementary", {
     name: "Selected robot controls"
   });
   await expect(dock).toContainText("Status stale");
   await dock.getByLabel("Selected robot").selectOption("control-bravo");
-  await expect(page).toHaveURL(/\/robots\/control-bravo\/operating$/);
+  await expect(page).toHaveURL(/\/robots\/control-bravo\/operation$/);
   await expect(dock).toContainText("Offline");
 
-  await page.goto("/robots/control-removed/operating");
+  await page.goto("/robots/control-removed/operation");
   await expect(dock.getByLabel("Selected robot")).toHaveValue(
     "control-removed"
   );
@@ -925,20 +932,30 @@ test("captures Robot Dock expanded and collapsed desktop and phone states", asyn
   });
 });
 
-test("restores the direct Control-scoped Jogging route", async ({ page }) => {
-  await page.goto("/robots/control-alpha/jogging");
-  await expect(page.getByRole("heading", { name: "Jogging" })).toBeVisible();
+test("restores the direct Control-scoped Operation route", async ({ page }) => {
+  await page.goto("/robots/control-alpha/operation");
+  await expect(page.getByRole("heading", { name: "Operation" })).toBeVisible();
   await expect(page.getByText("control-alpha", { exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Jogging" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Operation" })).toHaveAttribute(
     "aria-current",
     "page"
   );
 });
 
-test("loads a selected Portal-owned robot profile only on the Jogging route", async ({
+test("redirects legacy robot page routes to Operation", async ({ page }) => {
+  await page.goto("/robots/control-alpha/jogging");
+  await expect(page).toHaveURL(/\/robots\/control-alpha\/operation$/);
+  await expect(page.getByRole("heading", { name: "Operation" })).toBeVisible();
+
+  await page.goto("/robots/control-alpha/operating");
+  await expect(page).toHaveURL(/\/robots\/control-alpha\/operation$/);
+  await expect(page.getByRole("heading", { name: "Operation" })).toBeVisible();
+});
+
+test("loads a selected Portal-owned robot profile only on the Operation route", async ({
   page
 }) => {
-  await page.goto("/robots/control-alpha/jogging");
+  await page.goto("/robots/control-alpha/operation");
   await expect(page.locator("canvas")).toHaveCount(0);
 
   const loaded_meshes = new Set<string>();
@@ -978,7 +995,7 @@ test("loads a selected Portal-owned robot profile only on the Jogging route", as
     controls_bounds === null ||
     values_bounds === null
   )
-    throw new Error("Jogging layout landmarks are unavailable.");
+    throw new Error("Operation layout landmarks are unavailable.");
   expect(controls_bounds.x).toBeGreaterThan(visualization_bounds.x);
   expect(values_bounds.y).toBeGreaterThan(visualization_bounds.y);
 

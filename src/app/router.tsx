@@ -1,23 +1,23 @@
 import { lazy, Suspense } from "react";
-import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
+import {
+  createBrowserRouter,
+  Navigate,
+  RouterProvider,
+  useParams
+} from "react-router";
 import { PortalShell } from "../shell/portal_shell";
 
 const HomePage = lazy(() =>
   import("../pages/home_page").then((module) => ({ default: module.HomePage }))
 );
-const JoggingPage = lazy(() =>
-  import("../pages/jogging_page").then((module) => ({
-    default: module.JoggingPage
+const OperationPage = lazy(() =>
+  import("../pages/operation_page").then((module) => ({
+    default: module.OperationPage
   }))
 );
 const DevicePage = lazy(() =>
   import("../pages/device_page").then((module) => ({
     default: module.DevicePage
-  }))
-);
-const OperatingPage = lazy(() =>
-  import("../pages/operating_page").then((module) => ({
-    default: module.OperatingPage
   }))
 );
 const NotFoundPage = lazy(() =>
@@ -38,6 +38,15 @@ function lazyPage(Page: typeof HomePage) {
   );
 }
 
+function LegacyRobotOperationRedirect() {
+  const { control_id } = useParams();
+  const target =
+    control_id === undefined
+      ? "/home"
+      : `/robots/${encodeURIComponent(control_id)}/operation`;
+  return <Navigate replace to={target} />;
+}
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -50,10 +59,17 @@ const router = createBrowserRouter([
         path: "robots/:control_id/device",
         element: <Navigate replace to="/devices" />
       },
-      { path: "robots/:control_id/jogging", element: lazyPage(JoggingPage) },
+      {
+        path: "robots/:control_id/operation",
+        element: lazyPage(OperationPage)
+      },
+      {
+        path: "robots/:control_id/jogging",
+        element: <LegacyRobotOperationRedirect />
+      },
       {
         path: "robots/:control_id/operating",
-        element: lazyPage(OperatingPage)
+        element: <LegacyRobotOperationRedirect />
       },
       { path: "*", element: lazyPage(NotFoundPage) }
     ]
