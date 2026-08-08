@@ -36,6 +36,17 @@ export interface PilotHttpResponse<T> {
   body: T;
 }
 
+export interface PilotEndpointDirectory {
+  server_instance_id: string;
+  catalog_revision: number;
+  endpoints: unknown[];
+}
+
+export interface PilotComponentDirectory {
+  components: unknown[];
+  snapshot_revision: number;
+}
+
 const PILOT_REQUEST_TIMEOUT_MS = 5000;
 
 export function resolvePilotPath(
@@ -61,11 +72,59 @@ export class PilotHttpClient {
   getSnapshot(): Promise<components["schemas"]["PilotSnapshot"]> {
     return this.get("/api/v1/snapshot");
   }
-  getComponents(): Promise<components["schemas"]["ComponentsResponse"]> {
-    return this.get("/api/v1/components");
+  async getComponents(): Promise<PilotComponentDirectory> {
+    const response = await this.get<unknown>("/api/v1/components");
+    if (!isComponentDirectoryEnvelope(response)) {
+      throw new PilotProtocolError(
+        "Pilot component directory response does not match the public contract."
+      );
+    }
+    return response;
   }
-  getEndpoints(): Promise<components["schemas"]["EndpointDirectoryResponse"]> {
-    return this.get("/api/v1/endpoints");
+  async getEndpoints(): Promise<PilotEndpointDirectory> {
+    const endpoints: unknown[] = [];
+    const seen_cursors = new Set<string>();
+    let cursor: string | null = null;
+    let server_instance_id: string | null = null;
+    let catalog_revision: number | null = null;
+
+    do {
+      const query: string =
+        cursor === null ? "" : `?cursor=${encodeURIComponent(cursor)}`;
+      const page: unknown = await this.get<unknown>(
+        `/api/v1/endpoints${query}`
+      );
+      if (!isEndpointDirectoryEnvelope(page)) {
+        throw new PilotProtocolError(
+          "Pilot endpoint directory response does not match the public contract."
+        );
+      }
+      if (
+        (server_instance_id !== null &&
+          page.server_instance_id !== server_instance_id) ||
+        (catalog_revision !== null &&
+          page.catalog_revision !== catalog_revision)
+      ) {
+        throw new PilotProtocolError(
+          "Pilot endpoint directory changed while its pages were being read."
+        );
+      }
+      server_instance_id = page.server_instance_id;
+      catalog_revision = page.catalog_revision;
+      endpoints.push(...page.endpoints);
+      cursor = page.next_cursor;
+      if (
+        cursor !== null &&
+        (seen_cursors.has(cursor) || seen_cursors.size >= 128)
+      ) {
+        throw new PilotProtocolError(
+          "Pilot endpoint directory pagination did not terminate."
+        );
+      }
+      if (cursor !== null) seen_cursors.add(cursor);
+    } while (cursor !== null);
+
+    return { server_instance_id, catalog_revision, endpoints };
   }
   async getRobotStatusStreams(): Promise<
     components["schemas"]["SampleStreamsResponse"]
@@ -206,4 +265,38 @@ export class PilotHttpClient {
   private resolvePath(path: string): string {
     return resolvePilotPath(path, this.base_url);
   }
+}
+
+function isEndpointDirectoryEnvelope(value: unknown): value is {
+  server_instance_id: string;
+  catalog_revision: number;
+  endpoints: unknown[];
+  next_cursor: string | null;
+} {
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    return false;
+  const response = value as Record<string, unknown>;
+  return (
+    typeof response.server_instance_id === "string" &&
+    isNonNegativeInteger(response.catalog_revision) &&
+    Array.isArray(response.endpoints) &&
+    (typeof response.next_cursor === "string" || response.next_cursor === null)
+  );
+}
+
+function isComponentDirectoryEnvelope(value: unknown): value is {
+  components: unknown[];
+  snapshot_revision: number;
+} {
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    return false;
+  const response = value as Record<string, unknown>;
+  return (
+    Array.isArray(response.components) &&
+    isNonNegativeInteger(response.snapshot_revision)
+  );
+}
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
 }

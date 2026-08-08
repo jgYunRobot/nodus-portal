@@ -42,6 +42,38 @@ describe("PilotHttpClient", () => {
       "/api/v1/pilot/streams?stream_kind=robot_status"
     ]);
   });
+  it("exhausts the public endpoint directory pages before returning", async () => {
+    const requests: string[] = [];
+    const pages = [
+      {
+        server_instance_id: "pilot-a",
+        catalog_revision: 2,
+        endpoints: [{ component_id: "camera-a" }],
+        next_cursor: "next page"
+      },
+      {
+        server_instance_id: "pilot-a",
+        catalog_revision: 2,
+        endpoints: [{ component_id: "operator-a" }],
+        next_cursor: null
+      }
+    ];
+    const client = new PilotHttpClient("same-origin", async (input) => {
+      requests.push(String(input));
+      const page = pages.shift();
+      return Response.json(page);
+    });
+
+    await expect(client.getEndpoints()).resolves.toEqual({
+      server_instance_id: "pilot-a",
+      catalog_revision: 2,
+      endpoints: [{ component_id: "camera-a" }, { component_id: "operator-a" }]
+    });
+    expect(requests).toEqual([
+      "/api/v1/endpoints",
+      "/api/v1/endpoints?cursor=next%20page"
+    ]);
+  });
   it("uses the configured Pilot base URL when no constructor override is given", async () => {
     configurePortalConfig({
       pilot_base_url: "https://pilot.example.test",

@@ -209,6 +209,92 @@ test("keeps Devices global and redirects the legacy robot-scoped route", async (
   await expect(page).toHaveURL(/\/devices$/);
 });
 
+test("builds the minimum-five-slot directory from public device records", async ({
+  page
+}) => {
+  await page.route(
+    (url) => url.pathname === "/api/v1/pilot/streams",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ server_instance_id: "pilot-a", streams: [] })
+      });
+    }
+  );
+  await page.route(
+    (url) => url.pathname === "/api/v1/components",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          snapshot_revision: 1,
+          components: [
+            {
+              component_id: "camera.top",
+              instance_id: "camera.top.instance",
+              component_type: "camera",
+              session_generation: 1,
+              capabilities: ["camera.stream.color.preview"],
+              service_endpoints: {},
+              state: { health: "ready", reason: null, details: {} },
+              metadata: { display_name: "Top camera" },
+              registered_at_ns: 1,
+              last_heartbeat_ns: 1,
+              expires_at_ns: 2,
+              last_sequence: 1,
+              clock_domain: "monotonic_same_host",
+              available: true
+            },
+            {
+              component_id: "operator.leader",
+              instance_id: "operator.leader.instance",
+              component_type: "input_source",
+              session_generation: 1,
+              capabilities: ["control.operation.v1"],
+              service_endpoints: {},
+              state: { health: "ready", reason: null, details: {} },
+              metadata: {},
+              registered_at_ns: 1,
+              last_heartbeat_ns: 1,
+              expires_at_ns: 2,
+              last_sequence: 1,
+              clock_domain: "monotonic_same_host",
+              available: true
+            }
+          ]
+        })
+      });
+    }
+  );
+  await page.route(
+    (url) => url.pathname === "/api/v1/endpoints",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          server_instance_id: "pilot-a",
+          catalog_revision: 1,
+          endpoints: [],
+          next_cursor: null
+        })
+      });
+    }
+  );
+
+  await page.goto("/devices");
+  const directory = page.getByRole("region", { name: "Device directory" });
+  await expect(directory.getByRole("heading")).toHaveCount(5);
+  await expect(
+    directory.getByRole("heading", { name: "Top camera" })
+  ).toBeVisible();
+  await expect(
+    directory.getByRole("heading", { name: "operator.leader" })
+  ).toBeVisible();
+  await expect(
+    directory.getByRole("heading", { name: "Empty slot 1" })
+  ).toBeVisible();
+});
+
 test("collapses the right-anchored Robot Dock without resizing main content", async ({
   page
 }) => {
