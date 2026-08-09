@@ -1,0 +1,175 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Nodus Operator Activation API",
+    "version": "1.0.0",
+    "description": "Direct provider API for observing and controlling Nodus Operator activation."
+  },
+  "paths": {
+    "/api/v1/activation": {
+      "get": {
+        "operationId": "getActivation",
+        "summary": "Read the authoritative Operator activation snapshot",
+        "responses": {
+          "200": {"description": "Current activation state", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ActivationSnapshot"}}}}
+        }
+      }
+    },
+    "/api/v1/activation/latched": {
+      "put": {
+        "operationId": "setLatchedActivation",
+        "summary": "Set the desired latched Run or Pause state",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/LatchedActivationRequest"}}}},
+        "responses": {
+          "200": {"description": "Accepted or already-satisfied desired state", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ActivationSnapshot"}}}},
+          "409": {"$ref": "#/components/responses/ConflictError"},
+          "415": {"$ref": "#/components/responses/UnsupportedMediaTypeError"},
+          "413": {"$ref": "#/components/responses/PayloadTooLargeError"},
+          "503": {"$ref": "#/components/responses/ServiceUnavailableError"}
+        }
+      }
+    },
+    "/api/v1/activation/hold/start": {
+      "post": {
+        "operationId": "startActivationHold",
+        "summary": "Start a server-owned remote Hold-to-Run lease",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HoldStartRequest"}}}},
+        "responses": {
+          "200": {"description": "New active hold lease", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HoldStartResponse"}}}},
+          "409": {"$ref": "#/components/responses/ConflictError"},
+          "415": {"$ref": "#/components/responses/UnsupportedMediaTypeError"},
+          "413": {"$ref": "#/components/responses/PayloadTooLargeError"},
+          "503": {"$ref": "#/components/responses/ServiceUnavailableError"}
+        }
+      }
+    },
+    "/api/v1/activation/hold/heartbeat": {
+      "post": {
+        "operationId": "renewActivationHold",
+        "summary": "Renew a current remote Hold-to-Run lease",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HoldLeaseRequest"}}}},
+        "responses": {
+          "200": {"description": "Current activation snapshot with refreshed lease presentation", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ActivationSnapshot"}}}},
+          "409": {"$ref": "#/components/responses/StaleLeaseError"},
+          "415": {"$ref": "#/components/responses/UnsupportedMediaTypeError"},
+          "413": {"$ref": "#/components/responses/PayloadTooLargeError"},
+          "503": {"$ref": "#/components/responses/ServiceUnavailableError"}
+        }
+      }
+    },
+    "/api/v1/activation/hold/stop": {
+      "post": {
+        "operationId": "stopActivationHold",
+        "summary": "Stop a current remote Hold-to-Run lease",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HoldLeaseRequest"}}}},
+        "responses": {
+          "200": {"description": "Paused activation snapshot", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ActivationSnapshot"}}}},
+          "409": {"$ref": "#/components/responses/StaleLeaseError"},
+          "415": {"$ref": "#/components/responses/UnsupportedMediaTypeError"},
+          "413": {"$ref": "#/components/responses/PayloadTooLargeError"},
+          "503": {"$ref": "#/components/responses/ServiceUnavailableError"}
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ActivationSnapshot": {
+        "x-schema-id": "operator.activation.v1.ActivationSnapshot",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["schema_version", "component_id", "instance_id", "target_control_id", "source_id", "terminal_mode", "run_state", "activation_kind", "generation", "revision", "ready", "hold_lease", "fault"],
+        "properties": {
+          "schema_version": {"type": "integer", "const": 1},
+          "component_id": {"$ref": "#/components/schemas/Identifier"},
+          "instance_id": {"$ref": "#/components/schemas/Identifier"},
+          "target_control_id": {"$ref": "#/components/schemas/Identifier"},
+          "source_id": {"$ref": "#/components/schemas/Identifier"},
+          "terminal_mode": {"type": "string", "enum": ["latched", "hold_to_run"]},
+          "run_state": {"type": "string", "enum": ["connecting", "paused", "starting", "running", "stopping", "fault", "shutting_down"]},
+          "activation_kind": {"type": "string", "enum": ["none", "latched", "local_hold", "remote_hold"]},
+          "generation": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+          "revision": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+          "ready": {"type": "boolean"},
+          "hold_lease": {"anyOf": [{"$ref": "#/components/schemas/HoldLease"}, {"type": "null"}]},
+          "fault": {"anyOf": [{"$ref": "#/components/schemas/ActivationFault"}, {"type": "null"}]}
+        }
+      },
+      "LatchedActivationRequest": {
+        "x-schema-id": "operator.activation.v1.LatchedActivationRequest",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["desired_state", "observed_generation"],
+        "properties": {
+          "desired_state": {"type": "string", "enum": ["running", "paused"]},
+          "observed_generation": {"type": "integer", "minimum": 0, "maximum": 9007199254740991}
+        }
+      },
+      "HoldStartRequest": {
+        "x-schema-id": "operator.activation.v1.HoldStartRequest",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["request_id"],
+        "properties": {"request_id": {"$ref": "#/components/schemas/RequestIdentifier"}}
+      },
+      "HoldLeaseRequest": {
+        "x-schema-id": "operator.activation.v1.HoldLeaseRequest",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["lease_id", "generation"],
+        "properties": {
+          "lease_id": {"$ref": "#/components/schemas/LeaseIdentifier"},
+          "generation": {"type": "integer", "minimum": 1, "maximum": 9007199254740991}
+        }
+      },
+      "HoldStartResponse": {
+        "x-schema-id": "operator.activation.v1.HoldStartResponse",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["lease", "snapshot"],
+        "properties": {
+          "lease": {"$ref": "#/components/schemas/HoldLease"},
+          "snapshot": {"$ref": "#/components/schemas/ActivationSnapshot"}
+        }
+      },
+      "HoldLease": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["lease_id", "generation", "expires_in_ms"],
+        "properties": {
+          "lease_id": {"$ref": "#/components/schemas/LeaseIdentifier"},
+          "generation": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+          "expires_in_ms": {"type": "integer", "minimum": 0, "maximum": 5000}
+        }
+      },
+      "ActivationFault": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "message"],
+        "properties": {
+          "code": {"type": "string", "minLength": 1, "maxLength": 64},
+          "message": {"type": "string", "minLength": 1, "maxLength": 256}
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["error", "snapshot"],
+        "properties": {
+          "error": {"$ref": "#/components/schemas/ActivationFault"},
+          "snapshot": {"anyOf": [{"$ref": "#/components/schemas/ActivationSnapshot"}, {"type": "null"}]}
+        }
+      },
+      "Identifier": {"type": "string", "minLength": 1, "maxLength": 128},
+      "RequestIdentifier": {"type": "string", "minLength": 1, "maxLength": 128},
+      "LeaseIdentifier": {"type": "string", "minLength": 1, "maxLength": 128}
+    },
+    "responses": {
+      "ConflictError": {"description": "Activation conflict, stale generation, or not-ready state", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}},
+      "StaleLeaseError": {"description": "The requested remote hold lease is no longer active", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}},
+      "UnsupportedMediaTypeError": {"description": "Request body is not application/json", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}},
+      "PayloadTooLargeError": {"description": "Request body exceeds the configured bound", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}},
+      "ServiceUnavailableError": {"description": "The transition service cannot accept or complete bounded work", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}}
+    }
+  }
+}

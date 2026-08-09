@@ -1325,3 +1325,29 @@
   device directory.
 - Decide the first Camera card's exact information hierarchy and color/depth layout.
 - Implement DV0 only after explicit implementation approval.
+
+## 2026-08-10 - Operator activation OR4-0 contract pin
+
+### Changes
+
+- Pinned the released Operator Activation OpenAPI 1.0.0 artifact with its immutable source revision
+  and SHA-256 provenance.
+- Added the reproducible local Operator contract generator and committed generated TypeScript types;
+  Portal builds no contract dependency from a sibling Operator checkout or network source.
+
+### Status
+
+- OR4-0 is complete. The direct activation runtime remains disabled until subsequent OR4 gates
+  validate directory evidence, transport, and authoritative state.
+
+### Validation
+
+- `npm run generate:operator-contract` regenerated the committed artifact.
+- The pinned bytes match `nodus-operator` revision `9aa5c66565eb10bc047b47ea97337c4969f6809e`
+  with SHA-256 `ce33cbf5865b41fc795aec787db45fbbe4fece13051b814ea999edcd5400f09c`.
+- `git diff --check` passed.
+
+### Next goals
+
+- OR4-1: retain exact public service schema IDs and resolve the complete selected-runtime descriptor
+  set without changing Camera or generic Device behavior.
