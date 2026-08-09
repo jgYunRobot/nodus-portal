@@ -1501,3 +1501,26 @@
 
 - `npm run typecheck` now reports only the existing Camera nullable endpoint capture at
   `src/features/camera/use_vision_camera.ts:52`.
+
+## 2026-08-10 - Operator activation OR4-6 Device Remote binding
+
+### Changes
+
+- Bound the existing Device Remote card to the selected Operator's validated direct activation
+  endpoints and authoritative runtime snapshot.
+- Connected desired-state Latched Run/Pause and local press-and-hold lease input while preserving
+  the reviewed card order, button placement, and factual identity details.
+- Releases the local hold lease on pointer/key release, pointer cancellation, focus loss, offline,
+  hidden document, selection/runtime change, and unmount. Jog/control-authority interlocks are
+  deliberately deferred to their dedicated control-ownership work.
+
+### Status
+
+- OR4-6 is complete. Device Remote owns only its selected Operator activation lifecycle.
+
+### Validation
+
+- Focused Operator panel, contract, client, query, latched, and Hold lease tests passed (6 files,
+  18 tests).
+- Focused ESLint passed for the changed Operator activation UI. `npm run typecheck` remains blocked
+  solely by the pre-existing nullable Camera endpoint capture at `src/features/camera/use_vision_camera.ts:52`.

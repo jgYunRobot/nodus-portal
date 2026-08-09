@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import { useControlStatus } from "../api/pilot/use_control_status";
 import { Card } from "../components/feedback/card";
@@ -10,6 +10,15 @@ import {
   type RobotProfile
 } from "../features/robot_model/robot_profile";
 import { HoldControls } from "../features/operations/hold_controls";
+import {
+  getOperatorCandidates,
+  resolveOperatorSelection
+} from "../features/operator_remote/operator_remote_model";
+import {
+  OperatorRemotePanel,
+  type OperatorRemoteDirectoryState
+} from "../features/operator_remote/operator_remote_panel";
+import { useDeviceDirectory } from "../features/device_directory/use_device_directory";
 import styles from "./operation_page.module.css";
 
 const RobotScene = lazy(() =>
@@ -32,6 +41,7 @@ export function OperationPage() {
 
 function OperationWorkspace({ control_id }: { control_id: string }) {
   const snapshot = useControlStatus(control_id);
+  const device_directory = useDeviceDirectory();
   const visualization = adaptRobotVisualizationState(snapshot);
   const robot_state = snapshot.status?.sample?.robot_state;
   const realtime_robot_state =
@@ -42,6 +52,25 @@ function OperationWorkspace({ control_id }: { control_id: string }) {
       : undefined;
   const [profile, setProfile] = useState<RobotProfile | null>(() =>
     loadRobotProfile(control_id)
+  );
+  const [selected_operator_id, setSelectedOperatorId] = useState<string | null>(
+    null
+  );
+  const operator_candidates = useMemo(
+    () => getOperatorCandidates(device_directory.directory?.entries ?? []),
+    [device_directory.directory?.entries]
+  );
+  const directory_state: OperatorRemoteDirectoryState =
+    device_directory.error !== null
+      ? "error"
+      : device_directory.directory !== undefined
+        ? "ready"
+        : "loading";
+
+  const resolved_operator_id = resolveOperatorSelection(
+    operator_candidates,
+    selected_operator_id,
+    selected_operator_id === null
   );
 
   function selectProfile(profile_id: string) {
@@ -148,9 +177,20 @@ function OperationWorkspace({ control_id }: { control_id: string }) {
             )}
           </Card>
         </section>
-        <Card className={styles.operation_card}>
-          <HoldControls control_id={control_id} />
-        </Card>
+        <aside aria-label="Operation remotes" className={styles.remote_rail}>
+          <Card>
+            <HoldControls control_id={control_id} />
+          </Card>
+          <OperatorRemotePanel
+            candidates={operator_candidates}
+            control_id={control_id}
+            directory_event={device_directory.last_event}
+            directory_state={directory_state}
+            on_select_operator={setSelectedOperatorId}
+            refresh_directory={device_directory.refresh_directory}
+            selected_component_id={resolved_operator_id}
+          />
+        </aside>
       </div>
     </main>
   );

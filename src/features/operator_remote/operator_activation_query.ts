@@ -77,7 +77,10 @@ export function useOperatorActivationQuery({
     [selected_entry]
   );
   const runtime_key = selected_entry?.runtime_key ?? null;
-  const query_key = getOperatorActivationQueryKey(runtime_key ?? "unselected");
+  const query_key = useMemo(
+    () => getOperatorActivationQueryKey(runtime_key ?? "unselected"),
+    [runtime_key]
+  );
   const is_compatible =
     selected_entry !== null &&
     selected_entry.lifecycle_state === "ready" &&
