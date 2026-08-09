@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { DeviceDirectoryEntry } from "../device_directory/device_directory";
 import {
   OperatorActivationClient,
@@ -53,7 +53,9 @@ export function useOperatorLatchedActivation({
   const [reconciliation_started_at, setReconciliationStartedAt] = useState<
     number | null
   >(null);
-  const requires_reconciliation = reconciliation_started_at !== null;
+  const requires_reconciliation =
+    reconciliation_started_at !== null &&
+    !(query_state === "ready" && data_updated_at >= reconciliation_started_at);
   const desired_state = getLatchedDesiredState(snapshot);
   const can_submit =
     selected_entry !== null &&
@@ -122,16 +124,6 @@ export function useOperatorLatchedActivation({
       void query_client.invalidateQueries({ exact: true, queryKey: query_key });
     }
   });
-
-  useEffect(() => {
-    if (
-      reconciliation_started_at !== null &&
-      query_state === "ready" &&
-      data_updated_at >= reconciliation_started_at
-    ) {
-      setReconciliationStartedAt(null);
-    }
-  }, [data_updated_at, query_state, reconciliation_started_at]);
 
   function requestLatched(): boolean {
     if (

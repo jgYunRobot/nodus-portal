@@ -1473,3 +1473,19 @@
 ### Next goals
 
 - OR4-6: bind authoritative activation states to the Device Remote while preserving Jog cooperation.
+
+## 2026-08-10 - Operator contract validation follow-up
+
+### Changes
+
+- Excluded the immutable Operator OpenAPI bytes and generated TypeScript from repository formatting
+  and linting, matching the existing pinned Pilot contract convention.
+- Removed the activation reconciliation effect's synchronous state update; reconciliation remains
+  derived from the fresh direct-query timestamp.
+
+### Validation
+
+- Focused Operator activation modules pass ESLint and focused latched/lease tests (2 files, 5 tests).
+- Full lint remains blocked by pre-existing Camera/Device files and the user-owned uncommitted
+  Operator Remote fixture; full typecheck remains blocked by the existing Camera nullable endpoint
+  capture.

@@ -5,6 +5,8 @@ docs/agent_docs/
 docs/designs/
 contracts/pilot/v1/openapi.yaml
 contracts/vision/v1/openapi.yaml
+contracts/operator/v1/openapi.yaml
 src/api/pilot/generated/
+src/api/operator/generated/
 docs/progress.md
 docs/rules.md

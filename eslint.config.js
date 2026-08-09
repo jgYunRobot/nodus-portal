@@ -10,7 +10,8 @@ export default tseslint.config(
       "coverage",
       "node_modules",
       "storybook-static",
-      "src/api/pilot/generated"
+      "src/api/pilot/generated",
+      "src/api/operator/generated"
     ]
   },
   js.configs.recommended,
