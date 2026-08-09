@@ -1401,3 +1401,27 @@
 ### Next goals
 
 - OR4-3: add the one selected-runtime TanStack Query owner and current-runtime invalidation path.
+
+## 2026-08-10 - Operator activation OR4-3 authoritative query
+
+### Changes
+
+- Added one selected-runtime TanStack Query key scoped by the existing Device Directory runtime key.
+- Revalidate through the existing Directory event owner only for matching public
+  `component_state_updated` identity evidence, current visibility/online boundaries, and one
+  visible-only low-rate fallback interval.
+- Enforced component, instance, and route-Control snapshot binding plus monotonic revisions; a
+  replacement runtime starts with an empty cache and an older revision cannot overwrite the current
+  one.
+
+### Status
+
+- OR4-3 is complete. The query owns no Pilot EventSource and has no mutation UI yet.
+
+### Validation
+
+- Focused selected-runtime query tests passed (1 file, 2 tests).
+
+### Next goals
+
+- OR4-4: enable only authoritative desired-state Latched Run/Pause mutation and reconciliation.
