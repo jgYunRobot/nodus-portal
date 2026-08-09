@@ -1449,3 +1449,27 @@
 ### Next goals
 
 - OR4-5: add the one-owner 100 ms remote Hold-to-Run lease session with exhaustive cleanup.
+
+## 2026-08-10 - Operator activation OR4-5 Hold lease
+
+### Changes
+
+- Extracted the existing browser-safe UUID implementation into the shared operation identity utility
+  and reused it for `portal-hold-<uuid>` Hold Start requests.
+- Added one local remote Hold lease session with a 100 ms heartbeat, no queued/overlapping heartbeat,
+  exact returned lease ownership, release-before-start Stop handling, and explicit recovery closure.
+- Local release invalidates the lease and timer before Stop awaits; failed Start, Heartbeat, or Stop
+  does not replay the original request or restart local hold admission.
+
+### Status
+
+- OR4-5 session behavior is complete and has no production input binding until OR4-6 adds the
+  page-local control events and cooperative interaction state.
+
+### Validation
+
+- Focused Hold lease and existing component-session identity tests passed (2 files, 9 tests).
+
+### Next goals
+
+- OR4-6: bind authoritative activation states to the Device Remote while preserving Jog cooperation.
