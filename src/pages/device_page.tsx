@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -69,6 +70,7 @@ function DeviceDeck({
   const [selected_empty_index, setSelectedEmptyIndex] = useState<number | null>(
     null
   );
+  const deck_ref = useRef<HTMLElement | null>(null);
   const pointer_start = useRef<PointerStart | null>(null);
   const requested_component_id = search_params.get("device");
   const selection = resolveDeviceDeckSelection(
@@ -112,30 +114,51 @@ function DeviceDeck({
     slots
   ]);
 
-  function selectIndex(index: number): void {
-    const slot = slots[index];
-    if (slot === undefined) return;
-    if (slot.kind === "connected") {
+  const selectIndex = useCallback(
+    (index: number): void => {
+      const slot = slots[index];
+      if (slot === undefined) return;
+      if (slot.kind === "connected") {
+        setSearchParams((current) => {
+          const next = new URLSearchParams(current);
+          next.set("device", slot.entry.component_id);
+          return next;
+        });
+        return;
+      }
+      setSelectedEmptyIndex(index);
       setSearchParams((current) => {
         const next = new URLSearchParams(current);
-        next.set("device", slot.entry.component_id);
+        next.delete("device");
         return next;
       });
-      return;
-    }
-    setSelectedEmptyIndex(index);
-    setSearchParams((current) => {
-      const next = new URLSearchParams(current);
-      next.delete("device");
-      return next;
-    });
-  }
+    },
+    [setSearchParams, slots]
+  );
 
-  function selectRelative(offset: number): void {
-    const destination_index = active_index + offset;
-    if (destination_index < 0 || destination_index >= slots.length) return;
-    selectIndex(destination_index);
-  }
+  const selectRelative = useCallback(
+    (offset: number): void => {
+      const destination_index = active_index + offset;
+      if (destination_index < 0 || destination_index >= slots.length) return;
+      selectIndex(destination_index);
+    },
+    [active_index, selectIndex, slots.length]
+  );
+
+  useEffect(() => {
+    const deck_element = deck_ref.current;
+    if (deck_element === null) return;
+    function handleDeckWheel(event: WheelEvent): void {
+      if (event.deltaY === 0 || isInteractiveTarget(event.target)) return;
+      const offset = event.deltaY > 0 ? 1 : -1;
+      const destination_index = active_index + offset;
+      if (destination_index < 0 || destination_index >= slots.length) return;
+      event.preventDefault();
+      selectIndex(destination_index);
+    }
+    deck_element.addEventListener("wheel", handleDeckWheel, { passive: false });
+    return () => deck_element.removeEventListener("wheel", handleDeckWheel);
+  }, [active_index, selectIndex, slots.length]);
 
   function handleDeckKeyDown(event: KeyboardEvent<HTMLElement>): void {
     if (event.key === "ArrowLeft") {
@@ -171,6 +194,7 @@ function DeviceDeck({
       aria-roledescription="carousel"
       className={styles.deck}
       onKeyDown={handleDeckKeyDown}
+      ref={deck_ref}
       tabIndex={0}
     >
       <div className={styles.deck_controls}>

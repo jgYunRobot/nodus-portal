@@ -531,6 +531,21 @@ test("navigates the overlapping device deck through URL, keyboard, picker, and c
   await deck.getByRole("button", { name: "Select Top camera" }).click();
   await expect(page).toHaveURL(/\/devices\?device=camera\.top$/);
 
+  const wheel_card = deck.locator('[data-active="true"]');
+  const wheel_box = await wheel_card.boundingBox();
+  expect(wheel_box).not.toBeNull();
+  await page.mouse.move(
+    (wheel_box?.x ?? 0) + (wheel_box?.width ?? 0) / 2,
+    (wheel_box?.y ?? 0) + (wheel_box?.height ?? 0) / 2
+  );
+  await page.mouse.wheel(0, 120);
+  await expect(page).toHaveURL(/\/devices$/);
+  await expect(
+    deck.getByRole("heading", { name: "Empty slot 1" })
+  ).toBeVisible();
+  await page.mouse.wheel(0, -120);
+  await expect(page).toHaveURL(/\/devices\?device=camera\.top$/);
+
   const swipable_card = deck.locator('[data-active="true"]');
   const swipable_box = await swipable_card.boundingBox();
   expect(swipable_box).not.toBeNull();

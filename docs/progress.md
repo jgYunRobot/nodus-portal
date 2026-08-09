@@ -1,5 +1,29 @@
 # Progress
 
+## 2026-08-09 - Device deck wheel navigation and taller cards
+
+### Changes
+
+- Added Device deck mouse-wheel navigation: wheel down selects the card to the right and wheel up
+  selects the card to the left.
+- Retained normal page scrolling at the first and last card, and do not intercept wheel input from
+  interactive controls.
+- Increased the stable card frame by 3rem on desktop and narrow viewports.
+- Added focused Playwright coverage for both wheel directions.
+
+### Status
+
+- The Device deck now supports mouse wheel navigation alongside picker, card-edge, swipe, and
+  keyboard navigation.
+
+### Validation
+
+- Test commands were not run because repository rules require explicit user instruction.
+
+### Next goals
+
+- Complete Vision LAN address and browser CORS integration for tablet Camera previews.
+
 ## 2026-08-09 - Camera preview stream recovery
 
 ### Changes

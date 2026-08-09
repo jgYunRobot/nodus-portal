@@ -77,7 +77,7 @@
 }
 
 .deck_frame {
-  min-block-size: 31rem;
+  min-block-size: 34rem;
   overflow: clip;
   position: relative;
   touch-action: pan-y;
@@ -162,7 +162,7 @@
 .inactive_card {
   block-size: 100%;
   box-sizing: border-box;
-  min-block-size: 31rem;
+  min-block-size: 34rem;
 }
 
 .inactive_card {
@@ -283,7 +283,7 @@
   .device_card,
   .empty_slot,
   .inactive_card {
-    min-block-size: 28rem;
+    min-block-size: 31rem;
   }
 
   .deck_card[data-offset="-2"],
