@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { Buffer } from "node:buffer";
 
 function createControlStatus(
   control_id: string,
@@ -377,6 +378,17 @@ test("builds the minimum-five-slot directory from public device records", async 
   );
   await page.route("http://vision.test/**", async (route) => {
     const pathname = new URL(route.request().url()).pathname;
+    const preview_body = Buffer.from(
+      "/9j/4AAQSkZJRgABAgAAAQABAAD//gAQTGF2YzYwLjMxLjEwMgD/2wBDAAgEBAQEBAUFBQUFBQYGBgYGBgYGBgYGBgYHBwcICAgHBwcGBgcHCAgICAkJCQgICAgJCQoKCgwMCwsODg4RERT/xABLAAEBAAAAAAAAAAAAAAAAAAAACAEBAAAAAAAAAAAAAAAAAAAAABABAAAAAAAAAAAAAAAAAAAAABEBAAAAAAAAAAAAAAAAAAAAAP/AABEIAAIAAgMBIgACEQADEQD/2gAMAwEAAhEDEQA/AJ/AB//Z",
+      "base64"
+    );
+    const mjpeg_body = Buffer.concat([
+      Buffer.from(
+        `--nodus_frame\r\nContent-Type: image/jpeg\r\nContent-Length: ${preview_body.length}\r\n\r\n`
+      ),
+      preview_body,
+      Buffer.from("\r\n")
+    ]);
     const body =
       pathname === "/health"
         ? {
@@ -396,13 +408,13 @@ test("builds the minimum-five-slot directory from public device records", async 
                 mount_frame: "camera_mount"
               }
             }
-          : "preview";
+          : mjpeg_body;
     await route.fulfill({
-      body: typeof body === "string" ? body : JSON.stringify(body),
+      body: Buffer.isBuffer(body) ? body : JSON.stringify(body),
       contentType:
         pathname === "/health" || pathname === "/metadata"
           ? "application/json"
-          : "image/jpeg",
+          : "multipart/x-mixed-replace; boundary=nodus_frame",
       headers: { "access-control-allow-origin": "*" }
     });
   });
@@ -423,10 +435,10 @@ test("builds the minimum-five-slot directory from public device records", async 
   ).toBeVisible();
   await expect(
     directory.getByAltText("Top camera color preview")
-  ).toHaveAttribute("src", "http://vision.test/stream/color.mjpg");
+  ).toHaveAttribute("src", /^blob:/);
   await expect(
     directory.getByAltText("Top camera depth preview")
-  ).toHaveAttribute("src", "http://vision.test/stream/depth.mjpg");
+  ).toHaveAttribute("src", /^blob:/);
 });
 
 test("navigates the overlapping device deck through URL, keyboard, picker, and card edge", async ({

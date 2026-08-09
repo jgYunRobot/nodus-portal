@@ -1662,3 +1662,29 @@
   18 tests).
 - Focused ESLint passed for the changed Operator activation UI. `npm run typecheck` remains blocked
   solely by the pre-existing nullable Camera endpoint capture at `src/features/camera/use_vision_camera.ts:52`.
+
+## 2026-08-10 - Camera stream fixture and endpoint narrowing follow-up
+
+### Changes
+
+- Captured validated Vision health and metadata endpoints before the asynchronous refresh closure so
+  strict TypeScript no longer widens them back to nullable values.
+- Removed redundant synchronous effect resets; the runtime-keyed Camera card remount and asynchronous
+  request results now own loading/error state transitions without a cascading render.
+- Updated the Device-page browser fixture to serve the multipart MJPEG contract consumed by the
+  fetch/parser/blob preview path and assert the resulting browser-owned blob URLs.
+
+### Status
+
+- Camera runtime loading and the browser acceptance fixture now describe the same direct-stream
+  implementation without changing the Vision public contract or preview behavior.
+
+### Validation
+
+- Focused Prettier and ESLint checks passed with the repository's required Node 24 runtime.
+- Typecheck, browser acceptance, and production build were not run because they require an explicit
+  request.
+
+### Next goals
+
+- Run the Portal typecheck and focused Device-page Playwright acceptance when validation is requested.

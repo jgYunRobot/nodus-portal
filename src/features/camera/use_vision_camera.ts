@@ -22,9 +22,9 @@ export function useVisionCamera(
   const metadata_endpoint = endpoints?.metadata.endpoint ?? null;
 
   useEffect(() => {
-    setRuntime(null);
-    setError(null);
     if (health_endpoint === null || metadata_endpoint === null) return;
+    const selected_health_endpoint = health_endpoint;
+    const selected_metadata_endpoint = metadata_endpoint;
     let is_active = true;
     let controller: AbortController | null = null;
     let request_timeout: number | null = null;
@@ -49,8 +49,8 @@ export function useVisionCamera(
       }, CAMERA_REQUEST_TIMEOUT_MS);
       try {
         const next_runtime = await fetchVisionCameraRuntime(
-          health_endpoint,
-          metadata_endpoint,
+          selected_health_endpoint,
+          selected_metadata_endpoint,
           next_controller.signal
         );
         if (!is_active) return;
