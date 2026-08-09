@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { DeviceDirectoryEntry } from "../device_directory/device_directory";
 import { OperatorActivationClient } from "./operator_activation_client";
 import type {
@@ -86,20 +86,24 @@ describe("Operator latched activation", () => {
   });
 
   it("submits a desired-state request once and reconciles the returned snapshot", async () => {
-    const fetch_operator = vi.fn(
-      async () =>
-        new Response(
-          JSON.stringify(
-            snapshot({
-              run_state: "running",
-              activation_kind: "latched",
-              generation: 2,
-              revision: 2
-            })
-          ),
-          { headers: { "content-type": "application/json" } }
-        )
-    );
+    const requests: [RequestInfo | URL, RequestInit | undefined][] = [];
+    const fetch_operator = async (
+      input: RequestInfo | URL,
+      init?: RequestInit
+    ) => {
+      requests.push([input, init]);
+      return new Response(
+        JSON.stringify(
+          snapshot({
+            run_state: "running",
+            activation_kind: "latched",
+            generation: 2,
+            revision: 2
+          })
+        ),
+        { headers: { "content-type": "application/json" } }
+      );
+    };
     const query_client = new QueryClient({
       defaultOptions: { queries: { retry: false } }
     });
@@ -119,9 +123,9 @@ describe("Operator latched activation", () => {
 
     expect(result.result.current.label).toBe("Run");
     act(() => expect(result.result.current.request_latched()).toBe(true));
-    await waitFor(() => expect(fetch_operator).toHaveBeenCalledTimes(1));
-    expect(fetch_operator.mock.calls[0][0]).toBe(endpoints.latched);
-    expect(fetch_operator.mock.calls[0][1]?.body).toBe(
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0][0]).toBe(endpoints.latched);
+    expect(requests[0][1]?.body).toBe(
       JSON.stringify({ desired_state: "running", observed_generation: 1 })
     );
     await waitFor(() =>

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   OperatorActivationClient,
   OperatorActivationHttpError
@@ -35,18 +35,27 @@ function jsonResponse(value: unknown, status = 200): Response {
 
 describe("OperatorActivationClient", () => {
   it("calls only the discovered endpoint with bounded direct request settings", async () => {
-    const fetch_operator = vi.fn(async () => jsonResponse(snapshot()));
+    const requests: [RequestInfo | URL, RequestInit | undefined][] = [];
+    const fetch_operator = async (
+      input: RequestInfo | URL,
+      init?: RequestInit
+    ) => {
+      requests.push([input, init]);
+      return jsonResponse(snapshot());
+    };
     const client = new OperatorActivationClient(fetch_operator);
 
     await expect(
       client.getActivation("http://192.168.219.106:8770/api/v1/activation")
     ).resolves.toMatchObject({ run_state: "paused" });
 
-    expect(fetch_operator).toHaveBeenCalledTimes(1);
-    expect(fetch_operator.mock.calls[0][0]).toBe(
+    expect(requests).toHaveLength(1);
+    expect(requests[0][0]).toBe(
       "http://192.168.219.106:8770/api/v1/activation"
     );
-    const init = fetch_operator.mock.calls[0][1] as RequestInit;
+    const init = requests[0][1];
+    if (init === undefined)
+      throw new Error("Operator request init is missing.");
     expect(init.method).toBe("GET");
     expect(new Headers(init.headers).get("accept")).toBe("application/json");
     expect(init.credentials).toBe("omit");
@@ -55,9 +64,11 @@ describe("OperatorActivationClient", () => {
   });
 
   it("does not retry an uncertain mutation", async () => {
-    const fetch_operator = vi.fn(async () => {
+    let request_count = 0;
+    const fetch_operator = async () => {
+      request_count += 1;
       throw new TypeError("network down");
-    });
+    };
     const client = new OperatorActivationClient(fetch_operator);
 
     await expect(
@@ -69,7 +80,7 @@ describe("OperatorActivationClient", () => {
       uncertain_mutation: true,
       retryable_read: false
     });
-    expect(fetch_operator).toHaveBeenCalledTimes(1);
+    expect(request_count).toBe(1);
   });
 
   it("preserves a validated 409 conflict snapshot without treating it as success", async () => {

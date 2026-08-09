@@ -6,6 +6,7 @@ import type {
   DeviceDirectoryEntry,
   DeviceEndpoint
 } from "../device_directory/device_directory";
+import type { DeviceDirectoryEvent } from "../device_directory/device_directory_events";
 import { OperatorActivationClient } from "./operator_activation_client";
 import type { OperatorActivationSnapshot } from "./operator_activation_contract";
 import {
@@ -144,7 +145,7 @@ describe("Operator activation query", () => {
           client: new OperatorActivationClient(fetch_operator)
         }),
       {
-        initialProps: { directory_event: null },
+        initialProps: { directory_event: null as DeviceDirectoryEvent | null },
         wrapper: createWrapper(query_client)
       }
     );

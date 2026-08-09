@@ -103,7 +103,7 @@ export function useOperatorLatchedActivation({
     onError: (error) => {
       const conflict_snapshot =
         error instanceof OperatorActivationHttpError
-          ? error.response?.snapshot
+          ? (error.response?.snapshot ?? null)
           : null;
       if (
         conflict_snapshot !== null &&

@@ -1489,3 +1489,15 @@
 - Full lint remains blocked by pre-existing Camera/Device files and the user-owned uncommitted
   Operator Remote fixture; full typecheck remains blocked by the existing Camera nullable endpoint
   capture.
+
+## 2026-08-10 - Operator typecheck follow-up
+
+### Changes
+
+- Tightened Operator test fetch record types and nullable conflict-snapshot handling so the pinned
+  activation code remains strict TypeScript checked.
+
+### Validation
+
+- `npm run typecheck` now reports only the existing Camera nullable endpoint capture at
+  `src/features/camera/use_vision_camera.ts:52`.
