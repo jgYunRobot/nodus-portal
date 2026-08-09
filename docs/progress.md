@@ -1351,3 +1351,28 @@
 
 - OR4-1: retain exact public service schema IDs and resolve the complete selected-runtime descriptor
   set without changing Camera or generic Device behavior.
+
+## 2026-08-10 - Operator activation OR4-1 directory evidence
+
+### Changes
+
+- Preserved public service request and response schema IDs in the existing Device Directory entries.
+- Extended the existing directory EventSource owner to forward only bounded, validated
+  `component_state_updated` identity evidence to consumers while retaining its refresh behavior.
+- Added a pure exact resolver for the selected runtime's five Operator activation descriptors; it
+  rejects missing, duplicate, wrong-method, wrong-schema, or malformed-protocol matches.
+
+### Status
+
+- OR4-1 is complete. Portal still sends no Operator activation request; OR4-2 adds the bounded
+  direct client and closed runtime guards.
+
+### Validation
+
+- Focused Device Directory, lifecycle event, Camera regression, and Operator descriptor tests passed
+  (4 files, 12 tests).
+
+### Next goals
+
+- OR4-2: validate direct Operator responses at the Portal boundary with finite, no-retry mutation
+  transport.

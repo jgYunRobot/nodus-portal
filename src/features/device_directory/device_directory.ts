@@ -39,6 +39,8 @@ export interface DeviceEndpoint {
   media_type: string;
   schema_id: string | null;
   service_method: "GET" | "POST" | "PUT" | "DELETE" | null;
+  request_schema_id: string | null;
+  response_schema_id: string | null;
 }
 
 export interface EmptyDeviceSlot {
@@ -246,18 +248,24 @@ function parseEndpointDescriptor(value: unknown): DeviceEndpoint | null {
     return null;
   }
   let service_method: DeviceEndpoint["service_method"] = null;
+  let request_schema_id: string | null = null;
+  let response_schema_id: string | null = null;
   if (descriptor.kind === "service") {
     if (
       !isRecord(descriptor.service) ||
       descriptor.stream !== null ||
       !["GET", "POST", "PUT", "DELETE"].includes(
         descriptor.service.method as string
-      )
+      ) ||
+      !isNullableString(descriptor.service.request_schema_id) ||
+      !isNullableString(descriptor.service.response_schema_id)
     ) {
       return null;
     }
     service_method = descriptor.service
       .method as DeviceEndpoint["service_method"];
+    request_schema_id = descriptor.service.request_schema_id;
+    response_schema_id = descriptor.service.response_schema_id;
   } else if (descriptor.service !== null || !isRecord(descriptor.stream)) {
     return null;
   }
@@ -270,7 +278,9 @@ function parseEndpointDescriptor(value: unknown): DeviceEndpoint | null {
     endpoint: descriptor.endpoint,
     media_type: descriptor.media_type,
     schema_id: descriptor.schema_id,
-    service_method
+    service_method,
+    request_schema_id,
+    response_schema_id
   };
 }
 
@@ -334,6 +344,10 @@ function isComponentState(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isNullableString(value: unknown): value is string | null {
+  return typeof value === "string" || value === null;
 }
 
 function getCatalogGeneration(endpoints: ParsedEndpoint[]): number | null {

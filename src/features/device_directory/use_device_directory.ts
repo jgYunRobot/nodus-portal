@@ -1,16 +1,22 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   usePilotComponents,
   usePilotEndpoints
 } from "../../api/pilot/pilot_queries";
 import { pilot_query_keys } from "../../api/pilot/pilot_query_keys";
 import { createDeviceDirectory } from "./device_directory";
-import { subscribeDeviceDirectoryEvents } from "./device_directory_events";
+import {
+  subscribeDeviceDirectoryEvents,
+  type DeviceDirectoryEvent
+} from "./device_directory_events";
 
 const DIRECTORY_EVENT_COALESCE_MS = 50;
 
 export function useDeviceDirectory() {
+  const [last_event, setLastEvent] = useState<DeviceDirectoryEvent | null>(
+    null
+  );
   const query_client = useQueryClient();
   const components_query = usePilotComponents();
   const endpoints_query = usePilotEndpoints();
@@ -36,7 +42,11 @@ export function useDeviceDirectory() {
         void refreshDirectory();
       }, DIRECTORY_EVENT_COALESCE_MS);
     };
-    const unsubscribe = subscribeDeviceDirectoryEvents(scheduleRefresh);
+    const unsubscribe = subscribeDeviceDirectoryEvents(
+      scheduleRefresh,
+      undefined,
+      setLastEvent
+    );
     return () => {
       unsubscribe();
       if (refresh_timeout !== null) window.clearTimeout(refresh_timeout);
@@ -57,6 +67,7 @@ export function useDeviceDirectory() {
     directory,
     is_loading: components_query.isLoading || endpoints_query.isLoading,
     error: components_query.error ?? endpoints_query.error,
-    refresh_directory: refreshDirectory
+    refresh_directory: refreshDirectory,
+    last_event
   };
 }

@@ -10,8 +10,8 @@ class FakeEventSource {
     this.listeners.set(type, listener);
   }
 
-  emit(type: string): void {
-    this.listeners.get(type)?.(new Event(type));
+  emit(type: string, data?: string): void {
+    this.listeners.get(type)?.(new MessageEvent(type, { data }));
   }
 
   close(): void {
@@ -36,6 +36,45 @@ describe("subscribeDeviceDirectoryEvents", () => {
     source.emit("unrelated");
     source.onerror?.(new Event("error"));
     expect(on_change).toHaveBeenCalledTimes(4);
+
+    unsubscribe();
+    expect(source.closed).toBe(true);
+  });
+
+  it("forwards only validated component-state evidence without another source", () => {
+    const source = new FakeEventSource();
+    const on_change = vi.fn();
+    const on_event = vi.fn();
+    const unsubscribe = subscribeDeviceDirectoryEvents(
+      on_change,
+      () => source,
+      on_event
+    );
+
+    source.emit(
+      "component_state_updated",
+      JSON.stringify({
+        payload: {
+          component_id: "operator.leader",
+          instance_id: "operator-instance-a",
+          session_generation: 2
+        }
+      })
+    );
+    source.emit("component_state_updated", "not-json");
+    source.emit(
+      "component_state_updated",
+      JSON.stringify({ payload: { component_id: "operator.leader" } })
+    );
+
+    expect(on_change).toHaveBeenCalledTimes(3);
+    expect(on_event).toHaveBeenCalledTimes(1);
+    expect(on_event).toHaveBeenCalledWith({
+      event_type: "component_state_updated",
+      component_id: "operator.leader",
+      instance_id: "operator-instance-a",
+      session_generation: 2
+    });
 
     unsubscribe();
     expect(source.closed).toBe(true);

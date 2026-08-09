@@ -26,7 +26,9 @@ function endpoint(
     media_type:
       kind === "stream" ? "multipart/x-mixed-replace" : "application/json",
     schema_id,
-    service_method: kind === "service" ? "GET" : null
+    service_method: kind === "service" ? "GET" : null,
+    request_schema_id: null,
+    response_schema_id: kind === "service" ? schema_id : null
   };
 }
 

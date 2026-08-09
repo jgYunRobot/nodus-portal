@@ -51,6 +51,33 @@ function endpoint(component_id: string) {
   };
 }
 
+function serviceEndpoint(component_id: string) {
+  return {
+    component_id,
+    instance_id: `${component_id}.instance`,
+    component_type: "input_source",
+    session_generation: 1,
+    catalog_generation: 2,
+    descriptor: {
+      descriptor_id: "operator.activation.read",
+      kind: "service",
+      capability: "operator.activation.read.v1",
+      contract_version: 1,
+      protocol: "http",
+      endpoint: "http://operator.test/api/v1/activation",
+      media_type: "application/json",
+      schema_id: "operator.activation.v1.ActivationSnapshot",
+      metadata: {},
+      service: {
+        method: "GET",
+        request_schema_id: null,
+        response_schema_id: "operator.activation.v1.ActivationSnapshot"
+      },
+      stream: null
+    }
+  };
+}
+
 describe("createDeviceDirectory", () => {
   it("creates stable Camera, Operator, and generic cards with five slots", () => {
     const directory = createDeviceDirectory(
@@ -117,6 +144,26 @@ describe("createDeviceDirectory", () => {
       component_id: "camera.bad",
       endpoint_count: 0,
       malformed_endpoint_count: 1
+    });
+  });
+
+  it("retains public service request and response schema evidence", () => {
+    const directory = createDeviceDirectory(
+      {
+        snapshot_revision: 1,
+        components: [component("operator.leader", "input_source")]
+      },
+      {
+        server_instance_id: "pilot-a",
+        catalog_revision: 1,
+        endpoints: [serviceEndpoint("operator.leader")]
+      }
+    );
+
+    expect(directory.entries[0].endpoints[0]).toMatchObject({
+      descriptor_id: "operator.activation.read",
+      request_schema_id: null,
+      response_schema_id: "operator.activation.v1.ActivationSnapshot"
     });
   });
 
