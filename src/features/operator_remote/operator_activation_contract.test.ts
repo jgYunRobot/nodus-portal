@@ -4,6 +4,11 @@ import type {
   DeviceEndpoint
 } from "../device_directory/device_directory";
 import { resolveOperatorActivationEndpoints } from "./operator_activation_contract";
+import {
+  isOperatorActivationSnapshot,
+  matchesOperatorActivationRuntime,
+  type OperatorActivationSnapshot
+} from "./operator_activation_contract";
 
 function endpoint(
   descriptor_id: string,
@@ -86,6 +91,27 @@ function activationEndpoints(): DeviceEndpoint[] {
   ];
 }
 
+function snapshot(
+  overrides: Partial<OperatorActivationSnapshot> = {}
+): OperatorActivationSnapshot {
+  return {
+    schema_version: 1,
+    component_id: "operator.leader",
+    instance_id: "operator-instance-a",
+    target_control_id: "control-a",
+    source_id: "leader-arm",
+    terminal_mode: "latched",
+    run_state: "paused",
+    activation_kind: "none",
+    generation: 1,
+    revision: 1,
+    ready: true,
+    hold_lease: null,
+    fault: null,
+    ...overrides
+  };
+}
+
 describe("Operator activation descriptor selection", () => {
   it("accepts only the complete exact Operator descriptor set", () => {
     expect(
@@ -117,5 +143,27 @@ describe("Operator activation descriptor selection", () => {
         ])
       )
     ).toBeNull();
+  });
+
+  it("accepts only closed snapshots for the selected runtime and Control", () => {
+    const entry = operator(activationEndpoints());
+    const accepted = snapshot();
+    expect(isOperatorActivationSnapshot(accepted)).toBe(true);
+    expect(matchesOperatorActivationRuntime(accepted, entry, "control-a")).toBe(
+      true
+    );
+    expect(
+      matchesOperatorActivationRuntime(
+        snapshot({ target_control_id: "control-b" }),
+        entry,
+        "control-a"
+      )
+    ).toBe(false);
+    expect(
+      isOperatorActivationSnapshot({ ...accepted, unexpected: true })
+    ).toBe(false);
+    expect(isOperatorActivationSnapshot({ ...accepted, revision: -1 })).toBe(
+      false
+    );
   });
 });

@@ -1376,3 +1376,28 @@
 
 - OR4-2: validate direct Operator responses at the Portal boundary with finite, no-retry mutation
   transport.
+
+## 2026-08-10 - Operator activation OR4-2 direct client
+
+### Changes
+
+- Added bounded direct HTTP calls for the five discovered Operator endpoints only, with JSON-only
+  request/response handling, finite abort timeout, response-size bound, omitted credentials, and
+  redirect rejection.
+- Added closed runtime guards for activation snapshots, fault envelopes, leases, and hold-start
+  responses, plus selected component/instance/Control binding validation.
+- Classified retryable reads, valid `409` conflict snapshots, and uncertain mutations; mutations
+  perform no client retry and never become successful from malformed or incompatible responses.
+
+### Status
+
+- OR4-2 is complete. The client has no React owner yet, so it cannot create an activation request
+  from the Operation page before OR4-3/OR4-4 integration.
+
+### Validation
+
+- Focused activation contract and client tests passed (2 files, 7 tests).
+
+### Next goals
+
+- OR4-3: add the one selected-runtime TanStack Query owner and current-runtime invalidation path.
