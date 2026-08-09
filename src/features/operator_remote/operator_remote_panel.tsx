@@ -5,7 +5,6 @@ import { Card } from "../../components/feedback/card";
 import type { DeviceDirectoryEntry } from "../device_directory/device_directory";
 import {
   createOperatorRemoteViewModel,
-  getOperatorAvailabilityMessage,
   getOperatorLifecycleLabel,
   getOperatorOptionLabel
 } from "./operator_remote_model";
@@ -58,6 +57,7 @@ export function OperatorRemotePanel({
   const hold = useOperatorHoldActivation({
     client: activation.client,
     control_id,
+    data_updated_at: activation.data_updated_at,
     endpoints: activation.endpoints,
     query_key: activation.query_key,
     query_state: activation.query_state,
@@ -70,15 +70,6 @@ export function OperatorRemotePanel({
     directory_state,
     candidates.length
   );
-  const status_message = getStatusMessage(
-    directory_state,
-    view_model,
-    activation.query_state,
-    activation.snapshot,
-    latched.requires_reconciliation,
-    hold.state
-  );
-
   function on_hold_pointer_down(event: PointerEvent<HTMLButtonElement>): void {
     if (event.pointerType === "mouse" && event.button !== 0) return;
     event.preventDefault();
@@ -138,9 +129,6 @@ export function OperatorRemotePanel({
           ))}
         </select>
       </label>
-      <p aria-live="polite" className={styles.status_line}>
-        {status_message}
-      </p>
       {view_model.selected_operator !== null && (
         <dl className={styles.details}>
           <div>
@@ -153,21 +141,6 @@ export function OperatorRemotePanel({
               {getOperatorLifecycleLabel(
                 view_model.selected_operator.lifecycle_state
               )}
-            </dd>
-          </div>
-          <div>
-            <dt>Instance</dt>
-            <dd>{view_model.selected_operator.instance_id}</dd>
-          </div>
-          <div>
-            <dt>Session generation</dt>
-            <dd>{view_model.selected_operator.session_generation}</dd>
-          </div>
-          <div>
-            <dt>Capabilities</dt>
-            <dd>
-              {view_model.selected_operator.capabilities.join(", ") ||
-                "None advertised"}
             </dd>
           </div>
         </dl>
@@ -184,42 +157,4 @@ function getSelectorPlaceholder(
   if (directory_state === "error") return "Operator discovery unavailable";
   if (candidate_count === 0) return "No Operator connected";
   return "Select an Operator";
-}
-
-function getStatusMessage(
-  directory_state: OperatorRemoteDirectoryState,
-  view_model: ReturnType<typeof createOperatorRemoteViewModel>,
-  query_state: ReturnType<typeof useOperatorActivationQuery>["query_state"],
-  snapshot: ReturnType<typeof useOperatorActivationQuery>["snapshot"],
-  requires_reconciliation: boolean,
-  hold_state: ReturnType<typeof useOperatorHoldActivation>["state"]
-): string {
-  if (directory_state === "loading") return "Discovering Operators";
-  if (directory_state === "error") return "Operator discovery is unavailable.";
-  if (view_model.availability !== "activation_contract_unavailable")
-    return getOperatorAvailabilityMessage(
-      view_model.availability,
-      view_model.selected_operator
-    );
-  if (requires_reconciliation || hold_state === "recovering")
-    return "Reconciliation required before another activation request.";
-  if (hold_state === "starting") return "Starting Operator hold-to-run.";
-  if (hold_state === "holding") return "Operator is running while held.";
-  if (hold_state === "stopping") return "Stopping Operator hold-to-run.";
-  if (query_state === "loading") return "Reading Operator activation state.";
-  if (query_state === "recovering")
-    return "Recovering Operator activation state.";
-  if (query_state === "offline") return "Operator activation is unavailable.";
-  if (query_state === "faulted")
-    return snapshot?.fault?.message ?? "Operator reported an activation fault.";
-  if (query_state !== "ready" || snapshot === null)
-    return "Operator activation contract is unavailable.";
-  if (
-    snapshot.run_state === "running" &&
-    snapshot.activation_kind === "latched"
-  )
-    return "Operator is running (latched).";
-  if (snapshot.activation_kind === "remote_hold")
-    return "Operator is running under another remote hold.";
-  return "Operator is paused and ready for activation.";
 }

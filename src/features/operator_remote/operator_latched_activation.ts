@@ -19,7 +19,11 @@ import {
 export function getLatchedDesiredState(
   snapshot: OperatorActivationSnapshot | null
 ): "running" | "paused" | null {
-  if (snapshot?.run_state === "paused" && snapshot.activation_kind === "none")
+  if (
+    snapshot?.ready === true &&
+    snapshot.run_state === "paused" &&
+    snapshot.activation_kind === "none"
+  )
     return "running";
   if (
     snapshot?.run_state === "running" &&

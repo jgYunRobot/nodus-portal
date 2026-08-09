@@ -83,6 +83,7 @@ describe("Operator latched activation", () => {
         snapshot({ run_state: "running", activation_kind: "remote_hold" })
       )
     ).toBeNull();
+    expect(getLatchedDesiredState(snapshot({ ready: false }))).toBeNull();
   });
 
   it("submits a desired-state request once and reconciles the returned snapshot", async () => {

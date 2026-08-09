@@ -7,9 +7,16 @@ import type {
   DeviceEndpoint
 } from "../device_directory/device_directory";
 import type { DeviceDirectoryEvent } from "../device_directory/device_directory_events";
-import { OperatorActivationClient } from "./operator_activation_client";
-import type { OperatorActivationSnapshot } from "./operator_activation_contract";
 import {
+  OperatorActivationClient,
+  OperatorActivationHttpError
+} from "./operator_activation_client";
+import {
+  resolveOperatorActivationEndpoints,
+  type OperatorActivationSnapshot
+} from "./operator_activation_contract";
+import {
+  getOperatorActivationQueryState,
   getOperatorActivationQueryKey,
   matchesActivationInvalidation,
   selectNewestActivationSnapshot,
@@ -203,5 +210,33 @@ describe("Operator activation query", () => {
         entry()
       )
     ).toBe(false);
+  });
+
+  it("distinguishes transport recovery from an authoritative Operator fault", () => {
+    const selected_entry = entry();
+    const endpoints = resolveOperatorActivationEndpoints(selected_entry);
+    expect(endpoints).not.toBeNull();
+    expect(
+      getOperatorActivationQueryState(
+        selected_entry,
+        endpoints,
+        undefined,
+        false,
+        false,
+        new OperatorActivationHttpError("temporary failure", {
+          retryable_read: true
+        })
+      )
+    ).toBe("recovering");
+    expect(
+      getOperatorActivationQueryState(
+        selected_entry,
+        endpoints,
+        undefined,
+        false,
+        false,
+        new Error("incompatible response")
+      )
+    ).toBe("offline");
   });
 });

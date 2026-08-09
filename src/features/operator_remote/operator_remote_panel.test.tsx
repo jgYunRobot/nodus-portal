@@ -58,7 +58,7 @@ describe("OperatorRemotePanel", () => {
       selected_component_id: null
     });
 
-    expect(screen.getAllByText("No Operator connected")).toHaveLength(2);
+    expect(screen.getAllByText("No Operator connected")).toHaveLength(1);
     expect(screen.getByLabelText("Operator").hasAttribute("disabled")).toBe(
       true
     );
@@ -84,10 +84,10 @@ describe("OperatorRemotePanel", () => {
     });
 
     expect(
-      screen.getByText("Operator activation contract is unavailable.")
-    ).not.toBeNull();
-    expect(screen.getByText("operator-instance-a")).not.toBeNull();
-    expect(screen.getByText("control.operation.v1")).not.toBeNull();
+      screen.queryByText("Operator activation contract is unavailable.")
+    ).toBeNull();
+    expect(screen.queryByText("operator-instance-a")).toBeNull();
+    expect(screen.queryByText("control.operation.v1")).toBeNull();
     expect(screen.getByRole("button", { name: "Run / Pause" })).toHaveProperty(
       "disabled",
       true
@@ -95,6 +95,9 @@ describe("OperatorRemotePanel", () => {
     expect(
       screen.queryByText("Select an Operator for this Operation workspace")
     ).toBeNull();
+    expect((screen.getByLabelText("Operator") as HTMLSelectElement).value).toBe(
+      "operator.leader"
+    );
     const panel = screen.getByRole("region", { name: "Device Remote" });
     expect(panel.innerHTML.indexOf("Run / Pause")).toBeLessThan(
       panel.innerHTML.indexOf('aria-label="Operator"')
@@ -135,7 +138,7 @@ describe("OperatorRemotePanel", () => {
       selected_component_id: operator.component_id
     });
 
-    expect(screen.getByText("Operator lifecycle is Degraded.")).not.toBeNull();
+    expect(screen.getByText("Degraded")).not.toBeNull();
     expect(screen.queryByText(/paused|running|holding/i)).toBeNull();
   });
 });

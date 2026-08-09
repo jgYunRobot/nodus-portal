@@ -107,7 +107,7 @@ export function getOperatorOptionLabel(
   const identity = has_duplicate_name
     ? `${candidate.display_name} (${getShortComponentId(candidate.component_id)})`
     : candidate.display_name;
-  return `${identity} — ${getOperatorLifecycleLabel(candidate.lifecycle_state)}`;
+  return identity;
 }
 
 function getShortComponentId(component_id: string): string {

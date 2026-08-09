@@ -4,6 +4,7 @@ import {
   createOperatorRemoteViewModel,
   getOperatorAvailabilityMessage,
   getOperatorCandidates,
+  getOperatorOptionLabel,
   resolveOperatorSelection
 } from "./operator_remote_model";
 
@@ -106,5 +107,12 @@ describe("Operator Remote model", () => {
         degraded_view.selected_operator
       )
     ).toBe("Operator lifecycle is Degraded.");
+  });
+
+  it("keeps lifecycle state out of Operator selector labels", () => {
+    const operator = createOperator();
+    expect(getOperatorOptionLabel(operator, [operator])).toBe(
+      "Leader Operator"
+    );
   });
 });

@@ -163,7 +163,7 @@ export function useOperatorActivationQuery({
   };
 }
 
-function getOperatorActivationQueryState(
+export function getOperatorActivationQueryState(
   selected_entry: DeviceDirectoryEntry | null,
   endpoints: OperatorActivationEndpoints | null,
   snapshot: OperatorActivationSnapshot | undefined,
@@ -175,7 +175,7 @@ function getOperatorActivationQueryState(
   if (selected_entry.lifecycle_state !== "ready" || endpoints === null)
     return "incompatible";
   if (is_pending) return "loading";
-  if (snapshot?.fault !== null) return "faulted";
+  if (snapshot !== undefined && snapshot.fault !== null) return "faulted";
   if (snapshot !== undefined && error === null && !is_fetching) return "ready";
   if (snapshot !== undefined || is_fetching) return "recovering";
   if (error instanceof OperatorActivationHttpError && error.retryable_read)

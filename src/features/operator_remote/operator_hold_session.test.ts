@@ -160,4 +160,23 @@ describe("OperatorHoldSession", () => {
     expect(fixture.clear_interval).toHaveBeenCalledWith(17);
     expect(fixture.session.start()).toBe(false);
   });
+
+  it("allows a fresh manual start only after authoritative reconciliation", async () => {
+    const fixture = createSession({
+      heartbeat: async () => {
+        throw new Error("network failed");
+      }
+    });
+
+    fixture.session.start();
+    await vi.waitFor(() => expect(fixture.session.getState()).toBe("holding"));
+    fixture.get_heartbeat_callback()?.();
+    await vi.waitFor(() =>
+      expect(fixture.session.getState()).toBe("recovering")
+    );
+
+    expect(fixture.session.reconcile()).toBe(true);
+    expect(fixture.session.getState()).toBe("idle");
+    expect(fixture.session.start()).toBe(true);
+  });
 });

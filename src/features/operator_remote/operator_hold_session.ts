@@ -92,6 +92,12 @@ export class OperatorHoldSession {
     if (this.state === "holding") this.stopCurrentLease();
   }
 
+  reconcile(): boolean {
+    if (this.state !== "recovering" || this.lease !== null) return false;
+    this.setState("idle");
+    return true;
+  }
+
   dispose(): void {
     this.release();
   }

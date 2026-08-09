@@ -1,5 +1,143 @@
 # Progress
 
+## 2026-08-10 - Operator Hold-to-Run same-runtime recovery remediation
+
+### Changes
+
+- Keyed the page-owned remote Hold session by immutable Operator runtime identity and exact endpoint
+  URLs instead of transient Device Directory object identity, so component-state refreshes no longer
+  dispose an active lease.
+- Added explicit post-failure reconciliation before a recovered Hold session returns to idle, while
+  preserving no-retry behavior for uncertain mutations.
+- Corrected activation query error classification when no snapshot exists and required the public
+  `ready` fact before enabling Run or Hold.
+- Added factual Terminal local-hold and transitional Operator status messages instead of falling
+  through to a paused-ready claim.
+- Simplified the Device Remote presentation by removing the status-message region, removing
+  lifecycle suffixes from selector options, and retaining only Component ID and Lifecycle details.
+- Added regression coverage for same-runtime Directory replacement, continued heartbeat, recovery,
+  query error classification, readiness, and status presentation.
+
+### Status
+
+- The reported first-command-only Hold behavior is corrected without adding the intentionally
+  deferred Jog interaction lock.
+- Operator, Pilot, Control, Camera, and provider contracts remain unchanged.
+
+### Validation
+
+- `git diff --check` passed.
+- Targeted Prettier check and ESLint passed for the touched Operator Remote files.
+- Unit, typecheck, build, and Playwright commands were not run because they were not explicitly
+  requested for this coding task.
+
+### Next goals
+
+- Confirm in the live Portal that a held pointer produces continuous Operator heartbeats and motion
+  until release.
+- Run the focused Operator Remote unit suite and browser acceptance when explicitly requested.
+
+## 2026-08-09 - Portal Operator activation integration design
+
+### Changes
+
+- Defined the Portal OR4 architecture that discovers exact Operator activation descriptors through
+  the existing Pilot Device Directory and calls the selected Operator directly.
+- Specified pinned Operator OpenAPI provenance, service request/response schema matching, runtime
+  identity and target-Control checks, authoritative snapshot reconciliation, and Terminal-origin
+  state synchronization.
+- Designed desired-state Latched Run/Pause and one-owner remote Hold-to-Run with a 100 ms heartbeat,
+  exhaustive release cleanup, and no replay after uncertain mutations.
+- Added a Portal-local cooperative interaction boundary with Jog while preserving the existing
+  Pilot session/runtime and avoiding a second Pilot subscriber or activation proxy.
+- Included the current LAN deployment handoff: Operator binds `192.168.219.106`, advertises
+  `http://192.168.219.106:8770`, and allows the exact local and LAN Portal origins.
+
+### Status
+
+- `docs/designs/src_features_operator_remote_activation_integration_design.md` is implementation-
+  ready for OR4-0 through OR4-7.
+- No Portal runtime, Pilot, Control, or hardware behavior was changed. The separately owned Operator
+  deployment profile was updated to the confirmed Wi-Fi address for the documented LAN boundary.
+
+### Validation
+
+- Reviewed the current Portal Device Directory, Operator Remote presentation, direct Vision
+  provider pattern, Pilot lifecycle event invalidation, generated-contract convention, and the
+  Operator 1.0.0 activation OpenAPI/catalog implementation.
+- Build and test commands were not run because this task is documentation-only and no explicit
+  validation request was made.
+
+### Next goals
+
+- Implement OR4-0 through OR4-6 in Portal as independently reviewable checkpoints.
+- Verify the existing OR4-7 Operator LAN profile during fake-provider browser acceptance before any
+  separately authorized physical motion test.
+
+## 2026-08-09 - Operation Device Remote presentation
+
+### Changes
+
+- Implemented the Portal-only Device Remote below the existing Jog remote in the Operation page.
+- Reused the public Device Directory to select `input_source` components by stable
+  `component_id`, including sole-candidate initialization, reorder retention, replacement retention,
+  and clear-on-removal behavior.
+- Added factual Operator identity/lifecycle/capability presentation and final equal-width Run/Pause
+  and Hold-to-Run controls directly below the title after removing the redundant helper sentence;
+  both remain disabled because no activation contract is integrated.
+- Added focused model and panel fixtures for empty, single, multiple, degraded, removed, and
+  replacement states without introducing an Operator client or operation request.
+- Made a Device Directory query error take precedence over retained cached data so the remote shows
+  discovery failure instead of presenting a stale Operator directory as ready.
+
+### Status
+
+- OR0, OR1, and OR2 of the Device Remote design are implemented in Portal only.
+- Operator activation, hold behavior, provider endpoints, Pilot mutations, and hardware operation
+  remain intentionally deferred.
+
+### Validation
+
+- `git diff --check` passed after the directory error-precedence correction.
+- Test commands were not run because repository rules require explicit user instruction.
+
+### Next goals
+
+- Run the OR3 visual and request-isolation acceptance checks when explicitly requested.
+
+## 2026-08-09 - Operation Device Remote Portal-only design
+
+### Changes
+
+- Designed a second Device Remote card below the existing Jog remote on the robot-scoped Operation
+  page.
+- Defined connected `input_source` discovery and stable Operator selection using the existing
+  global Device Directory without adding another Pilot subscription.
+- Specified the final Run/Pause and Hold-to-Run presentation while keeping both controls disabled
+  until an Operator-owned activation contract is released.
+- Split implementation into OR0-OR3 Portal-only checkpoints and deferred all provider requests,
+  Pilot mutations, hold leases, Policy inference, and physical operation to an unapproved OR4 gate.
+
+### Status
+
+- The implementation-ready Portal presentation design is recorded in
+  `docs/designs/src_features_operator_remote_operation_device_remote_design.md`.
+- This design advances only the UI portion of Device DV5 and does not invent or approve the
+  Operator activation API.
+
+### Validation
+
+- Reviewed the current Operation page, Device Directory model, Device-page Operator boundary,
+  Operation consolidation design, navigation design, and existing PA-CONTROL policy hold pattern.
+- Build and test commands were not run because this change contains documentation only and no
+  explicit validation request was made.
+
+### Next goals
+
+- Implement OR0-OR3 in Portal without changing Operator, Pilot, Control, or the existing Jog remote.
+- Design OR4 separately after Operator publishes a versioned activation contract.
+
+
 ## 2026-08-09 - Device deck wheel navigation and taller cards
 
 ### Changes
