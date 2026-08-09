@@ -1425,3 +1425,27 @@
 ### Next goals
 
 - OR4-4: enable only authoritative desired-state Latched Run/Pause mutation and reconciliation.
+
+## 2026-08-10 - Operator activation OR4-4 latched mutation
+
+### Changes
+
+- Added desired-state Latched Run/Pause admission: only authoritative `paused/none` snapshots submit
+  `running`, and only authoritative `running/latched` snapshots submit `paused`.
+- Serialized the selected-runtime latched mutation through one TanStack mutation owner, preserved
+  valid conflict snapshots, and invalidated for direct GET reconciliation after every completion.
+- Kept uncertain outcomes disabled until a newer successful direct snapshot reconciles; no state is
+  rendered optimistically and no original mutation is replayed.
+
+### Status
+
+- OR4-4 mutation ownership is complete. Production button binding remains OR4-6 after the Hold lease
+  owner and page-local cooperation boundary are ready.
+
+### Validation
+
+- Focused activation-query and latched-mutation tests passed (2 files, 4 tests).
+
+### Next goals
+
+- OR4-5: add the one-owner 100 ms remote Hold-to-Run lease session with exhaustive cleanup.

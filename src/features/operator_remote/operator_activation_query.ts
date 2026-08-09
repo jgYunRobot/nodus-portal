@@ -154,6 +154,7 @@ export function useOperatorActivationQuery({
     query_key,
     query_state,
     snapshot: query.data ?? null,
+    data_updated_at: query.dataUpdatedAt,
     can_mutate: query_state === "ready" && !query.isFetching,
     refetch: query.refetch
   };
