@@ -1,5 +1,61 @@
 # Progress
 
+## 2026-08-13 - Operational README runbook
+
+### Changes
+
+- Replaced the obsolete documentation-scaffold introduction with the implemented Portal surfaces
+  and public integration boundaries.
+- Added exact local and LAN Vite commands with the Pilot proxy target, fixed port, strict-port
+  behavior, listener inspection, browser URL, and provider CORS coordination.
+- Documented direct npm installation/build ownership, static-hosting configuration, and the normal
+  five-process Nodus startup order.
+
+### Status
+
+- The README now provides an executable same-host and trusted-LAN runbook for the current research
+  profile instead of leaving Pilot requests unproxied or Vite bound only to loopback.
+- No Portal source, Pilot contract, provider endpoint, or runtime configuration changed.
+
+### Validation
+
+- Documentation commands were compared against the current launcher, Vite CLI help, Vite proxy
+  configuration, public Portal configuration, and current Operator/Vision allowlists.
+- `git diff --check` passed; typecheck, lint, tests, production build, and browser execution were not
+  run.
+
+### Next goals
+
+- Update the LAN URL and exact provider CORS origins together when DHCP or the Portal port changes.
+
+## 2026-08-12 - Root development-server helper
+
+### Changes
+
+- Added `run_app.sh` to launch the existing Vite development server while forwarding Vite CLI
+  options.
+- Documented explicit `npm ci`, the root launcher, and the existing direct `npm run build` command.
+- Documented separate loopback and LAN launch commands, including the required `0.0.0.0:5173`
+  bind, browser-facing LAN URL, DHCP caveat, and existing-server restart requirement.
+
+### Status
+
+- Portal now has a stable root development-server launcher without adding a redundant npm build
+  wrapper.
+- Dependency setup remains explicit and production bundling remains owned by `npm run build`.
+- LAN clients can use the documented host address after Vite is explicitly started with `--host`.
+
+### Validation
+
+- `bash -n run_app.sh`, its help path, and executable permissions passed.
+- `git diff --check` passed after the README hosting instructions were added.
+- Typecheck, lint, tests, production build, and browser execution were not run.
+
+### Next goals
+
+- Run `setup_dev.sh` and `npm ci` explicitly when setup is intended, then use the root helper for
+  normal development launch and `npm run build` for production bundling.
+
 ## 2026-08-10 - Operator Hold-to-Run same-runtime recovery remediation
 
 ### Changes
