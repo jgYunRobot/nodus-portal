@@ -83,12 +83,31 @@ describe("PilotOperationClient", () => {
     await client.submit({
       operation: "control.move_task_online",
       control_id: "control-a",
-      target_position: [0, 0, 0, 0, 0, 0]
+      target_position: [0, 0, 0, 0, 0, 0, 0],
+      target_id: 3,
+      reference_id: 0
     });
     expect(invalidated).toBe(1);
   });
 
   it.each([
+    [
+      {
+        operation: "control.move_task_online" as const,
+        control_id: "control-a",
+        target_position: [0, 0, 0, 0, 0, 1, 0],
+        target_id: 3,
+        reference_id: 0
+      },
+      {
+        operation: "control.move_task_online",
+        payload: {
+          target_position: [0, 0, 0, 0, 0, 1, 0],
+          target_id: 3,
+          reference_id: 0
+        }
+      }
+    ],
     [
       {
         operation: "control.set_servo_state" as const,

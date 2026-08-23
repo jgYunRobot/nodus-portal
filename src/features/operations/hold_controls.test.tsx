@@ -180,6 +180,7 @@ describe("HoldControls", () => {
     expect(mocks.start).toHaveBeenCalledWith({
       kind: "task",
       frame_name: "Tool",
+      frame_id: 1,
       axis_index: 4,
       direction: 1,
       speed_percent: 60

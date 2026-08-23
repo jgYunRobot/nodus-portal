@@ -32,6 +32,7 @@ function sameIntent(
   if (intent.kind === "task" && active_intent.kind === "task") {
     return (
       active_intent.frame_name === intent.frame_name &&
+      active_intent.frame_id === intent.frame_id &&
       active_intent.axis_index === intent.axis_index &&
       active_intent.direction === intent.direction
     );
@@ -110,11 +111,9 @@ export function HoldControls({ control_id }: HoldControlsProps) {
       (frame, index, all_frames) =>
         all_frames.findIndex((item) => item.name === frame.name) === index
     );
-  const active_frame = task_frames.some(
-    (frame) => frame.name === selected_frame
-  )
-    ? selected_frame
-    : (task_frames[0]?.name ?? "");
+  const active_frame =
+    task_frames.find((frame) => frame.name === selected_frame) ??
+    task_frames[0];
   const joint_count = Math.max(
     DEFAULT_JOINT_COUNT,
     robot_state?.real.pos.length ?? 0
@@ -303,7 +302,7 @@ export function HoldControls({ control_id }: HoldControlsProps) {
               disabled={interaction_locked || task_frames.length === 0}
               id={`task-frame-${control_id}`}
               onChange={(event) => changeFrame(event.target.value)}
-              value={active_frame}
+              value={active_frame?.name ?? ""}
             >
               {task_frames.length === 0 ? (
                 <option value="">No authoritative task frame</option>
@@ -320,7 +319,8 @@ export function HoldControls({ control_id }: HoldControlsProps) {
             {TASK_AXES.map((axis, axis_index) => {
               const negative_intent: HoldIntent = {
                 kind: "task",
-                frame_name: active_frame,
+                frame_name: active_frame?.name ?? "",
+                frame_id: active_frame?.id ?? -1,
                 axis_index,
                 direction: -1,
                 speed_percent
@@ -347,7 +347,7 @@ export function HoldControls({ control_id }: HoldControlsProps) {
                       active={negative_active}
                       disabled={
                         controls_disabled ||
-                        active_frame.length === 0 ||
+                        active_frame === undefined ||
                         (hold_active && !negative_active)
                       }
                       display_label="−"
@@ -360,7 +360,7 @@ export function HoldControls({ control_id }: HoldControlsProps) {
                       active={positive_active}
                       disabled={
                         controls_disabled ||
-                        active_frame.length === 0 ||
+                        active_frame === undefined ||
                         (hold_active && !positive_active)
                       }
                       display_label="+"

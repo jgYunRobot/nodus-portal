@@ -25,6 +25,7 @@ export type HoldIntent =
   | {
       kind: "task";
       frame_name: string;
+      frame_id: number;
       axis_index: number;
       direction: JogDirection;
       speed_percent: number;
@@ -42,6 +43,7 @@ export interface HoldSessionOptions {
 }
 
 const HOLD_TICK_MS = 50;
+const TASK_REFERENCE_FRAME_ID = 0;
 
 export class HoldSession {
   private readonly now: () => number;
@@ -151,7 +153,7 @@ export class HoldSession {
     }
     if (intent.kind === "task") {
       const frame = status.frames.get(intent.frame_name);
-      if (frame === undefined) return null;
+      if (frame === undefined || frame.id !== intent.frame_id) return null;
       if (this.projection === null) this.projection = [...frame.translation];
       if (this.task_rotation === null) this.task_rotation = frame.rotation;
       if (intent.axis_index < 3) {
@@ -182,7 +184,9 @@ export class HoldSession {
       return {
         operation: "control.move_task_online",
         control_id: this.options.control_id,
-        target_position
+        target_position,
+        target_id: intent.frame_id,
+        reference_id: TASK_REFERENCE_FRAME_ID
       };
     }
     const goal =

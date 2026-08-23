@@ -1108,6 +1108,13 @@ export interface components {
         TargetPositionPayload: {
             target_position: components["schemas"]["Vector100"];
         };
+        TaskTargetPayload: {
+            target_position: components["schemas"]["Vector100"];
+            /** @description Frame ID of the task control point to move and the Control task target index. */
+            target_id: number;
+            /** @description Frame ID of the coordinate system in which target_position is expressed. Control currently retains this value without applying a pose transform. */
+            reference_id: number;
+        };
         JointPositionPayload: {
             joint_position: components["schemas"]["Vector500"];
         };
@@ -1181,7 +1188,7 @@ export interface components {
             source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
             ttl_ms: number;
             control_id: components["schemas"]["Identifier"];
-            payload: components["schemas"]["TargetPositionPayload"];
+            payload: components["schemas"]["TaskTargetPayload"];
         };
         CalculateForwardKinematicsRequest: {
             /** @constant */

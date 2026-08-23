@@ -60,7 +60,7 @@ function status(generation = 1, fresh = true): ControlStatusSnapshot {
           },
           frames: [
             {
-              id: 0,
+              id: 3,
               parent_link_id: 6,
               name: "Base",
               x: 0,
@@ -115,6 +115,7 @@ describe("HoldSession", () => {
     hold.start({
       kind: "task",
       frame_name: "Base",
+      frame_id: 3,
       axis_index: 0,
       direction: 1,
       speed_percent: 100
@@ -124,7 +125,9 @@ describe("HoldSession", () => {
     tick?.();
     await Promise.resolve();
     expect(sent.at(-1)).toMatchObject({
-      operation: "control.move_task_online"
+      operation: "control.move_task_online",
+      target_id: 3,
+      reference_id: 0
     });
     expect(getMotionTarget(sent.at(-1))?.[0]).toBeGreaterThan(0);
     expect(getMotionTarget(sent.at(-1))).toHaveLength(7);
@@ -132,6 +135,7 @@ describe("HoldSession", () => {
     hold.start({
       kind: "task",
       frame_name: "Base",
+      frame_id: 3,
       axis_index: 3,
       direction: 1,
       speed_percent: 100

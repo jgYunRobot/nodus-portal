@@ -2197,6 +2197,32 @@
           }
         }
       },
+      "TaskTargetPayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "target_position",
+          "target_id",
+          "reference_id"
+        ],
+        "properties": {
+          "target_position": {
+            "$ref": "#/components/schemas/Vector100"
+          },
+          "target_id": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647,
+            "description": "Frame ID of the task control point to move and the Control task target index."
+          },
+          "reference_id": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647,
+            "description": "Frame ID of the coordinate system in which target_position is expressed. Control currently retains this value without applying a pose transform."
+          }
+        }
+      },
       "JointPositionPayload": {
         "type": "object",
         "additionalProperties": false,
@@ -2449,7 +2475,7 @@
             "$ref": "#/components/schemas/Identifier"
           },
           "payload": {
-            "$ref": "#/components/schemas/TargetPositionPayload"
+            "$ref": "#/components/schemas/TaskTargetPayload"
           }
         }
       },

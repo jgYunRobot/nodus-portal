@@ -1,5 +1,41 @@
 # Progress
 
+## 2026-08-23 - Task Jog frame ID handoff
+
+### Changes
+
+- Updated the pinned Pilot OpenAPI artifact and regenerated the TypeScript contract for the revised
+  `control.move_task_online` payload.
+- Carried the selected RobotStatus task-frame ID through the Task Jog hold intent and operation
+  request as `target_id`.
+- Set `reference_id` to `0` explicitly and cancel an active hold if the selected frame name resolves
+  to a different ID.
+- Added focused expectations for selected frame-ID propagation and the complete public operation
+  payload.
+
+### Status
+
+- Task Jog now submits `target_position`, the selected task control-point `target_id`, and
+  `reference_id = 0` through Pilot.
+- Reference-frame pose transformation remains unimplemented in Control and is not claimed by
+  Portal.
+
+### Validation
+
+- The checked-in Pilot and Portal OpenAPI artifacts compare byte-for-byte equal, and the generated
+  TypeScript contract includes the new task payload fields.
+- Prettier, focused ESLint, and `git diff --check` passed for the changed Portal files.
+- `npm run typecheck` was attempted but stopped in the untouched
+  `src/features/operator_remote/use_operator_hold_activation.test.tsx:77` because its timer stub
+  returns `number` where the current Node types require `Timeout`.
+- Tests, production build, browser interaction, live Control transport, and hardware motion were not
+  run because the user did not explicitly request test or build execution.
+
+### Next goals
+
+- Run the focused Portal/Pilot contract and task-jog test suites when execution is explicitly
+  requested, then perform a controlled hardware acceptance check for nonzero task frame IDs.
+
 ## 2026-08-13 - Operational README runbook
 
 ### Changes

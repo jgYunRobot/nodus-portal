@@ -8,9 +8,16 @@ import {
 
 export type OperationTarget =
   | {
-      operation: "control.move_joint_online" | "control.move_task_online";
+      operation: "control.move_joint_online";
       control_id: string;
       target_position: readonly number[];
+    }
+  | {
+      operation: "control.move_task_online";
+      control_id: string;
+      target_position: readonly number[];
+      target_id: number;
+      reference_id: number;
     }
   | {
       operation: "control.set_servo_state";
@@ -117,7 +124,11 @@ function createOperationRequest(
     return {
       ...common,
       operation: target.operation,
-      payload: { target_position: [...target.target_position] }
+      payload: {
+        target_position: [...target.target_position],
+        target_id: target.target_id,
+        reference_id: target.reference_id
+      }
     };
   }
   if (target.operation === "control.set_servo_state") {
