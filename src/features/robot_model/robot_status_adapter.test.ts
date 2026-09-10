@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ControlStatusSnapshot } from "../../api/pilot/pilot_stream_hub";
 import { adaptRobotVisualizationState } from "./robot_status_adapter";
+import { E_ROB_DUAL_PROFILE } from "./robot_profile";
 
 function snapshot(positions: number[], fresh = true): ControlStatusSnapshot {
   return {
@@ -35,7 +36,7 @@ function snapshot(positions: number[], fresh = true): ControlStatusSnapshot {
             schema_version: 1,
             robot_type: "e_rob",
             connected: true,
-            dof: 6,
+            dof: positions.length,
             servo_activated: false,
             brake_released: false,
             brake_state_source: "unknown",
@@ -53,6 +54,51 @@ function snapshot(positions: number[], fresh = true): ControlStatusSnapshot {
 }
 
 describe("adaptRobotVisualizationState", () => {
+  it("preserves all twelve dual-arm positions in control order", () => {
+    const positions = Array.from({ length: 12 }, (_, index) => index / 10);
+    expect(
+      adaptRobotVisualizationState(snapshot(positions), E_ROB_DUAL_PROFILE)
+    ).toMatchObject({ joint_positions: positions, tone: "success" });
+    expect(E_ROB_DUAL_PROFILE.joint_names).toEqual([
+      "left_Joint_1",
+      "left_Joint_2",
+      "left_Joint_3",
+      "left_Joint_4",
+      "left_Joint_5",
+      "left_Joint_6",
+      "right_Joint_1",
+      "right_Joint_2",
+      "right_Joint_3",
+      "right_Joint_4",
+      "right_Joint_5",
+      "right_Joint_6"
+    ]);
+  });
+
+  it("rejects mismatched DOF, stale dual-arm data and invalid right-arm positions", () => {
+    const positions = Array.from({ length: 12 }, () => 0);
+    expect(
+      adaptRobotVisualizationState(snapshot(positions)).joint_positions
+    ).toBeNull();
+    expect(
+      adaptRobotVisualizationState(
+        snapshot(positions.slice(0, 6)),
+        E_ROB_DUAL_PROFILE
+      ).joint_positions
+    ).toBeNull();
+    expect(
+      adaptRobotVisualizationState(
+        snapshot(positions, false),
+        E_ROB_DUAL_PROFILE
+      ).joint_positions
+    ).toBeNull();
+    positions[11] = Number.NaN;
+    expect(
+      adaptRobotVisualizationState(snapshot(positions), E_ROB_DUAL_PROFILE)
+        .joint_positions
+    ).toBeNull();
+  });
+
   it("uses only a fresh six-joint authoritative status", () => {
     expect(adaptRobotVisualizationState(snapshot([0, 1, 2, 3, 4, 5]))).toEqual({
       joint_positions: [0, 1, 2, 3, 4, 5],

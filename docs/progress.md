@@ -1,5 +1,34 @@
 # Progress
 
+## 2026-09-11 - Next-work handoff
+
+- Next: add Task Operator, then connect tasks to actual motion execution.
+- Dual-arm status and static mesh delivery were checked; browser visual acceptance
+  and numerical task-motion validation remain separate. No build/tests run for this commit.
+
+## 2026-09-11 - Fix dual-arm mesh URLs
+
+- Changed all 28 visual/collision mesh references to paths relative to the dual
+  URDF directory. Slash-prefixed URLs were concatenated with the loader working
+  path and returned the SPA HTML fallback instead of STL data.
+- Preserved model geometry, joint mapping and existing unrelated changes.
+- Live Portal HTTP checks returned 200 model/stl for all seven mesh files;
+  the served URDF contains the corrected paths. `git diff --check` passed.
+- Build/tests and browser visual acceptance were not run.
+
+## 2026-09-10 - eRob dual-arm visualization
+
+- Added the Portal-owned dual-arm URDF with 0.40 m base separation and opposite yaw,
+  reusing existing packaged meshes. Added the eRob Dual Arm (12 DOF) profile.
+- Replaced six-axis truncation and hardcoded joint names with profile-specific
+  count validation and left/right joint mapping. Profile changes remount the scene;
+  mismatched/stale status is visible and does not update the robot pose.
+- Added adapter regression cases. Prettier and `git diff --check` completed;
+  XML parsing confirmed Control parity except mesh URLs, 12 moving joints and no
+  missing mesh paths. Build, tests and live browser rendering were not run.
+- Remaining: select the dual profile against the 12-axis Control demo and verify
+  live poses/TCP overlays. Motion controls were not expanded in this task.
+
 ## 2026-08-23 - Task Jog frame ID handoff
 
 ### Changes

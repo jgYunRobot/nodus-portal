@@ -42,7 +42,6 @@ export function OperationPage() {
 function OperationWorkspace({ control_id }: { control_id: string }) {
   const snapshot = useControlStatus(control_id);
   const device_directory = useDeviceDirectory();
-  const visualization = adaptRobotVisualizationState(snapshot);
   const robot_state = snapshot.status?.sample?.robot_state;
   const realtime_robot_state =
     snapshot.state === "live" &&
@@ -52,6 +51,10 @@ function OperationWorkspace({ control_id }: { control_id: string }) {
       : undefined;
   const [profile, setProfile] = useState<RobotProfile | null>(() =>
     loadRobotProfile(control_id)
+  );
+  const visualization = adaptRobotVisualizationState(
+    snapshot,
+    profile ?? undefined
   );
   const [selected_operator_id, setSelectedOperatorId] = useState<string | null>(
     null
@@ -114,12 +117,16 @@ function OperationWorkspace({ control_id }: { control_id: string }) {
                 }
               >
                 <RobotScene
+                  key={profile.id}
                   frames={realtime_robot_state?.frames ?? []}
                   profile={profile}
                   joint_positions={visualization.joint_positions}
                 />
               </Suspense>
             )}
+            {profile !== null && visualization.tone !== "success" ? (
+              <p role="status">{visualization.message}</p>
+            ) : null}
           </Card>
           <Card
             className={styles.values_card}

@@ -1,0 +1,424 @@
+<?xml version="1.0"?>
+<!-- Dual eRob 3 kg demo: base centers 0.40 m apart on Y; base -Y protrusions outward. -->
+<robot name="eRobo3_dual_arm" version="1.0">
+  <link name="world">
+  </link>
+  <joint name="left_mount" type="fixed">
+    <origin xyz="0 0.20 0" rpy="0 0 3.141592653589793"/>
+    <parent link="world"/>
+    <child link="left_base_link"/>
+  </joint>
+  <joint name="left_Joint_1" type="revolute">
+    <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-2.8973" soft_upper_limit="2.8973"/>
+    <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+    <parent link="left_base_link"/>
+    <child link="left_Link_1"/>
+    <axis xyz="0.00000 0.00000 1.00000"/>
+    <limit effort="87" lower="-2.9671" upper="2.9671" velocity="2.3925"/>
+  </joint>
+
+  <joint name="left_Joint_2" type="revolute">
+    <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-1.7628" soft_upper_limit="1.7628"/>
+    <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.05300 0.14050"/>
+    <parent link="left_Link_1"/>
+    <child link="left_Link_2"/>
+    <axis xyz="0.00000 1.00000 0.00000"/>
+    <limit effort="87" lower="-1.8326" upper="1.8326" velocity="2.3925"/>
+  </joint>
+
+  <joint name="left_Joint_3" type="revolute">
+    <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-2.3736" soft_upper_limit="2.3736"/>
+    <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00050 0.24350"/>
+    <parent link="left_Link_2"/>
+    <child link="left_Link_3"/>
+    <axis xyz="0.00000 1.00000 0.00000"/>
+    <limit effort="87" lower="-2.4435" upper="2.4435" velocity="2.3925"/>
+  </joint>
+
+  <joint name="left_Joint_4" type="revolute">
+    <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-2.1991" soft_upper_limit="2.1991"/>
+    <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 -0.01400 0.21100"/>
+    <parent link="left_Link_3"/>
+    <child link="left_Link_4"/>
+    <axis xyz="0.00000 1.00000 0.00000"/>
+    <limit effort="12" lower="-2.2689" upper="2.2689" velocity="2.3925"/>
+  </joint>
+
+  <joint name="left_Joint_5" type="revolute">
+    <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-1.8973" soft_upper_limit="1.8973"/>
+    <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.04700 0.03900"/>
+    <parent link="left_Link_4"/>
+    <child link="left_Link_5"/>
+    <axis xyz="0.00000 0.00000 1.00000"/>
+    <limit effort="12" lower="-2.9671" upper="2.9671" velocity="2.8710"/>
+  </joint>
+
+  <joint name="left_Joint_6" type="revolute">
+    <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-3.0718" soft_upper_limit="3.0718"/>
+    <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.06080 0.04700"/>
+    <parent link="left_Link_5"/>
+    <child link="left_Link_6"/>
+    <axis xyz="0.00000 1.00000 0.00000"/>
+    <limit effort="12" lower="-3.1416" upper="3.1416" velocity="2.8710"/>
+  </joint>
+
+  <link name="left_Link_1">
+    <collision name="left_Link_1_collision">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_1.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <inertia ixx="0.00054" ixy="0.00000" ixz="0.00000" iyy="0.00052" iyz="0.00000" izz="0.00054"/>
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00308 0.13617"/>
+      <mass value="0.50622"/>
+    </inertial>
+    <visual name="left_Link_1_visual">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <material name="erob_arm_white"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_1.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="left_Link_2">
+    <collision name="left_Link_2_collision">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_2.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <inertia ixx="0.00157" ixy="0.00000" ixz="0.00000" iyy="0.00156" iyz="0.00000" izz="0.00119"/>
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.04217 0.11937"/>
+      <mass value="1.16203"/>
+    </inertial>
+    <visual name="left_Link_2_visual">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <material name="erob_arm_white"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_2.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="left_Link_3">
+    <collision name="left_Link_3_collision">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_3.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <inertia ixx="0.00081" ixy="0.00000" ixz="0.00000" iyy="0.00091" iyz="-0.00001" izz="0.00062"/>
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 -0.05451 0.09532"/>
+      <mass value="0.77552"/>
+    </inertial>
+    <visual name="left_Link_3_visual">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <material name="erob_arm_white"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_3.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="left_Link_4">
+    <collision name="left_Link_4_collision">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_4.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <inertia ixx="0.00025" ixy="0.00000" ixz="0.00000" iyy="0.00024" iyz="0.00000" izz="0.00026"/>
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00001 0.04110 0.00150"/>
+      <mass value="0.31668"/>
+    </inertial>
+    <visual name="left_Link_4_visual">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <material name="erob_arm_white"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_4.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="left_Link_5">
+    <collision name="left_Link_5_collision">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_5.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <inertia ixx="0.00025" ixy="0.00000" ixz="0.00000" iyy="0.00026" iyz="0.00000" izz="0.00024"/>
+      <origin rpy="0.00000 0.00000 0.00000" xyz="-0.00001 0.00150 0.04110"/>
+      <mass value="0.31668"/>
+    </inertial>
+    <visual name="left_Link_5_visual">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <material name="erob_arm_white"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_5.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="left_Link_6">
+    <collision name="left_Link_6_collision">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_6.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <inertia ixx="0.00004" ixy="0.00000" ixz="0.00000" iyy="0.00007" iyz="0.00000" izz="0.00004"/>
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 -0.00578 0.00013"/>
+      <mass value="0.10121"/>
+    </inertial>
+    <visual name="left_Link_6_visual">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <material name="erob_arm_white"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_6.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="left_base_link">
+    <collision name="left_base_link_collision">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/base_link.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <inertia ixx="0.00083" ixy="0.00001" ixz="0.00001" iyy="0.00085" iyz="0.00003" izz="0.00110"/>
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00095 -0.00172 0.03600"/>
+      <mass value="0.47602"/>
+    </inertial>
+    <visual name="left_base_link_visual">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <material name="base"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/base_link.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="right_mount" type="fixed">
+    <origin xyz="0 -0.20 0" rpy="0 0 0"/>
+    <parent link="world"/>
+    <child link="right_base_link"/>
+  </joint>
+  <joint name="right_Joint_1" type="revolute">
+    <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-2.8973" soft_upper_limit="2.8973"/>
+    <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+    <parent link="right_base_link"/>
+    <child link="right_Link_1"/>
+    <axis xyz="0.00000 0.00000 1.00000"/>
+    <limit effort="87" lower="-2.9671" upper="2.9671" velocity="2.3925"/>
+  </joint>
+
+  <joint name="right_Joint_2" type="revolute">
+    <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-1.7628" soft_upper_limit="1.7628"/>
+    <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.05300 0.14050"/>
+    <parent link="right_Link_1"/>
+    <child link="right_Link_2"/>
+    <axis xyz="0.00000 1.00000 0.00000"/>
+    <limit effort="87" lower="-1.8326" upper="1.8326" velocity="2.3925"/>
+  </joint>
+
+  <joint name="right_Joint_3" type="revolute">
+    <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-2.3736" soft_upper_limit="2.3736"/>
+    <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00050 0.24350"/>
+    <parent link="right_Link_2"/>
+    <child link="right_Link_3"/>
+    <axis xyz="0.00000 1.00000 0.00000"/>
+    <limit effort="87" lower="-2.4435" upper="2.4435" velocity="2.3925"/>
+  </joint>
+
+  <joint name="right_Joint_4" type="revolute">
+    <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-2.1991" soft_upper_limit="2.1991"/>
+    <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 -0.01400 0.21100"/>
+    <parent link="right_Link_3"/>
+    <child link="right_Link_4"/>
+    <axis xyz="0.00000 1.00000 0.00000"/>
+    <limit effort="12" lower="-2.2689" upper="2.2689" velocity="2.3925"/>
+  </joint>
+
+  <joint name="right_Joint_5" type="revolute">
+    <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-1.8973" soft_upper_limit="1.8973"/>
+    <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.04700 0.03900"/>
+    <parent link="right_Link_4"/>
+    <child link="right_Link_5"/>
+    <axis xyz="0.00000 0.00000 1.00000"/>
+    <limit effort="12" lower="-2.9671" upper="2.9671" velocity="2.8710"/>
+  </joint>
+
+  <joint name="right_Joint_6" type="revolute">
+    <safety_controller k_position="100.0" k_velocity="40.0" soft_lower_limit="-3.0718" soft_upper_limit="3.0718"/>
+    <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.06080 0.04700"/>
+    <parent link="right_Link_5"/>
+    <child link="right_Link_6"/>
+    <axis xyz="0.00000 1.00000 0.00000"/>
+    <limit effort="12" lower="-3.1416" upper="3.1416" velocity="2.8710"/>
+  </joint>
+
+  <link name="right_Link_1">
+    <collision name="right_Link_1_collision">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_1.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <inertia ixx="0.00054" ixy="0.00000" ixz="0.00000" iyy="0.00052" iyz="0.00000" izz="0.00054"/>
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00308 0.13617"/>
+      <mass value="0.50622"/>
+    </inertial>
+    <visual name="right_Link_1_visual">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <material name="erob_arm_white"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_1.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="right_Link_2">
+    <collision name="right_Link_2_collision">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_2.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <inertia ixx="0.00157" ixy="0.00000" ixz="0.00000" iyy="0.00156" iyz="0.00000" izz="0.00119"/>
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.04217 0.11937"/>
+      <mass value="1.16203"/>
+    </inertial>
+    <visual name="right_Link_2_visual">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <material name="erob_arm_white"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_2.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="right_Link_3">
+    <collision name="right_Link_3_collision">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_3.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <inertia ixx="0.00081" ixy="0.00000" ixz="0.00000" iyy="0.00091" iyz="-0.00001" izz="0.00062"/>
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 -0.05451 0.09532"/>
+      <mass value="0.77552"/>
+    </inertial>
+    <visual name="right_Link_3_visual">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <material name="erob_arm_white"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_3.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="right_Link_4">
+    <collision name="right_Link_4_collision">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_4.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <inertia ixx="0.00025" ixy="0.00000" ixz="0.00000" iyy="0.00024" iyz="0.00000" izz="0.00026"/>
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00001 0.04110 0.00150"/>
+      <mass value="0.31668"/>
+    </inertial>
+    <visual name="right_Link_4_visual">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <material name="erob_arm_white"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_4.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="right_Link_5">
+    <collision name="right_Link_5_collision">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_5.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <inertia ixx="0.00025" ixy="0.00000" ixz="0.00000" iyy="0.00026" iyz="0.00000" izz="0.00024"/>
+      <origin rpy="0.00000 0.00000 0.00000" xyz="-0.00001 0.00150 0.04110"/>
+      <mass value="0.31668"/>
+    </inertial>
+    <visual name="right_Link_5_visual">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <material name="erob_arm_white"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_5.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="right_Link_6">
+    <collision name="right_Link_6_collision">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_6.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <inertia ixx="0.00004" ixy="0.00000" ixz="0.00000" iyy="0.00007" iyz="0.00000" izz="0.00004"/>
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 -0.00578 0.00013"/>
+      <mass value="0.10121"/>
+    </inertial>
+    <visual name="right_Link_6_visual">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <material name="erob_arm_white"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/link_6.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="right_base_link">
+    <collision name="right_base_link_collision">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/base_link.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <inertia ixx="0.00083" ixy="0.00001" ixz="0.00001" iyy="0.00085" iyz="0.00003" izz="0.00110"/>
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00095 -0.00172 0.03600"/>
+      <mass value="0.47602"/>
+    </inertial>
+    <visual name="right_base_link_visual">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 0.00000"/>
+      <material name="base"/>
+      <geometry>
+        <mesh filename="../e_rob/mesh/official_erob_arm/base_link.stl" scale="1.00000 1.00000 1.00000"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <material name="erob_arm_white">
+    <color rgba="0.80000 0.40000 0 1.00000"/>
+  </material>
+  <material name="base">
+    <color rgba="0.40000 0.40000 0.40000 1.00000"/>
+  </material>
+</robot>

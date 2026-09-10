@@ -1,4 +1,5 @@
 import type { ControlStatusSnapshot } from "../../api/pilot/pilot_stream_hub";
+import { E_ROB_3KG_PROFILE, type RobotProfile } from "./robot_profile";
 
 export interface RobotVisualizationState {
   joint_positions: readonly number[] | null;
@@ -7,7 +8,8 @@ export interface RobotVisualizationState {
 }
 
 export function adaptRobotVisualizationState(
-  snapshot: ControlStatusSnapshot
+  snapshot: ControlStatusSnapshot,
+  profile: RobotProfile = E_ROB_3KG_PROFILE
 ): RobotVisualizationState {
   if (snapshot.state === "malformed" || snapshot.state === "error") {
     return {
@@ -41,17 +43,17 @@ export function adaptRobotVisualizationState(
   const positions = snapshot.status.sample?.robot_state.real.pos;
   if (
     positions === undefined ||
-    positions.length < 6 ||
-    positions.slice(0, 6).some((position) => !Number.isFinite(position))
+    positions.length !== profile.joint_names.length ||
+    positions.some((position) => !Number.isFinite(position))
   ) {
     return {
       joint_positions: null,
-      message: "RobotStatus has no usable six-joint position vector.",
+      message: `RobotStatus requires ${profile.joint_names.length} finite joint positions for ${profile.label}.`,
       tone: "warning"
     };
   }
   return {
-    joint_positions: positions.slice(0, 6),
+    joint_positions: positions,
     message: "Authoritative RobotStatus is visualized.",
     tone: "success"
   };
