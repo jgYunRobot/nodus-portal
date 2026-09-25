@@ -629,6 +629,10 @@ Exact reconciliation tolerance, maximum horizon, per-joint/task limits, and Cont
 come from the released operation contract and targeted tests. They are named configuration/domain
 constants, not JSX literals.
 
+For `control.move_task_online`, the selected status frame ID remains `target_id` and the seven-value
+pose target is expressed in world coordinates with `reference_id = -2`. `HoldSession` sets this
+reference when scheduling task jog; `PilotOperationClient` forwards it unchanged.
+
 ### 9.3 Backpressure and stop behavior
 
 Only one mutating operation is in flight per selected Control. While it is in flight, new ticks

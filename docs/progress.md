@@ -1,5 +1,11 @@
 # Progress
 
+## 2026-09-26 - Align Task Jog with Pilot's world reference
+
+- `HoldSession` now sends `reference_id = -2` for `control.move_task_online`, matching Pilot's current world-only online task contract. The selected status frame ID remains `target_id`, and `PilotOperationClient` forwards both values unchanged.
+- Updated focused hold and request encoding expectations. Prettier, focused ESLint, and `git diff --check` passed. Tests, typecheck, browser, embedded runtime, and physical robot checks were not run.
+- Next: synchronize the pinned Pilot OpenAPI artifact and generated types when its updated contract is published, then verify the Portal-to-Pilot request in the embedded demo.
+
 ## 2026-09-24 - Accept embedded Pilot native operation results
 
 - Recognize Pilot's schema-v2 native operation responses alongside the existing v1 response type.
