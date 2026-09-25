@@ -5,7 +5,8 @@ import {
   isErrorResponse,
   isLifecycleAcceptedResponse,
   isOperationResult,
-  isSampleStreamsResponse
+  isSampleStreamsResponse,
+  type PilotOperationResult
 } from "./pilot_runtime_guards";
 
 export class PilotHttpError extends Error {
@@ -182,8 +183,7 @@ export class PilotHttpClient {
     request: components["schemas"]["OperationRequest"]
   ): Promise<
     PilotHttpResponse<
-      | components["schemas"]["OperationResult"]
-      | components["schemas"]["ErrorResponse"]
+      PilotOperationResult | components["schemas"]["ErrorResponse"]
     >
   > {
     const response = await this.post("/api/v1/operations", request);
@@ -194,8 +194,7 @@ export class PilotHttpClient {
       throw new PilotProtocolError("Pilot operation response is invalid.");
     }
     return response as PilotHttpResponse<
-      | components["schemas"]["OperationResult"]
-      | components["schemas"]["ErrorResponse"]
+      PilotOperationResult | components["schemas"]["ErrorResponse"]
     >;
   }
   private async get<T>(path: string): Promise<T> {

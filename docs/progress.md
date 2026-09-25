@@ -1,5 +1,17 @@
 # Progress
 
+## 2026-09-24 - Accept embedded Pilot native operation results
+
+- Recognize Pilot's schema-v2 native operation responses alongside the existing v1 response type.
+  Treat `worker_completed` as nonterminal worker evidence so a held Jog can continue to schedule
+  targets; native rejection and unavailable outcomes end the hold without claiming RT or physical
+  completion.
+- Added response-boundary and operation-presentation regression cases. The Pilot submodule and
+  Control sources were not changed.
+- Validation: `git diff --check` passed. Tests, typecheck, build, browser interaction and hardware
+  motion were not run. Next: run focused Portal tests and verify held Jog against the updated
+  Portal with the existing `nodus-run` Pilot response.
+
 ## 2026-09-11 - Next-work handoff
 
 - Next: add Task Operator, then connect tasks to actual motion execution.

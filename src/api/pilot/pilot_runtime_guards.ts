@@ -1,5 +1,37 @@
 import type { components } from "./generated/pilot_v1";
 
+type NativeDeliveryOutcome =
+  | "worker_completed"
+  | "worker_rejected"
+  | "native_busy"
+  | "native_invalid"
+  | "native_stopped"
+  | "unsupported"
+  | "result_unknown";
+
+const NATIVE_DELIVERY_OUTCOMES = new Set<string>([
+  "worker_completed",
+  "worker_rejected",
+  "native_busy",
+  "native_invalid",
+  "native_stopped",
+  "unsupported",
+  "result_unknown"
+]);
+
+export type PilotOperationResult =
+  | components["schemas"]["OperationResult"]
+  | (Omit<
+      components["schemas"]["OperationResult"],
+      "schema_version" | "delivery"
+    > & {
+      schema_version: 2;
+      delivery: {
+        outcome: NativeDeliveryOutcome;
+        connection_generation: number;
+      };
+    });
+
 export function isControlStatusResponse(
   value: unknown
 ): value is components["schemas"]["ControlStatusResponse"] {
@@ -84,12 +116,25 @@ export function isErrorResponse(
 
 export function isOperationResult(
   value: unknown
-): value is components["schemas"]["OperationResult"] {
+): value is PilotOperationResult {
   if (value === null || typeof value !== "object" || Array.isArray(value))
     return false;
   const result = value as Record<string, unknown>;
+  let valid_version = result.schema_version === 1;
+  if (
+    result.schema_version === 2 &&
+    result.delivery !== null &&
+    typeof result.delivery === "object" &&
+    !Array.isArray(result.delivery)
+  ) {
+    const delivery = result.delivery as Record<string, unknown>;
+    valid_version =
+      typeof delivery.outcome === "string" &&
+      NATIVE_DELIVERY_OUTCOMES.has(delivery.outcome) &&
+      isNonNegativeInteger(delivery.connection_generation);
+  }
   return (
-    result.schema_version === 1 &&
+    valid_version &&
     typeof result.request_id === "string" &&
     typeof result.operation === "string" &&
     typeof result.control_id === "string" &&

@@ -25,7 +25,75 @@ function operationResult(
   };
 }
 
+function nativeOperationResult(
+  outcome: "worker_completed" | "worker_rejected"
+) {
+  return {
+    ...operationResult(),
+    schema_version: 2 as const,
+    delivery: { outcome, connection_generation: 1 },
+    control_outcome: {
+      status: "not_reported" as const,
+      code: null,
+      message: null
+    },
+    error:
+      outcome === "worker_rejected"
+        ? { code: "native_error", message: "Control rejected the command." }
+        : null
+  };
+}
+
 describe("PilotOperationClient", () => {
+  it("keeps a hold alive after native worker completion without claiming RT application", async () => {
+    const client = new PilotOperationClient(
+      { reserveOperation: () => context } as never,
+      {
+        submitOperation: async () => ({
+          status: 200,
+          body: nativeOperationResult("worker_completed")
+        })
+      } as never
+    );
+
+    await expect(
+      client.submit({
+        operation: "control.move_joint_online",
+        control_id: "control-a",
+        target_position: [0, 0, 0, 0, 0, 0]
+      })
+    ).resolves.toEqual({
+      state: "accepted",
+      message:
+        "Control command worker completed; RT application is not confirmed.",
+      terminal: false
+    });
+  });
+
+  it("stops a hold on native worker rejection and exposes the reason", async () => {
+    const client = new PilotOperationClient(
+      { reserveOperation: () => context } as never,
+      {
+        submitOperation: async () => ({
+          status: 200,
+          body: nativeOperationResult("worker_rejected")
+        })
+      } as never
+    );
+
+    await expect(
+      client.submit({
+        operation: "control.move_joint_online",
+        control_id: "control-a",
+        target_position: [0, 0, 0, 0, 0, 0]
+      })
+    ).resolves.toMatchObject({
+      state: "rejected",
+      message: "Control rejected the command.",
+      terminal: true
+    });
+  });
+
   it.each([
     [200, operationResult(), "accepted"],
     [202, operationResult("written_unconfirmed"), "written_unconfirmed"],

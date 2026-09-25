@@ -641,6 +641,15 @@ ends the local hold immediately and clears pending work. No new target is emitte
 release. Where the public operation contract provides an explicit stop/cancel behavior, the client
 uses it; Portal does not invent an acknowledgement that the server did not provide.
 
+The embedded Pilot currently accepts a schema-v1 operation request but returns a schema-v2
+`OperationResult` for native Control delivery outcomes. Portal accepts only the known native
+outcome set for that response version. `worker_completed` is nonterminal for a hold: it confirms
+the Control command worker handled the request, not RT application or physical motion. Native
+rejection or unknown/unavailable results are terminal and clear the pending target. A native
+result carrying an error is parsed as an operation result before the generic HTTP error envelope.
+The checked-in Pilot OpenAPI v1 artifact does not yet describe these native v2 results; Portal
+keeps the v2 extension isolated at its response boundary until that upstream contract is versioned.
+
 Pointer capture provides reliable pointer-up behavior. Keyboard activation ignores key repeat and
 uses key-down/key-up lifecycle. Buttons expose pressed and unavailable state accessibly. Home and
 Ready use the same hold engine with their own target provider; they are not converted to one-shot

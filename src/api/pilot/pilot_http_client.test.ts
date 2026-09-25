@@ -27,6 +27,39 @@ describe("PilotHttpClient", () => {
       retryable: false
     });
   });
+  it("accepts Pilot's native worker-completed operation result", async () => {
+    const client = new PilotHttpClient("same-origin", async () =>
+      Response.json({
+        schema_version: 2,
+        request_id: "jog-1",
+        operation: "control.move_joint_online",
+        control_id: "control.default",
+        pilot_disposition: "forwarded",
+        delivery: { outcome: "worker_completed", connection_generation: 1 },
+        control_outcome: { status: "not_reported", code: null, message: null },
+        result: null,
+        error: null
+      })
+    );
+
+    await expect(
+      client.submitOperation({
+        schema_version: 1,
+        request_id: "jog-1",
+        operation: "control.move_joint_online",
+        session_id: "session-1",
+        generation: 0,
+        sequence: 1,
+        source_timestamp_ns: 1_000,
+        ttl_ms: 250,
+        control_id: "control.default",
+        payload: { target_position: [0, 0, 0, 0, 0, 0] }
+      })
+    ).resolves.toMatchObject({
+      status: 200,
+      body: { schema_version: 2, delivery: { outcome: "worker_completed" } }
+    });
+  });
   it("queries only public RobotStatus stream descriptors", async () => {
     const requests: string[] = [];
     const client = new PilotHttpClient("same-origin", async (input) => {
