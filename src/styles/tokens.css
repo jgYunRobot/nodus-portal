@@ -11,6 +11,12 @@
   --radius-card-large: 28px;
   --control-height: 44px;
   --motion-fast: 120ms;
+  --motion-press: 60ms;
+  --motion-release: 240ms;
+  --motion-panel: 280ms;
+  --motion-exit: 160ms;
+  --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.2, 0.8, 0.2, 1.12);
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --dock-height: 64px;
   --dock-collapsed-width: 244px;

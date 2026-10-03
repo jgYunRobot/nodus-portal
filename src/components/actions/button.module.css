@@ -11,8 +11,25 @@
   min-height: var(--control-height);
   padding: 0 var(--space-4);
   transition:
-    background-color var(--motion-fast),
-    border-color var(--motion-fast);
+    background-color var(--motion-fast) var(--ease-settle),
+    border-color var(--motion-fast) var(--ease-settle),
+    box-shadow var(--motion-release) var(--ease-settle);
+}
+.content {
+  align-items: center;
+  display: inline-flex;
+  gap: inherit;
+  justify-content: inherit;
+  pointer-events: none;
+  transition: transform var(--motion-release) var(--ease-spring);
+}
+.button:not(:disabled):active {
+  box-shadow: inset 0 2px 5px rgb(0 0 0 / 0.18);
+  transition-duration: var(--motion-press);
+}
+.button:not(:disabled):active .content {
+  transform: translateY(1px) scale(0.96);
+  transition-duration: var(--motion-press);
 }
 .button svg {
   flex-shrink: 0;

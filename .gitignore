@@ -4,3 +4,7 @@ coverage/
 playwright-report/
 test-results/
 storybook-static/
+
+# Local logo exploration
+/temp_design/
+/docs/designs/temp_design_nodus_symbol_identity_exploration_design.md

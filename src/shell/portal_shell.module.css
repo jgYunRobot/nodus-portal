@@ -3,6 +3,7 @@
   grid-template-columns: 248px minmax(0, 1fr);
   grid-template-rows: 76px 1fr;
   min-height: 100dvh;
+  transition: grid-template-columns var(--motion-panel) var(--ease-settle);
 }
 
 @media (max-width: 380px) {
@@ -10,7 +11,7 @@
     flex: 0 0 var(--control-height);
     padding: 0;
   }
-  .mobile_menu span {
+  .mobile_menu [data-button-content] > span {
     clip-path: inset(50%);
     height: 1px;
     overflow: hidden;
@@ -35,6 +36,7 @@
   padding: var(--space-6) var(--space-4);
   position: sticky;
   top: 0;
+  transition: padding var(--motion-panel) var(--ease-settle);
 }
 .sidebar_top {
   display: grid;
@@ -109,6 +111,7 @@
 .content {
   min-width: 0;
   padding: var(--space-8);
+  animation: var(--animation-fade-in);
 }
 .navigation {
   display: grid;
@@ -128,12 +131,18 @@
   position: relative;
   text-decoration: none;
   transition:
-    color var(--motion-fast),
-    background-color var(--motion-fast);
+    color var(--motion-fast) var(--ease-settle),
+    background-color var(--motion-fast) var(--ease-settle),
+    border-color var(--motion-fast) var(--ease-settle);
 }
 .navigation a svg {
   flex: 0 0 20px;
   height: 20px;
+  transition: transform var(--motion-release) var(--ease-spring);
+}
+.navigation a:active:not([aria-disabled="true"]) svg {
+  transform: scale(0.88);
+  transition-duration: var(--motion-press);
 }
 .navigation a:hover:not([aria-disabled="true"]) {
   background: var(--color-surface);
@@ -173,7 +182,7 @@
   padding: var(--space-3) 0;
 }
 .collapsed .navigation a span,
-.collapsed .sidebar_bottom button span {
+.collapsed .sidebar_bottom button [data-button-content] > span {
   clip-path: inset(50%);
   height: 1px;
   overflow: hidden;

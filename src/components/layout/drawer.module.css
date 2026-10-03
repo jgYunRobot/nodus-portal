@@ -4,6 +4,13 @@
   position: fixed;
   z-index: 30;
 }
+.overlay[data-state="open"] {
+  animation: var(--animation-fade-in);
+}
+.overlay[data-state="closed"] {
+  animation: var(--animation-fade-out);
+  pointer-events: none;
+}
 
 .content {
   background: var(--color-shell);
@@ -16,6 +23,13 @@
   top: 0;
   width: min(320px, calc(100vw - var(--space-8)));
   z-index: 31;
+}
+.content[data-state="open"] {
+  animation: var(--animation-drawer-in);
+}
+.content[data-state="closed"] {
+  animation: var(--animation-drawer-out);
+  pointer-events: none;
 }
 
 .heading {
