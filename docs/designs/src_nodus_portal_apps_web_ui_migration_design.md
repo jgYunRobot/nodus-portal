@@ -248,7 +248,7 @@ than the selected speed and actual hold duration.
 Portal replaces stale interval-state reads with the following model:
 
 1. Pointer down creates one active `HoldIntent` containing the operation kind, axis or goal,
-   direction, speed percentage, selected frame, and pointer identity.
+   direction, speed percentage, selected frame name and ID, and pointer identity.
 2. The first compatible authoritative status seeds both the central status store and the intent's
    projected target. A hold cannot invent an initial robot pose.
 3. Every newly accepted Control status sample atomically updates the central store independently of
@@ -303,6 +303,9 @@ checkbox must not silently change server or robot authority semantics.
   backward.
 - Submit the complete task target from the reconciled pose in the explicitly selected frame
   convention.
+- Send the selected RobotStatus task-frame ID as `target_id` and send `reference_id = 0` until a
+  separately approved reference-frame selector and pose-transform design exists.
+- Cancel the hold if the selected frame name resolves to a different ID while the hold is active.
 - Do not fall back to an identity pose after a compatible live status stream has been expected; make
   the missing frame visible as unavailable input.
 

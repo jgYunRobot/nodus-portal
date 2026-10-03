@@ -3,6 +3,7 @@ import { PilotHttpClient } from "./pilot_http_client";
 import { pilot_query_keys } from "./pilot_query_keys";
 
 const pilot_client = new PilotHttpClient();
+const DIRECTORY_FALLBACK_REFRESH_MS = 5000;
 
 export function usePilotHealth() {
   return useQuery({
@@ -24,6 +25,7 @@ export function usePilotComponents() {
   return useQuery({
     queryKey: pilot_query_keys.components,
     queryFn: () => pilot_client.getComponents(),
+    refetchInterval: DIRECTORY_FALLBACK_REFRESH_MS,
     retry: 2
   });
 }
@@ -32,6 +34,7 @@ export function usePilotEndpoints() {
   return useQuery({
     queryKey: pilot_query_keys.endpoints,
     queryFn: () => pilot_client.getEndpoints(),
+    refetchInterval: DIRECTORY_FALLBACK_REFRESH_MS,
     retry: 2
   });
 }

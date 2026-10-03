@@ -1,6 +1,10 @@
 import type { components } from "../../api/pilot/generated/pilot_v1";
 import { PilotHttpClient } from "../../api/pilot/pilot_http_client";
-import { isErrorResponse } from "../../api/pilot/pilot_runtime_guards";
+import {
+  isErrorResponse,
+  isOperationResult,
+  type PilotOperationResult
+} from "../../api/pilot/pilot_runtime_guards";
 import {
   PortalComponentSession,
   type OperationContext
@@ -8,9 +12,16 @@ import {
 
 export type OperationTarget =
   | {
-      operation: "control.move_joint_online" | "control.move_task_online";
+      operation: "control.move_joint_online";
       control_id: string;
       target_position: readonly number[];
+    }
+  | {
+      operation: "control.move_task_online";
+      control_id: string;
+      target_position: readonly number[];
+      target_id: number;
+      reference_id: number;
     }
   | {
       operation: "control.set_servo_state";
@@ -57,6 +68,9 @@ export class PilotOperationClient {
       const response = await this.client.submitOperation(
         createOperationRequest(context, target)
       );
+      if (isOperationResult(response.body)) {
+        return presentOperationResult(response.status, response.body);
+      }
       if (isErrorResponse(response.body)) {
         if (typeof response.body.snapshot.server_instance_id === "string") {
           this.session.observeServerInstance(
@@ -70,7 +84,7 @@ export class PilotOperationClient {
           terminal: true
         };
       }
-      return presentOperationResult(response.status, response.body);
+      throw new Error("Pilot operation response is invalid.");
     } catch (error: unknown) {
       return {
         state: "failed",
@@ -117,7 +131,11 @@ function createOperationRequest(
     return {
       ...common,
       operation: target.operation,
-      payload: { target_position: [...target.target_position] }
+      payload: {
+        target_position: [...target.target_position],
+        target_id: target.target_id,
+        reference_id: target.reference_id
+      }
     };
   }
   if (target.operation === "control.set_servo_state") {
@@ -139,8 +157,41 @@ function createOperationRequest(
 
 function presentOperationResult(
   http_status: number,
-  result: components["schemas"]["OperationResult"]
+  result: PilotOperationResult
 ): OperationPresentation {
+  if (result.schema_version === 2) {
+    if (
+      result.pilot_disposition === "rejected" ||
+      result.control_outcome.status === "rejected" ||
+      ["worker_rejected", "native_invalid", "unsupported"].includes(
+        result.delivery.outcome
+      )
+    ) {
+      return {
+        state: "rejected",
+        message:
+          result.error?.message ??
+          "Control command worker rejected the operation.",
+        terminal: true
+      };
+    }
+    if (
+      result.delivery.outcome === "worker_completed" &&
+      result.pilot_disposition === "forwarded"
+    ) {
+      return {
+        state: "accepted",
+        message:
+          "Control command worker completed; RT application is not confirmed.",
+        terminal: false
+      };
+    }
+    return {
+      state: "unavailable",
+      message: result.error?.message ?? "Native Control result is unavailable.",
+      terminal: true
+    };
+  }
   if (
     http_status === 202 ||
     result.delivery?.outcome === "written_unconfirmed"

@@ -49,7 +49,10 @@ function LoadedRobot({ profile, joint_positions, on_error }: LoadedRobotProps) {
   useEffect(() => {
     let disposed = false;
     const loader = new URDFLoader();
-    loader.workingPath = "/robots/e_rob/";
+    loader.workingPath = profile.urdf_path.slice(
+      0,
+      profile.urdf_path.lastIndexOf("/") + 1
+    );
     loader.parseCollision = false;
     loader.load(
       profile.urdf_path,
@@ -72,9 +75,9 @@ function LoadedRobot({ profile, joint_positions, on_error }: LoadedRobotProps) {
   useEffect(() => {
     if (robot === null || joint_positions === null) return;
     joint_positions.forEach((position, index) => {
-      robot.joints[`Joint_${index + 1}`]?.setJointValue?.(position);
+      robot.joints[profile.joint_names[index]]?.setJointValue?.(position);
     });
-  }, [joint_positions, robot]);
+  }, [joint_positions, profile.joint_names, robot]);
 
   useEffect(() => {
     if (robot === null) return;

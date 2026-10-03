@@ -1,5 +1,451 @@
 # Progress
 
+## 2026-09-26 - Align Task Jog with Pilot's world reference
+
+- `HoldSession` now sends `reference_id = -2` for `control.move_task_online`, matching Pilot's current world-only online task contract. The selected status frame ID remains `target_id`, and `PilotOperationClient` forwards both values unchanged.
+- Updated focused hold and request encoding expectations. Prettier, focused ESLint, and `git diff --check` passed. Tests, typecheck, browser, embedded runtime, and physical robot checks were not run.
+- Next: synchronize the pinned Pilot OpenAPI artifact and generated types when its updated contract is published, then verify the Portal-to-Pilot request in the embedded demo.
+
+## 2026-09-24 - Accept embedded Pilot native operation results
+
+- Recognize Pilot's schema-v2 native operation responses alongside the existing v1 response type.
+  Treat `worker_completed` as nonterminal worker evidence so a held Jog can continue to schedule
+  targets; native rejection and unavailable outcomes end the hold without claiming RT or physical
+  completion.
+- Added response-boundary and operation-presentation regression cases. The Pilot submodule and
+  Control sources were not changed.
+- Validation: `git diff --check` passed. Tests, typecheck, build, browser interaction and hardware
+  motion were not run. Next: run focused Portal tests and verify held Jog against the updated
+  Portal with the existing `nodus-run` Pilot response.
+
+## 2026-09-11 - Next-work handoff
+
+- Next: add Task Operator, then connect tasks to actual motion execution.
+- Dual-arm status and static mesh delivery were checked; browser visual acceptance
+  and numerical task-motion validation remain separate. No build/tests run for this commit.
+
+## 2026-09-11 - Fix dual-arm mesh URLs
+
+- Changed all 28 visual/collision mesh references to paths relative to the dual
+  URDF directory. Slash-prefixed URLs were concatenated with the loader working
+  path and returned the SPA HTML fallback instead of STL data.
+- Preserved model geometry, joint mapping and existing unrelated changes.
+- Live Portal HTTP checks returned 200 model/stl for all seven mesh files;
+  the served URDF contains the corrected paths. `git diff --check` passed.
+- Build/tests and browser visual acceptance were not run.
+
+## 2026-09-10 - eRob dual-arm visualization
+
+- Added the Portal-owned dual-arm URDF with 0.40 m base separation and opposite yaw,
+  reusing existing packaged meshes. Added the eRob Dual Arm (12 DOF) profile.
+- Replaced six-axis truncation and hardcoded joint names with profile-specific
+  count validation and left/right joint mapping. Profile changes remount the scene;
+  mismatched/stale status is visible and does not update the robot pose.
+- Added adapter regression cases. Prettier and `git diff --check` completed;
+  XML parsing confirmed Control parity except mesh URLs, 12 moving joints and no
+  missing mesh paths. Build, tests and live browser rendering were not run.
+- Remaining: select the dual profile against the 12-axis Control demo and verify
+  live poses/TCP overlays. Motion controls were not expanded in this task.
+
+## 2026-08-23 - Task Jog frame ID handoff
+
+### Changes
+
+- Updated the pinned Pilot OpenAPI artifact and regenerated the TypeScript contract for the revised
+  `control.move_task_online` payload.
+- Carried the selected RobotStatus task-frame ID through the Task Jog hold intent and operation
+  request as `target_id`.
+- Set `reference_id` to `0` explicitly and cancel an active hold if the selected frame name resolves
+  to a different ID.
+- Added focused expectations for selected frame-ID propagation and the complete public operation
+  payload.
+
+### Status
+
+- Task Jog now submits `target_position`, the selected task control-point `target_id`, and
+  `reference_id = 0` through Pilot.
+- Reference-frame pose transformation remains unimplemented in Control and is not claimed by
+  Portal.
+
+### Validation
+
+- The checked-in Pilot and Portal OpenAPI artifacts compare byte-for-byte equal, and the generated
+  TypeScript contract includes the new task payload fields.
+- Prettier, focused ESLint, and `git diff --check` passed for the changed Portal files.
+- `npm run typecheck` was attempted but stopped in the untouched
+  `src/features/operator_remote/use_operator_hold_activation.test.tsx:77` because its timer stub
+  returns `number` where the current Node types require `Timeout`.
+- Tests, production build, browser interaction, live Control transport, and hardware motion were not
+  run because the user did not explicitly request test or build execution.
+
+### Next goals
+
+- Run the focused Portal/Pilot contract and task-jog test suites when execution is explicitly
+  requested, then perform a controlled hardware acceptance check for nonzero task frame IDs.
+
+## 2026-08-13 - Operational README runbook
+
+### Changes
+
+- Replaced the obsolete documentation-scaffold introduction with the implemented Portal surfaces
+  and public integration boundaries.
+- Added exact local and LAN Vite commands with the Pilot proxy target, fixed port, strict-port
+  behavior, listener inspection, browser URL, and provider CORS coordination.
+- Documented direct npm installation/build ownership, static-hosting configuration, and the normal
+  five-process Nodus startup order.
+
+### Status
+
+- The README now provides an executable same-host and trusted-LAN runbook for the current research
+  profile instead of leaving Pilot requests unproxied or Vite bound only to loopback.
+- No Portal source, Pilot contract, provider endpoint, or runtime configuration changed.
+
+### Validation
+
+- Documentation commands were compared against the current launcher, Vite CLI help, Vite proxy
+  configuration, public Portal configuration, and current Operator/Vision allowlists.
+- `git diff --check` passed; typecheck, lint, tests, production build, and browser execution were not
+  run.
+
+### Next goals
+
+- Update the LAN URL and exact provider CORS origins together when DHCP or the Portal port changes.
+
+## 2026-08-12 - Root development-server helper
+
+### Changes
+
+- Added `run_app.sh` to launch the existing Vite development server while forwarding Vite CLI
+  options.
+- Documented explicit `npm ci`, the root launcher, and the existing direct `npm run build` command.
+- Documented separate loopback and LAN launch commands, including the required `0.0.0.0:5173`
+  bind, browser-facing LAN URL, DHCP caveat, and existing-server restart requirement.
+
+### Status
+
+- Portal now has a stable root development-server launcher without adding a redundant npm build
+  wrapper.
+- Dependency setup remains explicit and production bundling remains owned by `npm run build`.
+- LAN clients can use the documented host address after Vite is explicitly started with `--host`.
+
+### Validation
+
+- `bash -n run_app.sh`, its help path, and executable permissions passed.
+- `git diff --check` passed after the README hosting instructions were added.
+- Typecheck, lint, tests, production build, and browser execution were not run.
+
+### Next goals
+
+- Run `setup_dev.sh` and `npm ci` explicitly when setup is intended, then use the root helper for
+  normal development launch and `npm run build` for production bundling.
+
+## 2026-08-10 - Operator Hold-to-Run same-runtime recovery remediation
+
+### Changes
+
+- Keyed the page-owned remote Hold session by immutable Operator runtime identity and exact endpoint
+  URLs instead of transient Device Directory object identity, so component-state refreshes no longer
+  dispose an active lease.
+- Added explicit post-failure reconciliation before a recovered Hold session returns to idle, while
+  preserving no-retry behavior for uncertain mutations.
+- Corrected activation query error classification when no snapshot exists and required the public
+  `ready` fact before enabling Run or Hold.
+- Added factual Terminal local-hold and transitional Operator status messages instead of falling
+  through to a paused-ready claim.
+- Simplified the Device Remote presentation by removing the status-message region, removing
+  lifecycle suffixes from selector options, and retaining only Component ID and Lifecycle details.
+- Added regression coverage for same-runtime Directory replacement, continued heartbeat, recovery,
+  query error classification, readiness, and status presentation.
+
+### Status
+
+- The reported first-command-only Hold behavior is corrected without adding the intentionally
+  deferred Jog interaction lock.
+- Operator, Pilot, Control, Camera, and provider contracts remain unchanged.
+
+### Validation
+
+- `git diff --check` passed.
+- Targeted Prettier check and ESLint passed for the touched Operator Remote files.
+- Unit, typecheck, build, and Playwright commands were not run because they were not explicitly
+  requested for this coding task.
+
+### Next goals
+
+- Confirm in the live Portal that a held pointer produces continuous Operator heartbeats and motion
+  until release.
+- Run the focused Operator Remote unit suite and browser acceptance when explicitly requested.
+
+## 2026-08-09 - Portal Operator activation integration design
+
+### Changes
+
+- Defined the Portal OR4 architecture that discovers exact Operator activation descriptors through
+  the existing Pilot Device Directory and calls the selected Operator directly.
+- Specified pinned Operator OpenAPI provenance, service request/response schema matching, runtime
+  identity and target-Control checks, authoritative snapshot reconciliation, and Terminal-origin
+  state synchronization.
+- Designed desired-state Latched Run/Pause and one-owner remote Hold-to-Run with a 100 ms heartbeat,
+  exhaustive release cleanup, and no replay after uncertain mutations.
+- Added a Portal-local cooperative interaction boundary with Jog while preserving the existing
+  Pilot session/runtime and avoiding a second Pilot subscriber or activation proxy.
+- Included the current LAN deployment handoff: Operator binds `192.168.219.106`, advertises
+  `http://192.168.219.106:8770`, and allows the exact local and LAN Portal origins.
+
+### Status
+
+- `docs/designs/src_features_operator_remote_activation_integration_design.md` is implementation-
+  ready for OR4-0 through OR4-7.
+- No Portal runtime, Pilot, Control, or hardware behavior was changed. The separately owned Operator
+  deployment profile was updated to the confirmed Wi-Fi address for the documented LAN boundary.
+
+### Validation
+
+- Reviewed the current Portal Device Directory, Operator Remote presentation, direct Vision
+  provider pattern, Pilot lifecycle event invalidation, generated-contract convention, and the
+  Operator 1.0.0 activation OpenAPI/catalog implementation.
+- Build and test commands were not run because this task is documentation-only and no explicit
+  validation request was made.
+
+### Next goals
+
+- Implement OR4-0 through OR4-6 in Portal as independently reviewable checkpoints.
+- Verify the existing OR4-7 Operator LAN profile during fake-provider browser acceptance before any
+  separately authorized physical motion test.
+
+## 2026-08-09 - Operation Device Remote presentation
+
+### Changes
+
+- Implemented the Portal-only Device Remote below the existing Jog remote in the Operation page.
+- Reused the public Device Directory to select `input_source` components by stable
+  `component_id`, including sole-candidate initialization, reorder retention, replacement retention,
+  and clear-on-removal behavior.
+- Added factual Operator identity/lifecycle/capability presentation and final equal-width Run/Pause
+  and Hold-to-Run controls directly below the title after removing the redundant helper sentence;
+  both remain disabled because no activation contract is integrated.
+- Added focused model and panel fixtures for empty, single, multiple, degraded, removed, and
+  replacement states without introducing an Operator client or operation request.
+- Made a Device Directory query error take precedence over retained cached data so the remote shows
+  discovery failure instead of presenting a stale Operator directory as ready.
+
+### Status
+
+- OR0, OR1, and OR2 of the Device Remote design are implemented in Portal only.
+- Operator activation, hold behavior, provider endpoints, Pilot mutations, and hardware operation
+  remain intentionally deferred.
+
+### Validation
+
+- `git diff --check` passed after the directory error-precedence correction.
+- Test commands were not run because repository rules require explicit user instruction.
+
+### Next goals
+
+- Run the OR3 visual and request-isolation acceptance checks when explicitly requested.
+
+## 2026-08-09 - Operation Device Remote Portal-only design
+
+### Changes
+
+- Designed a second Device Remote card below the existing Jog remote on the robot-scoped Operation
+  page.
+- Defined connected `input_source` discovery and stable Operator selection using the existing
+  global Device Directory without adding another Pilot subscription.
+- Specified the final Run/Pause and Hold-to-Run presentation while keeping both controls disabled
+  until an Operator-owned activation contract is released.
+- Split implementation into OR0-OR3 Portal-only checkpoints and deferred all provider requests,
+  Pilot mutations, hold leases, Policy inference, and physical operation to an unapproved OR4 gate.
+
+### Status
+
+- The implementation-ready Portal presentation design is recorded in
+  `docs/designs/src_features_operator_remote_operation_device_remote_design.md`.
+- This design advances only the UI portion of Device DV5 and does not invent or approve the
+  Operator activation API.
+
+### Validation
+
+- Reviewed the current Operation page, Device Directory model, Device-page Operator boundary,
+  Operation consolidation design, navigation design, and existing PA-CONTROL policy hold pattern.
+- Build and test commands were not run because this change contains documentation only and no
+  explicit validation request was made.
+
+### Next goals
+
+- Implement OR0-OR3 in Portal without changing Operator, Pilot, Control, or the existing Jog remote.
+- Design OR4 separately after Operator publishes a versioned activation contract.
+
+
+## 2026-08-09 - Device deck wheel navigation and taller cards
+
+### Changes
+
+- Added Device deck mouse-wheel navigation: wheel down selects the card to the right and wheel up
+  selects the card to the left.
+- Retained normal page scrolling at the first and last card, and do not intercept wheel input from
+  interactive controls.
+- Increased the stable card frame by 3rem on desktop and narrow viewports.
+- Added focused Playwright coverage for both wheel directions.
+
+### Status
+
+- The Device deck now supports mouse wheel navigation alongside picker, card-edge, swipe, and
+  keyboard navigation.
+
+### Validation
+
+- Test commands were not run because repository rules require explicit user instruction.
+
+### Next goals
+
+- Complete Vision LAN address and browser CORS integration for tablet Camera previews.
+
+## 2026-08-09 - Camera preview stream recovery
+
+### Changes
+
+- Added a bounded Camera MJPEG reader that detects HTTP failure, multipart EOF, invalid parts, and
+  five seconds without stream data, then retries Color and Depth with exponential backoff while
+  preserving the exact advertised endpoint.
+- Kept the active Camera card and information visible while a preview reconnects, and revalidated
+  the public device directory after a stream failure.
+- Added parser regressions for transport-chunk boundaries and malformed part headers using only
+  in-memory bytes; they do not read or assert values from deployment configuration files.
+
+### Status
+
+- Portal now owns MJPEG EOF and stall detection instead of relying on browser `<img>` error events,
+  which can leave the last decoded frame visible after the connection has already closed.
+
+### Validation
+
+- Node 24 Prettier check and `git diff --check` passed for the owned Portal changes.
+- Vite transformed both new Camera modules with HTTP 200.
+- Against the user-running D435 provider, PC and tablet re-established four total Color/Depth
+  streams. During a 30-second observation, all four remained active while the capture frame advanced
+  from 12744 to 13511 with zero capture timeouts and drops.
+- Unit, typecheck, lint, production build, and Playwright were not run because they were not
+  explicitly requested.
+
+### Next goals
+
+- Confirm from both screens that an actual network interruption recovers without a page reload.
+
+## 2026-08-09 - Operation page consolidation
+
+### Changes
+
+- Consolidated the robot-scoped Jogging and Operating page model into one canonical Operation page.
+- Preserved the existing Jog remote, hold-to-run behavior, 3D visualization, real-time values,
+  RobotStatus ownership, and Robot Dock command ownership.
+- Defined `/robots/:control_id/operation` as canonical and retained replace redirects from the two
+  legacy robot page routes.
+
+### Status
+
+- The focused design is recorded in
+  `docs/designs/src_app_operation_page_consolidation_design.md` and supersedes only the route/page
+  naming portions of the older navigation, Robot Dock, and frontend architecture designs.
+- Existing Device page worktree changes remain out of scope and preserved.
+
+### Validation
+
+- Reviewed the current router, shell navigation, Home card, Robot Dock route-selection helper,
+  Jogging/Operating page modules, route fixtures, and applicable Portal designs.
+- Scoped Prettier formatting and `git diff --check` passed.
+- Typecheck, lint, unit, build, and Playwright commands have not been run because repository rules
+  require an explicit request.
+
+### Next goals
+
+- Keep Operation as the single robot workspace while adding future operation-owned features without
+  recreating a second duplicate robot-control page.
+
+## 2026-08-09 - Device deck controls simplification
+
+### Changes
+
+- Removed the redundant Previous and Next buttons below the Device card deck.
+- Kept direct selection through the device picker, visible adjacent card edges, horizontal drag,
+  and keyboard Left/Right Arrow navigation.
+
+### Status
+
+- Device deck navigation remains available without dedicated previous/next controls.
+
+### Validation
+
+- Added Playwright coverage that confirms the removed buttons are not exposed.
+- Test commands were not run because repository rules require explicit user instruction.
+
+### Next goals
+
+- Complete Vision LAN address and browser CORS integration for tablet Camera previews.
+
+## 2026-08-08 - Device active-selection retention
+
+### Changes
+
+- Kept deterministic card ordering and non-persistent slot numbers, but made the initially active
+  connected device authoritative by recording its `component_id` in the URL with replace
+  navigation.
+- Prevented a newly connected device that sorts before the current card from taking over the active
+  Device presentation.
+- Preserved page-local empty-slot selection and the existing removed-device fallback behavior.
+
+### Status
+
+- Device card numbers may still change as the directory is deterministically re-sorted, but the
+  device the user is viewing remains selected until it is removed or the user selects another card.
+
+### Validation
+
+- Scoped Prettier check passed for the owned TypeScript, E2E, design, and progress files, and
+  `git diff --check` passed.
+- Typecheck, lint, unit, build, and Playwright commands were not run because repository rules
+  require explicit user instruction.
+
+### Next goals
+
+- Complete Vision LAN address and browser CORS integration for tablet Camera previews.
+
+## 2026-08-08 - Live Device directory recovery
+
+### Changes
+
+- Added one Device-page refresh owner that coalesces relevant public Pilot lifecycle, endpoint-
+  catalog, gap, and SSE error events into component/endpoint directory invalidation.
+- Added a five-second fallback refresh for event loss, SSE capacity exhaustion, and Pilot restart.
+- Changed removed or unknown selected-device URLs to clear the stale `device` query with replace
+  navigation and activate the first empty slot instead of rendering an error card.
+- Kept transient Pilot/provider failures user-facing as a stable recovering state without exposing
+  raw transport error strings, while preserving the five empty placeholders when no directory
+  snapshot is available.
+- Qualified active Camera runtime by Pilot/session/catalog identity and tightened Vision 1.3.0
+  endpoint selection to exact unique descriptor ids, service methods, and matching URL protocols.
+- Added focused unit and browser fixtures for lifecycle/catalog invalidation, endpoint rejection,
+  removed selection fallback, and disconnect-to-empty behavior without page reload.
+
+### Status
+
+- The reported stale Device cards and removed-device error presentation are corrected in source.
+- Direct Camera health/metadata recovery remains read-only and re-queries Pilot when a provider
+  failure may indicate a stale endpoint. Vision CORS/LAN product work remains outside this change.
+- Existing unrelated design and progress edits remain preserved and uncommitted.
+
+### Validation
+
+- Scoped Prettier check passed for the owned TypeScript, CSS, E2E, design, and progress files, and
+  `git diff --check` passed.
+- Typecheck, lint, unit, build, and Playwright commands were not run because repository rules
+  require explicit user instruction.
+
+### Next goals
+
+- Run the Portal validation suite when explicitly requested and exercise the live Vision stop/start
+  flow against Pilot on the target LAN setup.
+
 ## 2026-08-08 - Task Jog parent-link frame eligibility
 
 ### Changes
@@ -1064,3 +1510,371 @@
 
 - Confirm the same isolation after a future production static-host deployment.
 - Add command authority separately when its Pilot contract is approved.
+
+## 2026-08-08 - Interim Camera and Device integration baseline
+
+### Changes
+
+- Recorded the verified Vision-Pilot-Portal ownership and data-flow boundary for future Device-page
+  Camera work.
+- Cataloged the current Vision 1.3.0 health, metadata, preview, query, point-cloud, and optional
+  recording endpoints without treating them as implemented Portal features.
+- Captured the remaining LAN advertised-address, browser CORS, Camera-to-Control association,
+  Portal contract-pinning, and settings-mutation decisions.
+- Split the future Device-page design into incremental decisions so unresolved behavior is not
+  guessed during implementation.
+
+### Status
+
+- The integration baseline is documented as an interim design only; no Portal, Pilot, or Vision
+  runtime source was changed.
+- Fake-provider investigation has shown that Vision can register a Camera endpoint catalog with
+  Pilot and serve payloads directly, while the Portal Device page remains Control-status-only.
+
+### Validation
+
+- Reviewed the new documentation diff and whitespace only.
+- Build, lint, typecheck, and test commands were not run because this change is documentation-only
+  and repository rules require explicit user instruction before running them.
+
+### Next goals
+
+- Design the Device page information architecture and Camera placement first.
+- Decide Camera-to-Control association and global Camera behavior before defining directory
+  filtering or selection.
+- Pin the approved Vision provider contract and design LAN/CORS support only after the Device-page
+  design is accepted.
+
+## 2026-08-08 - Global Device card-deck design
+
+### Changes
+
+- Replaced the former robot-scoped Device product direction with a global `/devices` page that has
+  no RobotStatus ownership and remains accessible without a connected robot.
+- Designed a device-per-card overlapping deck with swipe, pointer, keyboard, adjacent-card, and
+  direct-picker navigation.
+- Added a minimum-five-slot rule: connected devices fill the leading cards, empty placeholders keep
+  the deck at five, and connections beyond five append cards without a maximum implied by the UI.
+- Defined common card information/settings boundaries, a direct Vision Camera card with optional
+  depth presentation, and an Operator/input-source card limited by its currently published
+  lifecycle contract.
+- Updated navigation, Robot Dock, frontend route, and interim Camera integration designs so global
+  Device selection remains independent from the selected Control.
+
+### Status
+
+- The Device page product and technical design is documented; implementation has not started.
+- Camera can support read-only information and previews after its contract, LAN, and CORS
+  checkpoints. Operator can initially show generic lifecycle information but requires an
+  Operator-owned provider contract before Portal exposes configuration or activation controls.
+- Existing runtime source and current robot-scoped Device implementation remain unchanged.
+
+### Validation
+
+- Reviewed documentation consistency and whitespace only.
+- Build, lint, typecheck, and test commands were not run because this change is documentation-only
+  and repository rules require explicit user instruction before running them.
+
+### Next goals
+
+- Review and approve the minimum-five-card deck geometry and Device navigation behavior.
+
+## 2026-08-08 - Device DV0 global route baseline
+
+### Result
+
+- Replaced the robot-scoped Device route with the global `/devices` route and redirect the legacy
+  `/robots/:control_id/device` URL without retaining the Control identity.
+- Moved `Devices` into the global Portal navigation, so it remains available when RobotDirectory is
+  empty, and label the shell context `Device directory`.
+- Removed the Device page's RobotStatus subscription and Control-status presentation. The temporary
+  empty view now describes provider device discovery only.
+
+### Validation
+
+- Passed `npm run format:check`, `npm run typecheck`, and `npm test` (17 files, 64 tests).
+- Passed focused Chromium route coverage for the global link, zero-robot access, legacy redirect,
+  and Robot Dock route isolation.
+
+### Next
+
+- DV1: join public lifecycle and paginated endpoint-directory data into a stable, minimum-five-slot
+  device directory.
+- Decide the first Camera card's exact information hierarchy and color/depth layout.
+- Implement DV0 only after explicit implementation approval.
+
+## 2026-08-10 - Operator activation OR4-0 contract pin
+
+### Changes
+
+- Pinned the released Operator Activation OpenAPI 1.0.0 artifact with its immutable source revision
+  and SHA-256 provenance.
+- Added the reproducible local Operator contract generator and committed generated TypeScript types;
+  Portal builds no contract dependency from a sibling Operator checkout or network source.
+
+### Status
+
+- OR4-0 is complete. The direct activation runtime remains disabled until subsequent OR4 gates
+  validate directory evidence, transport, and authoritative state.
+
+### Validation
+
+- `npm run generate:operator-contract` regenerated the committed artifact.
+- The pinned bytes match `nodus-operator` revision `9aa5c66565eb10bc047b47ea97337c4969f6809e`
+  with SHA-256 `ce33cbf5865b41fc795aec787db45fbbe4fece13051b814ea999edcd5400f09c`.
+- `git diff --check` passed.
+
+### Next goals
+
+- OR4-1: retain exact public service schema IDs and resolve the complete selected-runtime descriptor
+  set without changing Camera or generic Device behavior.
+
+## 2026-08-10 - Operator activation OR4-1 directory evidence
+
+### Changes
+
+- Preserved public service request and response schema IDs in the existing Device Directory entries.
+- Extended the existing directory EventSource owner to forward only bounded, validated
+  `component_state_updated` identity evidence to consumers while retaining its refresh behavior.
+- Added a pure exact resolver for the selected runtime's five Operator activation descriptors; it
+  rejects missing, duplicate, wrong-method, wrong-schema, or malformed-protocol matches.
+
+### Status
+
+- OR4-1 is complete. Portal still sends no Operator activation request; OR4-2 adds the bounded
+  direct client and closed runtime guards.
+
+### Validation
+
+- Focused Device Directory, lifecycle event, Camera regression, and Operator descriptor tests passed
+  (4 files, 12 tests).
+
+### Next goals
+
+- OR4-2: validate direct Operator responses at the Portal boundary with finite, no-retry mutation
+  transport.
+
+## 2026-08-10 - Operator activation OR4-2 direct client
+
+### Changes
+
+- Added bounded direct HTTP calls for the five discovered Operator endpoints only, with JSON-only
+  request/response handling, finite abort timeout, response-size bound, omitted credentials, and
+  redirect rejection.
+- Added closed runtime guards for activation snapshots, fault envelopes, leases, and hold-start
+  responses, plus selected component/instance/Control binding validation.
+- Classified retryable reads, valid `409` conflict snapshots, and uncertain mutations; mutations
+  perform no client retry and never become successful from malformed or incompatible responses.
+
+### Status
+
+- OR4-2 is complete. The client has no React owner yet, so it cannot create an activation request
+  from the Operation page before OR4-3/OR4-4 integration.
+
+### Validation
+
+- Focused activation contract and client tests passed (2 files, 7 tests).
+
+### Next goals
+
+- OR4-3: add the one selected-runtime TanStack Query owner and current-runtime invalidation path.
+
+## 2026-08-10 - Operator activation OR4-3 authoritative query
+
+### Changes
+
+- Added one selected-runtime TanStack Query key scoped by the existing Device Directory runtime key.
+- Revalidate through the existing Directory event owner only for matching public
+  `component_state_updated` identity evidence, current visibility/online boundaries, and one
+  visible-only low-rate fallback interval.
+- Enforced component, instance, and route-Control snapshot binding plus monotonic revisions; a
+  replacement runtime starts with an empty cache and an older revision cannot overwrite the current
+  one.
+
+### Status
+
+- OR4-3 is complete. The query owns no Pilot EventSource and has no mutation UI yet.
+
+### Validation
+
+- Focused selected-runtime query tests passed (1 file, 2 tests).
+
+### Next goals
+
+- OR4-4: enable only authoritative desired-state Latched Run/Pause mutation and reconciliation.
+
+## 2026-08-10 - Operator activation OR4-4 latched mutation
+
+### Changes
+
+- Added desired-state Latched Run/Pause admission: only authoritative `paused/none` snapshots submit
+  `running`, and only authoritative `running/latched` snapshots submit `paused`.
+- Serialized the selected-runtime latched mutation through one TanStack mutation owner, preserved
+  valid conflict snapshots, and invalidated for direct GET reconciliation after every completion.
+- Kept uncertain outcomes disabled until a newer successful direct snapshot reconciles; no state is
+  rendered optimistically and no original mutation is replayed.
+
+### Status
+
+- OR4-4 mutation ownership is complete. Production button binding remains OR4-6 after the Hold lease
+  owner and page-local cooperation boundary are ready.
+
+### Validation
+
+- Focused activation-query and latched-mutation tests passed (2 files, 4 tests).
+
+### Next goals
+
+- OR4-5: add the one-owner 100 ms remote Hold-to-Run lease session with exhaustive cleanup.
+
+## 2026-08-10 - Operator activation OR4-5 Hold lease
+
+### Changes
+
+- Extracted the existing browser-safe UUID implementation into the shared operation identity utility
+  and reused it for `portal-hold-<uuid>` Hold Start requests.
+- Added one local remote Hold lease session with a 100 ms heartbeat, no queued/overlapping heartbeat,
+  exact returned lease ownership, release-before-start Stop handling, and explicit recovery closure.
+- Local release invalidates the lease and timer before Stop awaits; failed Start, Heartbeat, or Stop
+  does not replay the original request or restart local hold admission.
+
+### Status
+
+- OR4-5 session behavior is complete and has no production input binding until OR4-6 adds the
+  page-local control events and cooperative interaction state.
+
+### Validation
+
+- Focused Hold lease and existing component-session identity tests passed (2 files, 9 tests).
+
+### Next goals
+
+- OR4-6: bind authoritative activation states to the Device Remote while preserving Jog cooperation.
+
+## 2026-08-10 - Operator contract validation follow-up
+
+### Changes
+
+- Excluded the immutable Operator OpenAPI bytes and generated TypeScript from repository formatting
+  and linting, matching the existing pinned Pilot contract convention.
+- Removed the activation reconciliation effect's synchronous state update; reconciliation remains
+  derived from the fresh direct-query timestamp.
+
+### Validation
+
+- Focused Operator activation modules pass ESLint and focused latched/lease tests (2 files, 5 tests).
+- Full lint remains blocked by pre-existing Camera/Device files and the user-owned uncommitted
+  Operator Remote fixture; full typecheck remains blocked by the existing Camera nullable endpoint
+  capture.
+
+## 2026-08-10 - Operator typecheck follow-up
+
+### Changes
+
+- Tightened Operator test fetch record types and nullable conflict-snapshot handling so the pinned
+  activation code remains strict TypeScript checked.
+
+### Validation
+
+- `npm run typecheck` now reports only the existing Camera nullable endpoint capture at
+  `src/features/camera/use_vision_camera.ts:52`.
+
+## 2026-08-10 - Operator activation OR4-6 Device Remote binding
+
+### Changes
+
+- Bound the existing Device Remote card to the selected Operator's validated direct activation
+  endpoints and authoritative runtime snapshot.
+- Connected desired-state Latched Run/Pause and local press-and-hold lease input while preserving
+  the reviewed card order, button placement, and factual identity details.
+- Releases the local hold lease on pointer/key release, pointer cancellation, focus loss, offline,
+  hidden document, selection/runtime change, and unmount. Jog/control-authority interlocks are
+  deliberately deferred to their dedicated control-ownership work.
+
+### Status
+
+- OR4-6 is complete. Device Remote owns only its selected Operator activation lifecycle.
+
+### Validation
+
+- Focused Operator panel, contract, client, query, latched, and Hold lease tests passed (6 files,
+  18 tests).
+- Focused ESLint passed for the changed Operator activation UI. `npm run typecheck` remains blocked
+  solely by the pre-existing nullable Camera endpoint capture at `src/features/camera/use_vision_camera.ts:52`.
+
+## 2026-08-10 - Camera stream fixture and endpoint narrowing follow-up
+
+### Changes
+
+- Captured validated Vision health and metadata endpoints before the asynchronous refresh closure so
+  strict TypeScript no longer widens them back to nullable values.
+- Removed redundant synchronous effect resets; the runtime-keyed Camera card remount and asynchronous
+  request results now own loading/error state transitions without a cascading render.
+- Updated the Device-page browser fixture to serve the multipart MJPEG contract consumed by the
+  fetch/parser/blob preview path and assert the resulting browser-owned blob URLs.
+
+### Status
+
+- Camera runtime loading and the browser acceptance fixture now describe the same direct-stream
+  implementation without changing the Vision public contract or preview behavior.
+
+### Validation
+
+- Focused Prettier and ESLint checks passed with the repository's required Node 24 runtime.
+- Typecheck, browser acceptance, and production build were not run because they require an explicit
+  request.
+
+### Next goals
+
+- Run the Portal typecheck and focused Device-page Playwright acceptance when validation is requested.
+
+## 2026-10-03 - Operator workspace UI/UX refresh
+
+### Changes
+
+- Applied the locally installed `ui-ux-composite` skill to the existing robotics operator Portal.
+  Recorded the direction in `src_shell_operator_workspace_visual_refresh_design.md`.
+- Added product identity and icon navigation, readable active/collapsed states, a keyboard skip
+  link, and actual Pilot discovery-query state in place of the connection placeholder.
+- Reorganized Home cards around identity, freshness, robot type/DOF, mechanical state and the
+  explicit Operation action. Added keyboard-accessible robot selection without navigation.
+- Rebalanced Operation's 3D model, model selector, readable joint measurements and remote rail.
+  On narrow screens controls follow the model before telemetry. Empty model/status states now
+  explain the next step; numeric readings retain units without truncation.
+- Increased jog/selection/theme target heights to 44 px, retained compact mobile joint rows,
+  explained hold-to-run input, and corrected the contradictory availability message when controls
+  are disabled. All motion handlers, schedulers and status calculations remain unchanged.
+- Styled the mobile navigation drawer, added a close button and explicit focus return to its
+  trigger. Button accepts React 19's native button props/ref for that focus handoff.
+- Added visible previous/next Device navigation backed by the existing deck-selection handler,
+  useful empty slots and consistent card typography. Corrected undefined `--space-5` references.
+- Refined theme/selection/status tokens and the floating Dock's appearance. Set body text color
+  from the active theme to keep inherited text correct after theme switches.
+
+### Status
+
+- UI refresh implemented in the current working tree. No dependency, Pilot/provider contract,
+  route, subscription ownership, command semantics or robot asset migration changes.
+- `setup_dev.sh` completed; the independently versioned documentation submodule remains unchanged.
+- At the implementation checkpoint, no commit, push, deployment or hardware command was performed.
+
+### Validation
+
+- Inspected intercepted public-contract fixture renders of Home, Operation and the empty five-slot
+  Device deck at desktop 1440 px and mobile 390/320 px; inspected black/light themes, collapsed
+  navigation, mobile drawer, expanded Dock, empty Home and empty model states.
+- Browser inspection found no page errors. At 320 px the document width was exactly 320 px.
+- Confirmed keyboard selection targets `/robots/control-bravo/operation`, Device previous/next
+  changes the active empty slot, Escape closes the drawer and restores trigger focus, and Dock
+  expansion preserves the main-content bounding box (1192 by 924 px at desktop).
+- Scoped ESLint passed for Button, Drawer, Shell, Home, RobotCard, Operation and HoldControls.
+  Device-page ESLint still reports the existing synchronous `setSelectedEmptyIndex` effect.
+  Reproduced that same finding from `HEAD` before these changes; no lint suppression was added.
+- Changed-file formatting and `git diff --check` passed. Production build, typecheck, unit tests
+  and acceptance test suites were not run under the shared explicit-request rule. Fixture browser
+  inspection does not establish live provider, realtime, motion or hardware acceptance.
+
+### Next goals
+
+- When requested, run typecheck and focused existing route/hold-control/Device acceptance suites.
+- Review live camera/operator payloads and actual robot operation as a separate runtime checkpoint.

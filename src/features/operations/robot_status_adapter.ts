@@ -6,6 +6,7 @@ import {
 } from "./jog_target_projector";
 
 export interface MotionTaskFrame {
+  id: number;
   translation: Vector3;
   rotation: RotationMatrix3;
 }
@@ -46,7 +47,7 @@ export function adaptMotionRobotStatus(
       frame.euler_type
     );
     if (translation.every(Number.isFinite) && rotation !== null) {
-      frames.set(frame.name, { translation, rotation });
+      frames.set(frame.name, { id: frame.id, translation, rotation });
     }
   });
   return {

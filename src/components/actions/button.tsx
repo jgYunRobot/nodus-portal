@@ -1,8 +1,8 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import styles from "./button.module.css";
 
 type ButtonTone = "primary" | "secondary" | "danger";
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends ComponentProps<"button"> {
   children: ReactNode;
   tone?: ButtonTone;
 }

@@ -1,3 +1,5 @@
+import { ArrowUpRight, Bot, Boxes } from "lucide-react";
+import { Link } from "react-router";
 import { Button } from "../components/actions/button";
 import { ErrorPanel } from "../components/feedback/error_panel";
 import { Skeleton } from "../components/feedback/skeleton";
@@ -15,10 +17,14 @@ export function HomePage() {
   return (
     <main className={styles.page}>
       <div className={styles.heading}>
-        <h1>Home</h1>
-        <p>
-          Robots publicly discovered from Pilot RobotStatus stream descriptors.
-        </p>
+        <div>
+          <h1>Home</h1>
+          <p>Your robots, their status, and your next move.</p>
+        </div>
+        <Link className={styles.device_link} to="/devices">
+          <Boxes aria-hidden="true" /> Explore devices{" "}
+          <ArrowUpRight aria-hidden="true" />
+        </Link>
       </div>
       {streams.isPending ? <Skeleton label="Loading robot directory" /> : null}
       {streams.isError ? (
@@ -36,12 +42,19 @@ export function HomePage() {
       ) : null}
       {directory?.entries.length === 0 ? (
         <ErrorPanel
-          message="Pilot has not published any RobotStatus streams."
+          message="Connect a Control to Pilot to see its robot here. Camera and Operator devices are available in Devices."
           title="No robots discovered"
         />
       ) : null}
       {directory !== null && directory.entries.length > 0 ? (
         <>
+          <div className={styles.section_heading}>
+            <h2>
+              <Bot aria-hidden="true" /> Robots{" "}
+              <span>{directory.entries.length}</span>
+            </h2>
+            <p>Select a robot, then open its workspace.</p>
+          </div>
           {directory.omitted_count > 0 ? (
             <p className={styles.notice}>
               Showing the first {directory.entries.length} stable Control

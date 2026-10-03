@@ -1,98 +1,581 @@
-import { useParams } from "react-router";
-import { useControlStatus } from "../api/pilot/use_control_status";
+import { Boxes, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type PointerEvent
+} from "react";
+import { useSearchParams } from "react-router";
+import { Button } from "../components/actions/button";
 import { Card } from "../components/feedback/card";
 import { StatusBadge } from "../components/feedback/status_badge";
+import { MjpegPreview } from "../features/camera/mjpeg_preview";
+import { selectVisionCameraEndpoints } from "../features/camera/vision_camera";
+import { useVisionCamera } from "../features/camera/use_vision_camera";
+import { resolveDeviceDeckSelection } from "../features/device_directory/device_deck";
+import {
+  createDeviceDeckSlots,
+  type DeviceDeckSlot,
+  type DeviceDirectoryEntry
+} from "../features/device_directory/device_directory";
+import { useDeviceDirectory } from "../features/device_directory/use_device_directory";
 import styles from "./device_page.module.css";
 
-function getConnectionStatus(
-  state: ReturnType<typeof useControlStatus>["state"],
-  available: boolean | undefined,
-  fresh: boolean | undefined,
-  stale: boolean | undefined
-) {
-  if (state === "malformed" || state === "error")
-    return { label: "Unavailable", tone: "danger" as const };
-  if (state === "recovering")
-    return { label: "Recovering", tone: "warning" as const };
-  if (available !== true)
-    return { label: "Awaiting status", tone: "neutral" as const };
-  if (fresh !== true || stale === true)
-    return { label: "Stale", tone: "warning" as const };
-  return { label: "Online", tone: "success" as const };
-}
+const SWIPE_THRESHOLD_PX = 48;
 
-function formatAge(age_ms: number | null | undefined): string {
-  if (age_ms === null || age_ms === undefined || !Number.isFinite(age_ms))
-    return "Unknown";
-  if (age_ms < 1000) return `${Math.round(age_ms)} ms`;
-  return `${(age_ms / 1000).toFixed(1)} s`;
+interface PointerStart {
+  pointer_id: number;
+  x: number;
 }
 
 export function DevicePage() {
-  const { control_id: route_control_id } = useParams();
-  const control_id = route_control_id ?? "unresolved-control";
-  return <DeviceWorkspace key={control_id} control_id={control_id} />;
-}
-
-function DeviceWorkspace({ control_id }: { control_id: string }) {
-  const snapshot = useControlStatus(control_id);
-  const status = snapshot.status;
-  const robot_interface = status?.sample?.robot_state.interface;
-  const connection = getConnectionStatus(
-    snapshot.state,
-    status?.available,
-    status?.fresh,
-    status?.stale
-  );
-
+  const { directory, error, is_loading, refresh_directory } =
+    useDeviceDirectory();
+  const fallback_slots = useMemo(() => createDeviceDeckSlots([]), []);
+  const has_error = error !== null && error !== undefined;
+  const slots = directory?.slots ?? (has_error ? fallback_slots : null);
   return (
     <main className={styles.page}>
       <div className={styles.heading}>
         <div>
-          <h1>Device</h1>
-          <p>{control_id}</p>
+          <h1>Device directory</h1>
+          <p>Cameras, Operators, and the devices behind your workspace.</p>
         </div>
-        <StatusBadge label={connection.label} tone={connection.tone} />
       </div>
-      <Card>
-        <h2>Control status</h2>
-        <dl className={styles.details}>
-          <div>
-            <dt>Robot type</dt>
-            <dd>{robot_interface?.robot_type ?? "Unknown"}</dd>
-          </div>
-          <div>
-            <dt>DOF</dt>
-            <dd>
-              {robot_interface === undefined ? "Unknown" : robot_interface.dof}
-            </dd>
-          </div>
-          <div>
-            <dt>Servo</dt>
-            <dd>
-              {robot_interface === undefined
-                ? "Unknown"
-                : robot_interface.servo_activated
-                  ? "Activated"
-                  : "Not activated"}
-            </dd>
-          </div>
-          <div>
-            <dt>Brake</dt>
-            <dd>
-              {robot_interface === undefined
-                ? "Unknown"
-                : robot_interface.brake_released
-                  ? "Released"
-                  : "Applied"}
-            </dd>
-          </div>
-          <div>
-            <dt>Latest update</dt>
-            <dd>{formatAge(status?.age_ms)}</dd>
-          </div>
-        </dl>
-      </Card>
+      {is_loading && <Card>Loading the public device directory…</Card>}
+      {has_error && (
+        <Card>
+          <h2>Device directory is reconnecting</h2>
+          <p>Pilot device discovery is temporarily unavailable.</p>
+        </Card>
+      )}
+      {slots !== null && (
+        <DeviceDeck on_provider_failure={refresh_directory} slots={slots} />
+      )}
     </main>
   );
+}
+
+function DeviceDeck({
+  slots,
+  on_provider_failure
+}: {
+  slots: DeviceDeckSlot[];
+  on_provider_failure: () => Promise<void>;
+}) {
+  const [search_params, setSearchParams] = useSearchParams();
+  const [selected_empty_index, setSelectedEmptyIndex] = useState<number | null>(
+    null
+  );
+  const deck_ref = useRef<HTMLElement | null>(null);
+  const pointer_start = useRef<PointerStart | null>(null);
+  const requested_component_id = search_params.get("device");
+  const selection = resolveDeviceDeckSelection(
+    slots,
+    requested_component_id,
+    selected_empty_index
+  );
+  const active_index = selection.active_index;
+
+  useEffect(() => {
+    if (selection.removed_component_id === null) return;
+    setSelectedEmptyIndex(active_index);
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete("device");
+        return next;
+      },
+      { replace: true }
+    );
+  }, [active_index, selection.removed_component_id, setSearchParams]);
+
+  useEffect(() => {
+    if (requested_component_id !== null || selected_empty_index !== null)
+      return;
+    const active_slot = slots[active_index];
+    if (active_slot?.kind !== "connected") return;
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.set("device", active_slot.entry.component_id);
+        return next;
+      },
+      { replace: true }
+    );
+  }, [
+    active_index,
+    requested_component_id,
+    selected_empty_index,
+    setSearchParams,
+    slots
+  ]);
+
+  const selectIndex = useCallback(
+    (index: number): void => {
+      const slot = slots[index];
+      if (slot === undefined) return;
+      if (slot.kind === "connected") {
+        setSearchParams((current) => {
+          const next = new URLSearchParams(current);
+          next.set("device", slot.entry.component_id);
+          return next;
+        });
+        return;
+      }
+      setSelectedEmptyIndex(index);
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current);
+        next.delete("device");
+        return next;
+      });
+    },
+    [setSearchParams, slots]
+  );
+
+  const selectRelative = useCallback(
+    (offset: number): void => {
+      const destination_index = active_index + offset;
+      if (destination_index < 0 || destination_index >= slots.length) return;
+      selectIndex(destination_index);
+    },
+    [active_index, selectIndex, slots.length]
+  );
+
+  useEffect(() => {
+    const deck_element = deck_ref.current;
+    if (deck_element === null) return;
+    function handleDeckWheel(event: WheelEvent): void {
+      if (event.deltaY === 0 || isInteractiveTarget(event.target)) return;
+      const offset = event.deltaY > 0 ? 1 : -1;
+      const destination_index = active_index + offset;
+      if (destination_index < 0 || destination_index >= slots.length) return;
+      event.preventDefault();
+      selectIndex(destination_index);
+    }
+    deck_element.addEventListener("wheel", handleDeckWheel, { passive: false });
+    return () => deck_element.removeEventListener("wheel", handleDeckWheel);
+  }, [active_index, selectIndex, slots.length]);
+
+  function handleDeckKeyDown(event: KeyboardEvent<HTMLElement>): void {
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      selectRelative(-1);
+    }
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      selectRelative(1);
+    }
+  }
+
+  function handlePointerDown(event: PointerEvent<HTMLElement>): void {
+    if (isInteractiveTarget(event.target)) return;
+    pointer_start.current = { pointer_id: event.pointerId, x: event.clientX };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handlePointerUp(event: PointerEvent<HTMLElement>): void {
+    const start = pointer_start.current;
+    pointer_start.current = null;
+    if (start === null || start.pointer_id !== event.pointerId) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId))
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    const distance = event.clientX - start.x;
+    if (Math.abs(distance) < SWIPE_THRESHOLD_PX) return;
+    selectRelative(distance > 0 ? -1 : 1);
+  }
+
+  return (
+    <section
+      aria-label="Device carousel"
+      aria-roledescription="carousel"
+      className={styles.deck}
+      onKeyDown={handleDeckKeyDown}
+      ref={deck_ref}
+      tabIndex={0}
+    >
+      <div className={styles.deck_controls}>
+        <div className={styles.deck_actions}>
+          <Button
+            aria-label="Previous device"
+            className={styles.deck_arrow}
+            disabled={active_index === 0}
+            onClick={() => selectRelative(-1)}
+            tone="secondary"
+          >
+            <ChevronLeft aria-hidden="true" />
+          </Button>
+          <p aria-live="polite" className={styles.deck_position}>
+            {`${active_index + 1} / ${slots.length}`}
+          </p>
+          <Button
+            aria-label="Next device"
+            className={styles.deck_arrow}
+            disabled={active_index === slots.length - 1}
+            onClick={() => selectRelative(1)}
+            tone="secondary"
+          >
+            <ChevronRight aria-hidden="true" />
+          </Button>
+        </div>
+        <label className={styles.picker_label}>
+          Device picker
+          <select
+            aria-label="Device picker"
+            onChange={(event) => selectIndex(Number(event.target.value))}
+            value={active_index}
+          >
+            {slots.map((slot, index) => (
+              <option key={getSlotKey(slot)} value={index}>
+                {getSlotLabel(slot)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div
+        className={styles.deck_frame}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+      >
+        {slots.map((slot, index) => {
+          const offset = index - active_index;
+          return (
+            <div
+              aria-hidden={offset !== 0}
+              className={styles.deck_card}
+              data-active={offset === 0}
+              data-offset={offset}
+              inert={offset !== 0}
+              key={getSlotKey(slot)}
+              style={
+                {
+                  "--deck-offset": offset,
+                  zIndex: 10 - Math.abs(offset)
+                } as CSSProperties
+              }
+            >
+              {offset === 0 ? (
+                slot.kind === "connected" ? (
+                  <DeviceCard
+                    entry={slot.entry}
+                    key={slot.entry.runtime_key}
+                    on_provider_failure={on_provider_failure}
+                    position={index + 1}
+                    total={slots.length}
+                  />
+                ) : (
+                  <EmptySlotCard slot_number={slot.slot_number} />
+                )
+              ) : (
+                <InactiveCard slot={slot} />
+              )}
+            </div>
+          );
+        })}
+        {active_index > 0 && (
+          <button
+            aria-label={`Select ${getSlotLabel(slots[active_index - 1])}`}
+            className={`${styles.deck_edge} ${styles.previous_edge}`}
+            onClick={() => selectRelative(-1)}
+            type="button"
+          />
+        )}
+        {active_index < slots.length - 1 && (
+          <button
+            aria-label={`Select ${getSlotLabel(slots[active_index + 1])}`}
+            className={`${styles.deck_edge} ${styles.next_edge}`}
+            onClick={() => selectRelative(1)}
+            type="button"
+          />
+        )}
+      </div>
+    </section>
+  );
+}
+
+function DeviceCard({
+  entry,
+  on_provider_failure,
+  position,
+  total
+}: {
+  entry: DeviceDirectoryEntry;
+  on_provider_failure: () => Promise<void>;
+  position: number;
+  total: number;
+}) {
+  if (entry.card_kind === "camera")
+    return (
+      <CameraDeviceCard
+        entry={entry}
+        on_provider_failure={on_provider_failure}
+        position={position}
+        total={total}
+      />
+    );
+  return (
+    <Card className={styles.device_card}>
+      <div aria-live="polite" className={styles.card_heading}>
+        <div>
+          <p className={styles.type_label}>{getCardTypeLabel(entry)}</p>
+          <h2>{entry.display_name}</h2>
+          <p className={styles.component_id}>{entry.component_id}</p>
+          <p className={styles.position_label}>
+            Device {position} of {total}
+          </p>
+        </div>
+        <StatusBadge
+          label={getLifecycleLabel(entry.lifecycle_state)}
+          tone={getLifecycleTone(entry.lifecycle_state)}
+        />
+      </div>
+      <dl className={styles.details}>
+        <div>
+          <dt>Instance</dt>
+          <dd>{entry.instance_id}</dd>
+        </div>
+        <div>
+          <dt>Capabilities</dt>
+          <dd>{entry.capabilities.join(", ") || "None advertised"}</dd>
+        </div>
+        <div>
+          <dt>Endpoints</dt>
+          <dd>{entry.endpoint_count}</dd>
+        </div>
+      </dl>
+      {entry.malformed_endpoint_count > 0 && (
+        <p className={styles.warning}>
+          {entry.malformed_endpoint_count} malformed endpoint descriptor
+          {entry.malformed_endpoint_count === 1 ? "" : "s"} ignored.
+        </p>
+      )}
+      <p className={styles.read_only}>Read-only information</p>
+    </Card>
+  );
+}
+
+function CameraDeviceCard({
+  entry,
+  on_provider_failure,
+  position,
+  total
+}: {
+  entry: DeviceDirectoryEntry;
+  on_provider_failure: () => Promise<void>;
+  position: number;
+  total: number;
+}) {
+  const endpoints = useMemo(() => selectVisionCameraEndpoints(entry), [entry]);
+  const { error, is_loading, runtime } = useVisionCamera(
+    entry.runtime_key,
+    endpoints,
+    on_provider_failure
+  );
+  const is_narrow_viewport = useNarrowViewport();
+  const [selected_preview, setSelectedPreview] = useState<"color" | "depth">(
+    "color"
+  );
+  return (
+    <Card className={styles.device_card}>
+      <DeviceCardHeader entry={entry} position={position} total={total} />
+      {endpoints === null ? (
+        <p className={styles.warning}>
+          No exact Vision 1.3.0 Color preview contract is advertised.
+        </p>
+      ) : error !== null ? (
+        <p className={styles.warning}>
+          Camera connection is recovering. Preview will resume automatically.
+        </p>
+      ) : is_loading ? (
+        <p className={styles.read_only}>Loading direct Camera information…</p>
+      ) : runtime !== null ? (
+        <>
+          <div className={styles.camera_media}>
+            {is_narrow_viewport && endpoints.depth !== null && (
+              <div className={styles.preview_segments}>
+                <Button
+                  aria-pressed={selected_preview === "color"}
+                  onClick={() => setSelectedPreview("color")}
+                  tone="secondary"
+                >
+                  Color
+                </Button>
+                <Button
+                  aria-pressed={selected_preview === "depth"}
+                  onClick={() => setSelectedPreview("depth")}
+                  tone="secondary"
+                >
+                  Depth
+                </Button>
+              </div>
+            )}
+            {(!is_narrow_viewport || selected_preview === "color") && (
+              <figure>
+                <MjpegPreview
+                  alt={`${entry.display_name} color preview`}
+                  endpoint={endpoints.color.endpoint}
+                  key={endpoints.color.endpoint}
+                  on_stream_failure={on_provider_failure}
+                />
+                <figcaption>Color</figcaption>
+              </figure>
+            )}
+            {endpoints.depth !== null &&
+              (!is_narrow_viewport || selected_preview === "depth") && (
+                <figure>
+                  <MjpegPreview
+                    alt={`${entry.display_name} depth preview`}
+                    endpoint={endpoints.depth.endpoint}
+                    key={endpoints.depth.endpoint}
+                    on_stream_failure={on_provider_failure}
+                  />
+                  <figcaption>Depth</figcaption>
+                </figure>
+              )}
+          </div>
+          <dl className={styles.details}>
+            <div>
+              <dt>Device</dt>
+              <dd>{runtime.metadata.device_id}</dd>
+            </div>
+            <div>
+              <dt>Adapter</dt>
+              <dd>{runtime.metadata.adapter}</dd>
+            </div>
+            <div>
+              <dt>Calibration</dt>
+              <dd>{runtime.metadata.calibration_id}</dd>
+            </div>
+            <div>
+              <dt>Frames</dt>
+              <dd>
+                {runtime.metadata.sensor_frame} → {runtime.metadata.mount_frame}
+              </dd>
+            </div>
+            <div>
+              <dt>Capture health</dt>
+              <dd>{runtime.health.camera_state}</dd>
+            </div>
+          </dl>
+        </>
+      ) : null}
+      <p className={styles.read_only}>Read-only information</p>
+    </Card>
+  );
+}
+
+function DeviceCardHeader({
+  entry,
+  position,
+  total
+}: {
+  entry: DeviceDirectoryEntry;
+  position: number;
+  total: number;
+}) {
+  return (
+    <div aria-live="polite" className={styles.card_heading}>
+      <div>
+        <p className={styles.type_label}>{getCardTypeLabel(entry)}</p>
+        <h2>{entry.display_name}</h2>
+        <p className={styles.component_id}>{entry.component_id}</p>
+        <p className={styles.position_label}>
+          Device {position} of {total}
+        </p>
+      </div>
+      <StatusBadge
+        label={getLifecycleLabel(entry.lifecycle_state)}
+        tone={getLifecycleTone(entry.lifecycle_state)}
+      />
+    </div>
+  );
+}
+
+function EmptySlotCard({ slot_number }: { slot_number: number }) {
+  return (
+    <Card className={styles.empty_slot}>
+      <Boxes aria-hidden="true" />
+      <h2>Empty slot {slot_number}</h2>
+      <p>
+        Connect a Camera or Operator to Pilot.
+        <br />
+        Its information will appear here.
+      </p>
+    </Card>
+  );
+}
+
+function InactiveCard({ slot }: { slot: DeviceDeckSlot }) {
+  return (
+    <Card className={styles.inactive_card}>
+      <p>
+        {slot.kind === "connected"
+          ? getCardTypeLabel(slot.entry)
+          : "Empty slot"}
+      </p>
+      <h2>{getSlotLabel(slot)}</h2>
+    </Card>
+  );
+}
+
+function getSlotKey(slot: DeviceDeckSlot): string {
+  return slot.kind === "connected"
+    ? slot.entry.component_id
+    : `empty-${slot.slot_number}`;
+}
+
+function getSlotLabel(slot: DeviceDeckSlot): string {
+  return slot.kind === "connected"
+    ? slot.entry.display_name
+    : `Empty slot ${slot.slot_number}`;
+}
+
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    target.closest("button, a, input, select, textarea, [data-no-swipe]") !==
+      null
+  );
+}
+
+function getCardTypeLabel(entry: DeviceDirectoryEntry): string {
+  if (entry.card_kind === "camera") return "Camera";
+  if (entry.card_kind === "operator") return "Operator";
+  return entry.component_type;
+}
+
+function getLifecycleLabel(
+  state: DeviceDirectoryEntry["lifecycle_state"]
+): string {
+  if (state === "ready") return "Online";
+  if (state === "degraded") return "Degraded";
+  if (state === "faulted") return "Faulted";
+  if (state === "stopping") return "Stopping";
+  return "Starting";
+}
+
+function getLifecycleTone(
+  state: DeviceDirectoryEntry["lifecycle_state"]
+): "success" | "warning" | "danger" | "neutral" {
+  if (state === "ready") return "success";
+  if (state === "degraded" || state === "stopping") return "warning";
+  if (state === "faulted") return "danger";
+  return "neutral";
+}
+
+function useNarrowViewport(): boolean {
+  const [is_narrow, setIsNarrow] = useState(false);
+  useEffect(() => {
+    const media_query = window.matchMedia("(max-width: 720px)");
+    const updateNarrow = () => setIsNarrow(media_query.matches);
+    updateNarrow();
+    media_query.addEventListener("change", updateNarrow);
+    return () => media_query.removeEventListener("change", updateNarrow);
+  }, []);
+  return is_narrow;
 }

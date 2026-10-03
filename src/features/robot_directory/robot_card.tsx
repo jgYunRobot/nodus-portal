@@ -1,3 +1,4 @@
+import { ArrowUpRight, Bot, Check, Circle } from "lucide-react";
 import { Link } from "react-router";
 import { useControlStatus } from "../../api/pilot/use_control_status";
 import { Card } from "../../components/feedback/card";
@@ -31,13 +32,14 @@ export function RobotCard({ entry }: { entry: RobotDirectoryEntry }) {
       onClick={selectRobot}
     >
       <div className={styles.header}>
-        <div>
-          <h2>{robot.control_id}</h2>
-          <p className={styles.identity}>
-            RobotStatus stream: {robot.stream_id}
-          </p>
+        <div className={styles.robot_mark}>
+          <Bot aria-hidden="true" />
         </div>
         <StatusBadge label={robot.status_label} tone={robot.tone} />
+      </div>
+      <div className={styles.identity}>
+        <h2>{robot.control_id}</h2>
+        <p title={robot.stream_id}>{robot.stream_id}</p>
       </div>
       <dl className={styles.details}>
         <div className={styles.detail}>
@@ -61,13 +63,29 @@ export function RobotCard({ entry }: { entry: RobotDirectoryEntry }) {
           <dd>{robot.update_age}</dd>
         </div>
       </dl>
-      <Link
-        className={styles.action}
-        onClick={selectRobot}
-        to={`/robots/${encodeURIComponent(robot.control_id)}/jogging`}
-      >
-        Open Jogging
-      </Link>
+      <div className={styles.footer}>
+        <button
+          aria-label={`Select ${robot.control_id}`}
+          aria-pressed={is_selected}
+          className={styles.select_button}
+          onClick={selectRobot}
+          type="button"
+        >
+          {is_selected ? (
+            <Check aria-hidden="true" />
+          ) : (
+            <Circle aria-hidden="true" />
+          )}
+          {is_selected ? "Selected" : "Select robot"}
+        </button>
+        <Link
+          className={styles.action}
+          onClick={selectRobot}
+          to={`/robots/${encodeURIComponent(robot.control_id)}/operation`}
+        >
+          Open Operation <ArrowUpRight aria-hidden="true" />
+        </Link>
+      </div>
     </Card>
   );
 }

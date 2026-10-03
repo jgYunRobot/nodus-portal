@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { Buffer } from "node:buffer";
 
 function createControlStatus(
   control_id: string,
@@ -74,13 +75,13 @@ test("keeps robot-scoped pages unavailable when discovery is successfully empty"
     }
   );
 
-  await page.goto("/robots/control-alpha/jogging");
+  await page.goto("/robots/control-alpha/operation");
   await expect(page).toHaveURL(/\/home$/);
   await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
 
-  const jogging = page.getByRole("link", { name: "Jogging" });
-  await expect(jogging).toHaveAttribute("aria-disabled", "true");
-  await jogging.click();
+  const operation = page.getByRole("link", { name: "Operation" });
+  await expect(operation).toHaveAttribute("aria-disabled", "true");
+  await operation.click({ force: true });
   await expect(page).toHaveURL(/\/home$/);
 });
 
@@ -137,8 +138,8 @@ test("renders stable multi-robot Home cards from public stream descriptors", asy
       )
   ).toEqual(["control-alpha", "control-bravo"]);
   await expect(
-    page.getByRole("link", { name: "Open Jogging" }).first()
-  ).toHaveAttribute("href", "/robots/control-alpha/jogging");
+    page.getByRole("link", { name: "Open Operation" }).first()
+  ).toHaveAttribute("href", "/robots/control-alpha/operation");
   await expect(page.locator("canvas")).toHaveCount(0);
 });
 
@@ -176,10 +177,509 @@ test("keeps a Home card selection while sidebar navigation targets that Control"
   await card.click();
   await expect(page).toHaveURL(/\/home$/);
   await expect(card).toHaveAttribute("data-selected", "true");
-  await expect(page.getByRole("link", { name: "Device" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Devices" })).toHaveAttribute(
     "href",
-    "/robots/control-alpha/device"
+    "/devices"
   );
+});
+
+test("keeps Devices global and redirects the legacy robot-scoped route", async ({
+  page
+}) => {
+  await page.route(
+    (url) => url.pathname === "/api/v1/pilot/streams",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ server_instance_id: "pilot-a", streams: [] })
+      });
+    }
+  );
+
+  await page.goto("/devices");
+  await expect(page).toHaveURL(/\/devices$/);
+  await expect(
+    page.getByRole("heading", { name: "Device directory" })
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Devices" })).toHaveAttribute(
+    "aria-current",
+    "page"
+  );
+
+  await page.goto("/robots/control-alpha/device");
+  await expect(page).toHaveURL(/\/devices$/);
+});
+
+test("builds the minimum-five-slot directory from public device records", async ({
+  page
+}) => {
+  await page.route(
+    (url) => url.pathname === "/api/v1/pilot/streams",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ server_instance_id: "pilot-a", streams: [] })
+      });
+    }
+  );
+  await page.route(
+    (url) => url.pathname === "/api/v1/components",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          snapshot_revision: 1,
+          components: [
+            {
+              component_id: "camera.top",
+              instance_id: "camera.top.instance",
+              component_type: "camera",
+              session_generation: 1,
+              capabilities: ["camera.stream.color.preview"],
+              service_endpoints: {},
+              state: { health: "ready", reason: null, details: {} },
+              metadata: { display_name: "Top camera" },
+              registered_at_ns: 1,
+              last_heartbeat_ns: 1,
+              expires_at_ns: 2,
+              last_sequence: 1,
+              clock_domain: "monotonic_same_host",
+              available: true
+            },
+            {
+              component_id: "operator.leader",
+              instance_id: "operator.leader.instance",
+              component_type: "input_source",
+              session_generation: 1,
+              capabilities: ["control.operation.v1"],
+              service_endpoints: {},
+              state: { health: "ready", reason: null, details: {} },
+              metadata: {},
+              registered_at_ns: 1,
+              last_heartbeat_ns: 1,
+              expires_at_ns: 2,
+              last_sequence: 1,
+              clock_domain: "monotonic_same_host",
+              available: true
+            }
+          ]
+        })
+      });
+    }
+  );
+  await page.route(
+    (url) => url.pathname === "/api/v1/endpoints",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          server_instance_id: "pilot-a",
+          catalog_revision: 1,
+          endpoints: [
+            {
+              component_id: "camera.top",
+              instance_id: "camera.top.instance",
+              component_type: "camera",
+              session_generation: 1,
+              catalog_generation: 1,
+              descriptor: {
+                descriptor_id: "health",
+                kind: "service",
+                capability: "camera.health.get",
+                contract_version: 1,
+                protocol: "http",
+                endpoint: "http://vision.test/health",
+                media_type: "application/json",
+                schema_id: "nodus.vision.health.response.v1",
+                metadata: {},
+                service: {
+                  method: "GET",
+                  request_schema_id: null,
+                  response_schema_id: "nodus.vision.health.response.v1"
+                },
+                stream: null
+              }
+            },
+            {
+              component_id: "camera.top",
+              instance_id: "camera.top.instance",
+              component_type: "camera",
+              session_generation: 1,
+              catalog_generation: 1,
+              descriptor: {
+                descriptor_id: "metadata",
+                kind: "service",
+                capability: "camera.metadata.get",
+                contract_version: 1,
+                protocol: "http",
+                endpoint: "http://vision.test/metadata",
+                media_type: "application/json",
+                schema_id: "nodus.vision.metadata.response.v1",
+                metadata: {},
+                service: {
+                  method: "GET",
+                  request_schema_id: null,
+                  response_schema_id: "nodus.vision.metadata.response.v1"
+                },
+                stream: null
+              }
+            },
+            {
+              component_id: "camera.top",
+              instance_id: "camera.top.instance",
+              component_type: "camera",
+              session_generation: 1,
+              catalog_generation: 1,
+              descriptor: {
+                descriptor_id: "color-preview",
+                kind: "stream",
+                capability: "camera.stream.color.preview",
+                contract_version: 1,
+                protocol: "http",
+                endpoint: "http://vision.test/stream/color.mjpg",
+                media_type: "multipart/x-mixed-replace",
+                schema_id: "nodus.vision.mjpeg.color_part.v1",
+                metadata: {},
+                service: null,
+                stream: {
+                  clock_domain: "provider_defined",
+                  stream_group_id: "camera.top.capture"
+                }
+              }
+            },
+            {
+              component_id: "camera.top",
+              instance_id: "camera.top.instance",
+              component_type: "camera",
+              session_generation: 1,
+              catalog_generation: 1,
+              descriptor: {
+                descriptor_id: "depth-preview",
+                kind: "stream",
+                capability: "camera.stream.depth.preview",
+                contract_version: 1,
+                protocol: "http",
+                endpoint: "http://vision.test/stream/depth.mjpg",
+                media_type: "multipart/x-mixed-replace",
+                schema_id: "nodus.vision.mjpeg.depth_part.v1",
+                metadata: {},
+                service: null,
+                stream: {
+                  clock_domain: "provider_defined",
+                  stream_group_id: "camera.top.capture"
+                }
+              }
+            }
+          ],
+          next_cursor: null
+        })
+      });
+    }
+  );
+  await page.route("http://vision.test/**", async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    const preview_body = Buffer.from(
+      "/9j/4AAQSkZJRgABAgAAAQABAAD//gAQTGF2YzYwLjMxLjEwMgD/2wBDAAgEBAQEBAUFBQUFBQYGBgYGBgYGBgYGBgYHBwcICAgHBwcGBgcHCAgICAkJCQgICAgJCQoKCgwMCwsODg4RERT/xABLAAEBAAAAAAAAAAAAAAAAAAAACAEBAAAAAAAAAAAAAAAAAAAAABABAAAAAAAAAAAAAAAAAAAAABEBAAAAAAAAAAAAAAAAAAAAAP/AABEIAAIAAgMBIgACEQADEQD/2gAMAwEAAhEDEQA/AJ/AB//Z",
+      "base64"
+    );
+    const mjpeg_body = Buffer.concat([
+      Buffer.from(
+        `--nodus_frame\r\nContent-Type: image/jpeg\r\nContent-Length: ${preview_body.length}\r\n\r\n`
+      ),
+      preview_body,
+      Buffer.from("\r\n")
+    ]);
+    const body =
+      pathname === "/health"
+        ? {
+            schema_version: 1,
+            state: "ready",
+            camera: { state: "streaming" }
+          }
+        : pathname === "/metadata"
+          ? {
+              schema_version: 1,
+              api_version: "1.3.0",
+              device_id: "camera-serial",
+              adapter: "fake",
+              calibration: {
+                calibration_id: "calibration-a",
+                sensor_frame: "camera_color_optical",
+                mount_frame: "camera_mount"
+              }
+            }
+          : mjpeg_body;
+    await route.fulfill({
+      body: Buffer.isBuffer(body) ? body : JSON.stringify(body),
+      contentType:
+        pathname === "/health" || pathname === "/metadata"
+          ? "application/json"
+          : "multipart/x-mixed-replace; boundary=nodus_frame",
+      headers: { "access-control-allow-origin": "*" }
+    });
+  });
+
+  await page.goto("/devices");
+  const directory = page.getByRole("region", { name: "Device carousel" });
+  await expect(directory.locator("[data-offset]")).toHaveCount(5);
+  await expect(
+    directory.getByRole("heading", { name: "operator.leader" })
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/devices\?device=operator\.leader$/);
+  await expect(
+    directory.getByLabel("Device picker").locator("option")
+  ).toHaveCount(5);
+  await page.goto("/devices?device=camera.top");
+  await expect(
+    directory.getByText("camera-serial", { exact: true })
+  ).toBeVisible();
+  await expect(
+    directory.getByAltText("Top camera color preview")
+  ).toHaveAttribute("src", /^blob:/);
+  await expect(
+    directory.getByAltText("Top camera depth preview")
+  ).toHaveAttribute("src", /^blob:/);
+});
+
+test("navigates the overlapping device deck through URL, keyboard, picker, and card edge", async ({
+  page
+}) => {
+  await page.route(
+    (url) => url.pathname === "/api/v1/pilot/streams",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ server_instance_id: "pilot-a", streams: [] })
+      });
+    }
+  );
+  await page.route(
+    (url) => url.pathname === "/api/v1/components",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          snapshot_revision: 1,
+          components: [
+            {
+              component_id: "camera.top",
+              instance_id: "camera.top.instance",
+              component_type: "camera",
+              session_generation: 1,
+              capabilities: [],
+              service_endpoints: {},
+              state: { health: "ready", reason: null, details: {} },
+              metadata: { display_name: "Top camera" },
+              registered_at_ns: 1,
+              last_heartbeat_ns: 1,
+              expires_at_ns: 2,
+              last_sequence: 1,
+              clock_domain: "monotonic_same_host",
+              available: true
+            },
+            {
+              component_id: "operator.leader",
+              instance_id: "operator.leader.instance",
+              component_type: "input_source",
+              session_generation: 1,
+              capabilities: ["control.operation.v1"],
+              service_endpoints: {},
+              state: { health: "ready", reason: null, details: {} },
+              metadata: { display_name: "Operator" },
+              registered_at_ns: 1,
+              last_heartbeat_ns: 1,
+              expires_at_ns: 2,
+              last_sequence: 1,
+              clock_domain: "monotonic_same_host",
+              available: true
+            }
+          ]
+        })
+      });
+    }
+  );
+  await page.route(
+    (url) => url.pathname === "/api/v1/endpoints",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          server_instance_id: "pilot-a",
+          catalog_revision: 1,
+          endpoints: [],
+          next_cursor: null
+        })
+      });
+    }
+  );
+
+  await page.goto("/devices?device=camera.top");
+  const deck = page.getByRole("region", { name: "Device carousel" });
+  await expect(deck.getByRole("heading", { name: "Top camera" })).toBeVisible();
+  await expect(
+    deck.getByRole("button", { name: "Previous device" })
+  ).toHaveCount(0);
+  await expect(deck.getByRole("button", { name: "Next device" })).toHaveCount(
+    0
+  );
+  await deck.press("ArrowLeft");
+  await expect(page).toHaveURL(/\/devices\?device=operator\.leader$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/devices\?device=camera\.top$/);
+  await page.goForward();
+  await expect(page).toHaveURL(/\/devices\?device=operator\.leader$/);
+
+  const active_card = deck.locator('[data-active="true"]');
+  const adjacent_card = deck.locator('[data-offset="1"]');
+  await expect(adjacent_card).toBeVisible();
+  await expect(adjacent_card).toHaveAttribute("inert", "");
+  const active_box = await active_card.boundingBox();
+  const adjacent_box = await adjacent_card.boundingBox();
+  expect(active_box).not.toBeNull();
+  expect(adjacent_box).not.toBeNull();
+  expect(
+    (adjacent_box?.x ?? 0) < (active_box?.x ?? 0) + (active_box?.width ?? 0)
+  ).toBe(true);
+  await deck.getByRole("button", { name: "Select Top camera" }).click();
+  await expect(page).toHaveURL(/\/devices\?device=camera\.top$/);
+
+  const wheel_card = deck.locator('[data-active="true"]');
+  const wheel_box = await wheel_card.boundingBox();
+  expect(wheel_box).not.toBeNull();
+  await page.mouse.move(
+    (wheel_box?.x ?? 0) + (wheel_box?.width ?? 0) / 2,
+    (wheel_box?.y ?? 0) + (wheel_box?.height ?? 0) / 2
+  );
+  await page.mouse.wheel(0, 120);
+  await expect(page).toHaveURL(/\/devices$/);
+  await expect(
+    deck.getByRole("heading", { name: "Empty slot 1" })
+  ).toBeVisible();
+  await page.mouse.wheel(0, -120);
+  await expect(page).toHaveURL(/\/devices\?device=camera\.top$/);
+
+  const swipable_card = deck.locator('[data-active="true"]');
+  const swipable_box = await swipable_card.boundingBox();
+  expect(swipable_box).not.toBeNull();
+  await page.mouse.move(
+    (swipable_box?.x ?? 0) + (swipable_box?.width ?? 0) / 2,
+    (swipable_box?.y ?? 0) + 120
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    (swipable_box?.x ?? 0) + (swipable_box?.width ?? 0) / 2 - 100,
+    (swipable_box?.y ?? 0) + 120
+  );
+  await page.mouse.up();
+  await expect(page).toHaveURL(/\/devices$/);
+  await expect(
+    deck.getByRole("heading", { name: "Empty slot 1" })
+  ).toBeVisible();
+
+  await deck.getByLabel("Device picker").selectOption("4");
+  await expect(page).toHaveURL(/\/devices$/);
+  await expect(
+    deck.getByRole("heading", { name: "Empty slot 3" })
+  ).toBeVisible();
+
+  await page.goto("/devices?device=removed.camera");
+  await expect(
+    deck.getByRole("heading", { name: "Empty slot 1" })
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/devices$/);
+});
+
+test("replaces a disconnected selected device with an empty slot without reload", async ({
+  page
+}) => {
+  let camera_connected = true;
+  let release_directory_event: (() => void) | undefined;
+  const directory_event = new Promise<void>((resolve) => {
+    release_directory_event = resolve;
+  });
+  let event_sent = false;
+
+  await page.route(
+    (url) => url.pathname === "/api/v1/pilot/streams",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ server_instance_id: "pilot-a", streams: [] })
+      });
+    }
+  );
+  await page.route(
+    (url) => url.pathname === "/api/v1/components",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          snapshot_revision: camera_connected ? 1 : 2,
+          components: camera_connected
+            ? [
+                {
+                  component_id: "camera.top",
+                  instance_id: "camera.top.instance",
+                  component_type: "camera",
+                  session_generation: 1,
+                  capabilities: [],
+                  service_endpoints: {},
+                  state: { health: "ready", reason: null, details: {} },
+                  metadata: { display_name: "Top camera" },
+                  registered_at_ns: 1,
+                  last_heartbeat_ns: 1,
+                  expires_at_ns: 2,
+                  last_sequence: 1,
+                  clock_domain: "monotonic_same_host",
+                  available: true
+                }
+              ]
+            : []
+        })
+      });
+    }
+  );
+  await page.route(
+    (url) => url.pathname === "/api/v1/endpoints",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          server_instance_id: "pilot-a",
+          catalog_revision: camera_connected ? 1 : 2,
+          endpoints: [],
+          next_cursor: null
+        })
+      });
+    }
+  );
+  await page.route(
+    (url) => url.pathname === "/api/v1/events/stream",
+    async (route) => {
+      if (event_sent) {
+        await route.abort();
+        return;
+      }
+      await directory_event;
+      event_sent = true;
+      await route.fulfill({
+        contentType: "text/event-stream",
+        body: "event: component_disconnected\ndata: {}\n\n"
+      });
+    }
+  );
+
+  await page.goto("/devices?device=camera.top");
+  const deck = page.getByRole("region", { name: "Device carousel" });
+  await expect(deck.getByRole("heading", { name: "Top camera" })).toBeVisible();
+
+  camera_connected = false;
+  release_directory_event?.();
+
+  await expect(
+    deck.getByRole("heading", { name: "Empty slot 1" })
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/devices$/);
 });
 
 test("collapses the right-anchored Robot Dock without resizing main content", async ({
@@ -282,19 +782,19 @@ test("switches a robot-scoped route without changing its page kind", async ({
     }
   );
 
-  await page.goto("/robots/control-alpha/operating");
+  await page.goto("/robots/control-alpha/operation");
   const dock = page.getByRole("complementary", {
     name: "Selected robot controls"
   });
   await dock.getByLabel("Selected robot").selectOption("control-bravo");
-  await expect(page).toHaveURL(/\/robots\/control-bravo\/operating$/);
+  await expect(page).toHaveURL(/\/robots\/control-bravo\/operation$/);
   await expect(
     page.getByTestId("portal-main-content").getByText("control-bravo", {
       exact: true
     })
   ).toBeVisible();
   await page.goBack();
-  await expect(page).toHaveURL(/\/robots\/control-alpha\/operating$/);
+  await expect(page).toHaveURL(/\/robots\/control-alpha\/operation$/);
 });
 
 test("retains stale, offline, and removed selections without auto-switching", async ({
@@ -349,16 +849,16 @@ test("retains stale, offline, and removed selections without auto-switching", as
     });
   });
 
-  await page.goto("/robots/control-alpha/device");
+  await page.goto("/robots/control-alpha/operation");
   const dock = page.getByRole("complementary", {
     name: "Selected robot controls"
   });
   await expect(dock).toContainText("Status stale");
   await dock.getByLabel("Selected robot").selectOption("control-bravo");
-  await expect(page).toHaveURL(/\/robots\/control-bravo\/device$/);
+  await expect(page).toHaveURL(/\/robots\/control-bravo\/operation$/);
   await expect(dock).toContainText("Offline");
 
-  await page.goto("/robots/control-removed/device");
+  await page.goto("/robots/control-removed/operation");
   await expect(dock.getByLabel("Selected robot")).toHaveValue(
     "control-removed"
   );
@@ -459,20 +959,30 @@ test("captures Robot Dock expanded and collapsed desktop and phone states", asyn
   });
 });
 
-test("restores the direct Control-scoped Jogging route", async ({ page }) => {
-  await page.goto("/robots/control-alpha/jogging");
-  await expect(page.getByRole("heading", { name: "Jogging" })).toBeVisible();
+test("restores the direct Control-scoped Operation route", async ({ page }) => {
+  await page.goto("/robots/control-alpha/operation");
+  await expect(page.getByRole("heading", { name: "Operation" })).toBeVisible();
   await expect(page.getByText("control-alpha", { exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Jogging" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Operation" })).toHaveAttribute(
     "aria-current",
     "page"
   );
 });
 
-test("loads a selected Portal-owned robot profile only on the Jogging route", async ({
+test("redirects legacy robot page routes to Operation", async ({ page }) => {
+  await page.goto("/robots/control-alpha/jogging");
+  await expect(page).toHaveURL(/\/robots\/control-alpha\/operation$/);
+  await expect(page.getByRole("heading", { name: "Operation" })).toBeVisible();
+
+  await page.goto("/robots/control-alpha/operating");
+  await expect(page).toHaveURL(/\/robots\/control-alpha\/operation$/);
+  await expect(page.getByRole("heading", { name: "Operation" })).toBeVisible();
+});
+
+test("loads a selected Portal-owned robot profile only on the Operation route", async ({
   page
 }) => {
-  await page.goto("/robots/control-alpha/jogging");
+  await page.goto("/robots/control-alpha/operation");
   await expect(page.locator("canvas")).toHaveCount(0);
 
   const loaded_meshes = new Set<string>();
@@ -512,7 +1022,7 @@ test("loads a selected Portal-owned robot profile only on the Jogging route", as
     controls_bounds === null ||
     values_bounds === null
   )
-    throw new Error("Jogging layout landmarks are unavailable.");
+    throw new Error("Operation layout landmarks are unavailable.");
   expect(controls_bounds.x).toBeGreaterThan(visualization_bounds.x);
   expect(values_bounds.y).toBeGreaterThan(visualization_bounds.y);
 

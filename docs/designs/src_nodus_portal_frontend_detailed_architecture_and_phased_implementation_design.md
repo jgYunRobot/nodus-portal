@@ -10,6 +10,9 @@
 - Visual reference: [Sphere UI Charts UIKIT](https://dribbble.com/shots/23224018-Sphere-UI-Charts-UIKIT)
 - Default visual mode: black theme.
 - Source application reference: `/home/jgy/workspace/ai_work/pa_control/apps/web_ui`.
+- Superseding route decision: as of 2026-08-09,
+  `src_app_operation_page_consolidation_design.md` replaces the Jogging/Operating page naming and
+  routes with one Operation page while retaining the existing Jog feature implementation.
 
 This document turns the two upstream product and migration designs into an implementable frontend
 architecture, target file layout, technology baseline, visual system, and ordered checkpoints. The
@@ -336,16 +339,18 @@ Initial route objects are:
 └── PortalShell
     ├── index                 -> redirect /home
     ├── home                  -> HomePage
+    ├── devices               -> DevicePage
     ├── robots/:control_id/
-    │   ├── device            -> DevicePage
     │   ├── jogging           -> JoggingPage
     │   └── operating         -> OperatingPage
     └── *                     -> NotFoundPage
 ```
 
 Page modules are lazy-loaded. The Three.js and URDF graph are imported only by the Jogging page,
-not by Home or the shell. Future Camera, Policy, recordings, diagnostics, and settings routes join
-this tree without changing the current route semantics.
+not by Home or the shell. Device is a global provider-card deck defined by
+`src_pages_device_page_design.md`; it does not own RobotStatus. Future Policy, recordings,
+diagnostics, and settings routes join this tree without changing the remaining robot-scoped route
+semantics.
 
 Route error elements distinguish:
 
@@ -624,6 +629,10 @@ Exact reconciliation tolerance, maximum horizon, per-joint/task limits, and Cont
 come from the released operation contract and targeted tests. They are named configuration/domain
 constants, not JSX literals.
 
+For `control.move_task_online`, the selected status frame ID remains `target_id` and the seven-value
+pose target is expressed in world coordinates with `reference_id = -2`. `HoldSession` sets this
+reference when scheduling task jog; `PilotOperationClient` forwards it unchanged.
+
 ### 9.3 Backpressure and stop behavior
 
 Only one mutating operation is in flight per selected Control. While it is in flight, new ticks
@@ -635,6 +644,15 @@ Control change, stream generation change, malformed/stale status, or terminal op
 ends the local hold immediately and clears pending work. No new target is emitted after local
 release. Where the public operation contract provides an explicit stop/cancel behavior, the client
 uses it; Portal does not invent an acknowledgement that the server did not provide.
+
+The embedded Pilot currently accepts a schema-v1 operation request but returns a schema-v2
+`OperationResult` for native Control delivery outcomes. Portal accepts only the known native
+outcome set for that response version. `worker_completed` is nonterminal for a hold: it confirms
+the Control command worker handled the request, not RT application or physical motion. Native
+rejection or unknown/unavailable results are terminal and clear the pending target. A native
+result carrying an error is parsed as an operation result before the generic HTTP error envelope.
+The checked-in Pilot OpenAPI v1 artifact does not yet describe these native v2 results; Portal
+keeps the v2 extension isolated at its response boundary until that upstream contract is versioned.
 
 Pointer capture provides reliable pointer-up behavior. Keyboard activation ignores key repeat and
 uses key-down/key-up lifecycle. Buttons expose pressed and unavailable state accessibly. Home and

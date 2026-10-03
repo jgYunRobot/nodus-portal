@@ -1,0 +1,44 @@
+.overlay {
+  background: rgb(0 0 0 / 0.6);
+  inset: 0;
+  position: fixed;
+  z-index: 30;
+}
+
+.content {
+  background: var(--color-shell);
+  border-right: 1px solid var(--color-border-strong);
+  bottom: 0;
+  left: 0;
+  overflow-y: auto;
+  padding: var(--space-6);
+  position: fixed;
+  top: 0;
+  width: min(320px, calc(100vw - var(--space-8)));
+  z-index: 31;
+}
+
+.heading {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+
+.close {
+  padding: 0;
+  width: var(--control-height);
+}
+
+.description {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  margin: var(--space-2) 0 var(--space-6);
+}
