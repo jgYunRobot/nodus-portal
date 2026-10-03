@@ -7,10 +7,17 @@
   );
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
-  height: min(58vh, 600px);
-  min-height: 360px;
+  height: min(48vh, 480px);
+  min-height: 320px;
   overflow: hidden;
   position: relative;
+}
+
+@media (max-width: 720px) {
+  .scene {
+    height: 340px;
+    min-height: 0;
+  }
 }
 
 .canvas {

@@ -1,3 +1,4 @@
+import { Activity, Box, MousePointer2 } from "lucide-react";
 import { lazy, Suspense, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import { useControlStatus } from "../api/pilot/use_control_status";
@@ -89,27 +90,40 @@ function OperationWorkspace({ control_id }: { control_id: string }) {
           <h1>Operation</h1>
           <p className={styles.eyebrow}>{control_id}</p>
         </div>
+        <p className={styles.description}>
+          Model, joint feedback, and motion controls.
+        </p>
       </div>
       <div className={styles.workspace}>
         <section className={styles.visual_column}>
           <Card className={styles.profile_card}>
-            <label>
-              Robot model
-              <select
-                aria-label="Visualization profile"
-                onChange={(event) => selectProfile(event.target.value)}
-                value={profile?.id ?? ""}
-              >
-                <option value="">No profile selected</option>
-                {ROBOT_PROFILES.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className={styles.scene_toolbar}>
+              <h2>
+                <Box aria-hidden="true" /> Robot visualization
+              </h2>
+              <label>
+                Robot model
+                <select
+                  aria-label="Visualization profile"
+                  onChange={(event) => selectProfile(event.target.value)}
+                  value={profile?.id ?? ""}
+                >
+                  <option value="">No profile selected</option>
+                  {ROBOT_PROFILES.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
             {profile === null ? (
-              <p className={styles.empty_scene}>No model selected.</p>
+              <div className={styles.empty_scene}>
+                <Box aria-hidden="true" />
+                <h3>Bring your robot into view</h3>
+                <p>Choose its model above to inspect the robot in 3D.</p>
+                <span>The model choice is saved for this robot.</span>
+              </div>
             ) : (
               <Suspense
                 fallback={
@@ -124,17 +138,33 @@ function OperationWorkspace({ control_id }: { control_id: string }) {
                 />
               </Suspense>
             )}
+            {profile !== null ? (
+              <p className={styles.scene_hint}>
+                <MousePointer2 aria-hidden="true" /> Drag to orbit · Scroll to
+                zoom
+              </p>
+            ) : null}
             {profile !== null && visualization.tone !== "success" ? (
-              <p role="status">{visualization.message}</p>
+              <p className={styles.visualization_status} role="status">
+                {visualization.message}
+              </p>
             ) : null}
           </Card>
           <Card
             className={styles.values_card}
             aria-label="Real-time robot values"
           >
-            <h2>Real-time values</h2>
+            <div className={styles.values_heading}>
+              <h2>
+                <Activity aria-hidden="true" /> Real-time values
+              </h2>
+              <p>Latest accepted joint feedback</p>
+            </div>
             {realtime_robot_state === undefined ? (
-              <p className={styles.empty_values}>No fresh RobotStatus.</p>
+              <p className={styles.empty_values}>
+                Waiting for fresh robot feedback. Joint values will appear here
+                when available.
+              </p>
             ) : (
               <div className={styles.joint_values}>
                 {realtime_robot_state.real.pos.map((_, joint_index) => (

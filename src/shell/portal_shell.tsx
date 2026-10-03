@@ -1,5 +1,13 @@
-import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { useState, type MouseEvent } from "react";
+import {
+  Boxes,
+  CircuitBoard,
+  House,
+  Menu,
+  Move3D,
+  PanelLeftClose,
+  PanelLeftOpen
+} from "lucide-react";
+import { useRef, useState, type MouseEvent } from "react";
 import {
   Navigate,
   NavLink,
@@ -22,6 +30,7 @@ export function PortalShell() {
   const portal_label = getPortalConfig().portal_label;
   const [is_collapsed, setIsCollapsed] = useState(false);
   const [is_drawer_open, setIsDrawerOpen] = useState(false);
+  const navigation_trigger = useRef<HTMLButtonElement>(null);
   const { control_id: route_control_id } = useParams();
   const location = useLocation();
   const robot_dock = useRobotDockState();
@@ -44,22 +53,48 @@ export function PortalShell() {
         is_collapsed ? `${styles.shell} ${styles.collapsed}` : styles.shell
       }
     >
+      <a className={styles.skip_link} href="#portal-workspace">
+        Skip to workspace
+      </a>
       <aside className={styles.sidebar}>
-        <Navigation
-          control_id={control_id}
-          operation_target={operation_target}
-          on_navigate={() => undefined}
-        />
-        <Button
-          aria-label="Collapse navigation"
-          onClick={() => setIsCollapsed(!is_collapsed)}
-          tone="secondary"
-        >
-          {is_collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
-        </Button>
+        <div className={styles.sidebar_top}>
+          <div className={styles.brand} title={portal_label}>
+            <CircuitBoard aria-hidden="true" className={styles.brand_mark} />
+            <div className={styles.brand_text}>
+              <strong>{portal_label}</strong>
+              <span>Robotics workspace</span>
+            </div>
+          </div>
+          <Navigation
+            control_id={control_id}
+            operation_target={operation_target}
+            on_navigate={() => undefined}
+          />
+        </div>
+        <div className={styles.sidebar_bottom}>
+          <p>Robot controls in the dock</p>
+          <Button
+            aria-label={
+              is_collapsed ? "Expand navigation" : "Collapse navigation"
+            }
+            onClick={() => setIsCollapsed(!is_collapsed)}
+            tone="secondary"
+          >
+            {is_collapsed ? (
+              <PanelLeftOpen aria-hidden="true" />
+            ) : (
+              <PanelLeftClose aria-hidden="true" />
+            )}
+            <span>{is_collapsed ? "Expand" : "Collapse"}</span>
+          </Button>
+        </div>
       </aside>
       <Drawer
         description="Portal navigation"
+        on_close_auto_focus={(event) => {
+          event.preventDefault();
+          navigation_trigger.current?.focus();
+        }}
         on_open_change={setIsDrawerOpen}
         open={is_drawer_open}
         title={portal_label}
@@ -75,15 +110,13 @@ export function PortalShell() {
           aria-label="Open navigation"
           className={styles.mobile_menu}
           onClick={() => setIsDrawerOpen(true)}
+          ref={navigation_trigger}
           tone="secondary"
         >
           <Menu aria-hidden="true" />
-          Menu
+          <span>Menu</span>
         </Button>
-        <div>
-          <p className={styles.connection}>
-            Pilot connection will be shown here
-          </p>
+        <div className={styles.header_context}>
           <p className={styles.context}>
             {location.pathname === "/devices"
               ? "Device directory"
@@ -91,13 +124,22 @@ export function PortalShell() {
                 ? "Fleet overview"
                 : `Control ${route_control_id}`}
           </p>
+          <p className={styles.connection}>
+            {streams.isError
+              ? "Pilot discovery unavailable"
+              : streams.isPending
+                ? "Checking Pilot discovery…"
+                : "Pilot directory loaded"}
+          </p>
         </div>
         <ThemeMenu />
       </header>
       <div
         className={styles.content}
         data-testid="portal-main-content"
+        id="portal-workspace"
         key={location.pathname}
+        tabIndex={-1}
       >
         <Outlet />
       </div>
@@ -130,19 +172,24 @@ function Navigation({
 
   return (
     <nav aria-label="Portal navigation" className={styles.navigation}>
-      <NavLink end onClick={on_navigate} to="/home">
-        Home
+      <p>Workspace</p>
+      <NavLink end onClick={on_navigate} title="Home" to="/home">
+        <House aria-hidden="true" />
+        <span>Home</span>
       </NavLink>
-      <NavLink onClick={on_navigate} to="/devices">
-        Devices
+      <NavLink onClick={on_navigate} title="Devices" to="/devices">
+        <Boxes aria-hidden="true" />
+        <span>Devices</span>
       </NavLink>
       <p>Robot</p>
       <NavLink
         aria-disabled={control_id === null}
         onClick={handleRobotNavigation}
+        title={control_id === null ? "Select a robot on Home" : "Operation"}
         to={operation_target}
       >
-        Operation
+        <Move3D aria-hidden="true" />
+        <span>Operation</span>
       </NavLink>
     </nav>
   );

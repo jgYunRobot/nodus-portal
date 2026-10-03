@@ -1827,3 +1827,54 @@
 ### Next goals
 
 - Run the Portal typecheck and focused Device-page Playwright acceptance when validation is requested.
+
+## 2026-10-03 - Operator workspace UI/UX refresh
+
+### Changes
+
+- Applied the locally installed `ui-ux-composite` skill to the existing robotics operator Portal.
+  Recorded the direction in `src_shell_operator_workspace_visual_refresh_design.md`.
+- Added product identity and icon navigation, readable active/collapsed states, a keyboard skip
+  link, and actual Pilot discovery-query state in place of the connection placeholder.
+- Reorganized Home cards around identity, freshness, robot type/DOF, mechanical state and the
+  explicit Operation action. Added keyboard-accessible robot selection without navigation.
+- Rebalanced Operation's 3D model, model selector, readable joint measurements and remote rail.
+  On narrow screens controls follow the model before telemetry. Empty model/status states now
+  explain the next step; numeric readings retain units without truncation.
+- Increased jog/selection/theme target heights to 44 px, retained compact mobile joint rows,
+  explained hold-to-run input, and corrected the contradictory availability message when controls
+  are disabled. All motion handlers, schedulers and status calculations remain unchanged.
+- Styled the mobile navigation drawer, added a close button and explicit focus return to its
+  trigger. Button accepts React 19's native button props/ref for that focus handoff.
+- Added visible previous/next Device navigation backed by the existing deck-selection handler,
+  useful empty slots and consistent card typography. Corrected undefined `--space-5` references.
+- Refined theme/selection/status tokens and the floating Dock's appearance. Set body text color
+  from the active theme to keep inherited text correct after theme switches.
+
+### Status
+
+- UI refresh implemented in the current working tree. No dependency, Pilot/provider contract,
+  route, subscription ownership, command semantics or robot asset migration changes.
+- `setup_dev.sh` completed; the independently versioned documentation submodule remains unchanged.
+- At the implementation checkpoint, no commit, push, deployment or hardware command was performed.
+
+### Validation
+
+- Inspected intercepted public-contract fixture renders of Home, Operation and the empty five-slot
+  Device deck at desktop 1440 px and mobile 390/320 px; inspected black/light themes, collapsed
+  navigation, mobile drawer, expanded Dock, empty Home and empty model states.
+- Browser inspection found no page errors. At 320 px the document width was exactly 320 px.
+- Confirmed keyboard selection targets `/robots/control-bravo/operation`, Device previous/next
+  changes the active empty slot, Escape closes the drawer and restores trigger focus, and Dock
+  expansion preserves the main-content bounding box (1192 by 924 px at desktop).
+- Scoped ESLint passed for Button, Drawer, Shell, Home, RobotCard, Operation and HoldControls.
+  Device-page ESLint still reports the existing synchronous `setSelectedEmptyIndex` effect.
+  Reproduced that same finding from `HEAD` before these changes; no lint suppression was added.
+- Changed-file formatting and `git diff --check` passed. Production build, typecheck, unit tests
+  and acceptance test suites were not run under the shared explicit-request rule. Fixture browser
+  inspection does not establish live provider, realtime, motion or hardware acceptance.
+
+### Next goals
+
+- When requested, run typecheck and focused existing route/hold-control/Device acceptance suites.
+- Review live camera/operator payloads and actual robot operation as a separate runtime checkpoint.

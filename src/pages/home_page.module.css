@@ -1,22 +1,104 @@
 .page {
   display: grid;
-  gap: var(--space-6);
+  gap: var(--space-8);
+  margin: 0 auto;
+  max-width: 1440px;
 }
-
+.heading {
+  align-items: center;
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+}
 .heading h1,
 .heading p,
-.notice {
+.notice,
+.section_heading h2,
+.section_heading p {
   margin: 0;
 }
-
-.heading p,
+.heading h1 {
+  font-size: 2.25rem;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 1.2;
+}
+.heading p {
+  color: var(--color-text-muted);
+  font-size: 0.9375rem;
+  margin-top: var(--space-3);
+}
+.device_link {
+  align-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
+  text-decoration: none;
+}
+.device_link svg {
+  height: 16px;
+  width: 16px;
+}
+.device_link:hover {
+  background: var(--color-surface-elevated);
+  border-color: var(--color-border-strong);
+}
+.section_heading {
+  align-items: center;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+  padding-top: var(--space-6);
+}
+.section_heading h2 {
+  align-items: center;
+  display: flex;
+  font-size: 1rem;
+  font-weight: 600;
+  gap: var(--space-2);
+}
+.section_heading h2 svg {
+  color: var(--color-text-muted);
+  height: 18px;
+  width: 18px;
+}
+.section_heading h2 span {
+  background: var(--color-surface-soft);
+  border-radius: 6px;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  padding: var(--space-1) var(--space-2);
+}
+.section_heading p,
 .notice {
   color: var(--color-text-muted);
-  margin-top: var(--space-2);
+  font-size: 0.8125rem;
 }
-
 .grid {
   display: grid;
-  gap: var(--space-4);
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: var(--space-6);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+}
+@media (max-width: 720px) {
+  .page {
+    gap: var(--space-6);
+  }
+  .heading,
+  .section_heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .heading h1 {
+    font-size: 2rem;
+  }
+  .section_heading {
+    gap: var(--space-2);
+  }
 }

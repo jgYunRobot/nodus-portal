@@ -178,6 +178,9 @@ export function HoldControls({ control_id }: HoldControlsProps) {
       className={styles.controls}
     >
       <h2 className={styles.heading}>Jog</h2>
+      <p className={styles.instruction}>
+        Press and hold to move. Release to stop.
+      </p>
 
       <div className={styles.speed_control}>
         <label htmlFor={`jog-speed-${control_id}`}>Speed</label>
@@ -380,7 +383,9 @@ export function HoldControls({ control_id }: HoldControlsProps) {
       <div aria-live="polite" className={styles.status_panel} role="status">
         <div className={styles.status_messages}>
           <p className={styles.operation_state}>
-            ready: Hold-to-run controls are available.
+            {controls_disabled
+              ? "Controls unavailable"
+              : "ready: Hold-to-run controls are available."}
           </p>
           {controls_disabled ? (
             <p className={styles.recovery_state}>

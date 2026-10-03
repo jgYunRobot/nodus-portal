@@ -11,6 +11,7 @@
   --radius-card-large: 28px;
   --control-height: 44px;
   --motion-fast: 120ms;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --dock-height: 64px;
   --dock-collapsed-width: 244px;
   --dock-expanded-width: 860px;

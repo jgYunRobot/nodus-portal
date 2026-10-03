@@ -1,3 +1,4 @@
+import { Boxes, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -42,7 +43,7 @@ export function DevicePage() {
       <div className={styles.heading}>
         <div>
           <h1>Device directory</h1>
-          <p>Discover connected provider devices independently of any robot.</p>
+          <p>Cameras, Operators, and the devices behind your workspace.</p>
         </div>
       </div>
       {is_loading && <Card>Loading the public device directory…</Card>}
@@ -198,9 +199,29 @@ function DeviceDeck({
       tabIndex={0}
     >
       <div className={styles.deck_controls}>
-        <p aria-live="polite" className={styles.deck_position}>
-          {`${active_index + 1} / ${slots.length}`}
-        </p>
+        <div className={styles.deck_actions}>
+          <Button
+            aria-label="Previous device"
+            className={styles.deck_arrow}
+            disabled={active_index === 0}
+            onClick={() => selectRelative(-1)}
+            tone="secondary"
+          >
+            <ChevronLeft aria-hidden="true" />
+          </Button>
+          <p aria-live="polite" className={styles.deck_position}>
+            {`${active_index + 1} / ${slots.length}`}
+          </p>
+          <Button
+            aria-label="Next device"
+            className={styles.deck_arrow}
+            disabled={active_index === slots.length - 1}
+            onClick={() => selectRelative(1)}
+            tone="secondary"
+          >
+            <ChevronRight aria-hidden="true" />
+          </Button>
+        </div>
         <label className={styles.picker_label}>
           Device picker
           <select
@@ -478,8 +499,13 @@ function DeviceCardHeader({
 function EmptySlotCard({ slot_number }: { slot_number: number }) {
   return (
     <Card className={styles.empty_slot}>
+      <Boxes aria-hidden="true" />
       <h2>Empty slot {slot_number}</h2>
-      <p>No supported provider device is registered in this slot.</p>
+      <p>
+        Connect a Camera or Operator to Pilot.
+        <br />
+        Its information will appear here.
+      </p>
     </Card>
   );
 }
