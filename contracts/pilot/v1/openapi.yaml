@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Nodus Pilot Public API",
-    "version": "1.0.3"
+    "version": "1.9.0"
   },
   "paths": {
     "/api/v1/health": {
@@ -542,7 +542,7 @@
         },
         "responses": {
           "200": {
-            "description": "Correlated Control response",
+            "description": "Correlated Control response or native worker delivery result; inspect delivery.outcome because HTTP 200 alone does not establish command success or RT application",
             "content": {
               "application/json": {
                 "schema": {
@@ -1710,7 +1710,14 @@
               "timed_out",
               "disconnected",
               "protocol_error",
-              "queue_full"
+              "queue_full",
+              "worker_completed",
+              "worker_rejected",
+              "native_busy",
+              "native_invalid",
+              "native_stopped",
+              "unsupported",
+              "result_unknown"
             ]
           },
           "connection_generation": {
@@ -2211,15 +2218,13 @@
           },
           "target_id": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 1,
             "maximum": 2147483647,
             "description": "Frame ID of the task control point to move and the Control task target index."
           },
           "reference_id": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 2147483647,
-            "description": "Frame ID of the coordinate system in which target_position is expressed. Control currently retains this value without applying a pose transform."
+            "const": 0,
+            "description": "World reference for the online task target. Body and relative references are unavailable until Control supports their target coordinates end to end."
           }
         }
       },
@@ -2259,73 +2264,81 @@
           }
         }
       },
-      "FrameTransform": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "x",
-          "y",
-          "z",
-          "r1",
-          "r2",
-          "r3",
-          "euler_type"
-        ],
-        "properties": {
-          "x": {
-            "$ref": "#/components/schemas/FiniteNumber"
+      "FramePoseInput": {
+        "oneOf": [
+          {
+            "type": "array",
+            "minItems": 7,
+            "maxItems": 7,
+            "items": {
+              "type": "number"
+            },
+            "description": "[x, y, z, qx, qy, qz, qw]; quaternion has unit length."
           },
-          "y": {
-            "$ref": "#/components/schemas/FiniteNumber"
-          },
-          "z": {
-            "$ref": "#/components/schemas/FiniteNumber"
-          },
-          "r1": {
-            "$ref": "#/components/schemas/FiniteNumber"
-          },
-          "r2": {
-            "$ref": "#/components/schemas/FiniteNumber"
-          },
-          "r3": {
-            "$ref": "#/components/schemas/FiniteNumber"
-          },
-          "euler_type": {
-            "type": "string",
-            "enum": [
-              "XYZ",
-              "XZY",
-              "YXZ",
-              "YZX",
-              "ZXY",
-              "ZYX",
-              "ZXZ",
-              "ZYZ"
-            ]
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["x", "y", "z", "r1", "r2", "r3", "euler_type"],
+            "properties": {
+              "x": {"type": "number"},
+              "y": {"type": "number"},
+              "z": {"type": "number"},
+              "r1": {"type": "number"},
+              "r2": {"type": "number"},
+              "r3": {"type": "number"},
+              "euler_type": {
+                "type": "string",
+                "enum": ["XYZ", "XZY", "YXZ", "YZX", "ZXY", "ZYX", "ZXZ", "ZYZ"]
+              }
+            },
+            "description": "Position and Euler angles in radians, composed in euler_type axis order."
           }
-        }
+        ]
       },
       "RegisterFramePayload": {
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "frame_name",
-          "link_id",
-          "local_transform"
+          "name",
+          "parent_link_id",
+          "pose"
         ],
         "properties": {
-          "frame_name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128
+          "name": {
+            "$ref": "#/components/schemas/Identifier"
           },
-          "link_id": {
+          "parent_link_id": {
             "type": "integer",
             "minimum": 0,
             "maximum": 2147483647
           },
-          "local_transform": {
-            "$ref": "#/components/schemas/FrameTransform"
+          "pose": {"$ref": "#/components/schemas/FramePoseInput"},
+          "frame_type": {"type": "string", "enum": ["reference_only", "control_point"], "default": "reference_only"}
+        }
+      },
+      "ChangeFramePayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "pose"
+        ],
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "pose": {"$ref": "#/components/schemas/FramePoseInput"}
+        }
+      },
+      "RemoveFramePayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/Identifier"
           }
         }
       },
@@ -2829,6 +2842,1174 @@
           }
         }
       },
+      "ChangeFrameRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 1
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.change_frame"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/ChangeFramePayload"
+          }
+        }
+      },
+      "RemoveFrameRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 1
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.remove_frame"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/RemoveFramePayload"
+          }
+        }
+      },
+      "MoveLinearRequestPayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "frame_id",
+          "reference_id",
+          "start",
+          "dest",
+          "linear_limit",
+          "angular_limit"
+        ],
+        "properties": {
+          "frame_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "reference_id": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647,
+            "description": "World (0), or a registered distinct reference frame for a joint-supported target. Poses and derivatives are expressed in reference axes. Control validates topology; direct targets remain world-only."
+          },
+          "start": {
+            "type": "array",
+            "minItems": 7,
+            "maxItems": 7,
+            "items": {
+              "type": "number"
+            }
+          },
+          "dest": {
+            "type": "array",
+            "minItems": 7,
+            "maxItems": 7,
+            "items": {
+              "type": "number"
+            }
+          },
+          "linear_limit": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "number"
+            }
+          },
+          "angular_limit": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "number"
+            }
+          },
+          "auto_play": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "MoveLinearPlayPayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "motion_id"
+        ],
+        "properties": {
+          "motion_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        }
+      },
+      "MoveLinearRequestRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 2
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.move_linear_request"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/MoveLinearRequestPayload"
+          }
+        }
+      },
+      "MoveLinearPlayRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 2
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.move_linear_play"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/MoveLinearPlayPayload"
+          }
+        }
+      },
+      "MoveCircleRequestPayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "frame_id",
+          "reference_id",
+          "start",
+          "dest",
+          "linear_limit",
+          "angular_limit",
+          "via"
+        ],
+        "properties": {
+          "frame_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "reference_id": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647,
+            "description": "World (0), or a registered distinct reference frame for a joint-supported target. Poses and derivatives are expressed in reference axes. Control validates topology; direct targets remain world-only."
+          },
+          "start": {
+            "type": "array",
+            "minItems": 7,
+            "maxItems": 7,
+            "items": {
+              "type": "number"
+            }
+          },
+          "dest": {
+            "type": "array",
+            "minItems": 7,
+            "maxItems": 7,
+            "items": {
+              "type": "number"
+            }
+          },
+          "linear_limit": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "number"
+            }
+          },
+          "angular_limit": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "number"
+            }
+          },
+          "auto_play": {
+            "type": "boolean",
+            "default": true
+          },
+          "via": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "MoveCirclePlayPayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "motion_id"
+        ],
+        "properties": {
+          "motion_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        }
+      },
+      "MoveCircleRequestRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 2
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.move_circle_request"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/MoveCircleRequestPayload"
+          }
+        }
+      },
+      "MoveCirclePlayRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 2
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.move_circle_play"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/MoveCirclePlayPayload"
+          }
+        }
+      },
+      "RegisterRigidBodyPayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "attach_link",
+          "mass",
+          "com",
+          "inertia"
+        ],
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "attach_link": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "mass": {
+            "type": "number"
+          },
+          "com": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "number"
+            }
+          },
+          "inertia": {
+            "type": "array",
+            "minItems": 6,
+            "maxItems": 6,
+            "items": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "RigidBodyTransitionPayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "start_time",
+          "transition_time"
+        ],
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "start_time": {
+            "type": "number"
+          },
+          "transition_time": {
+            "type": "number"
+          }
+        }
+      },
+      "RigidBodyNamePayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/Identifier"
+          }
+        }
+      },
+      "RegisterRigidBodyRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 1
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.register_rigid_body"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/RegisterRigidBodyPayload"
+          }
+        }
+      },
+      "AttachRigidBodyRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 1
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.attach_rigid_body"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/RigidBodyTransitionPayload"
+          }
+        }
+      },
+      "DetachRigidBodyRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 1
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.detach_rigid_body"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/RigidBodyTransitionPayload"
+          }
+        }
+      },
+      "RemoveRigidBodyRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 1
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.remove_rigid_body"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/RigidBodyNamePayload"
+          }
+        }
+      },
+      "MoveJointRequestPayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "start",
+          "dest",
+          "velocity_limit",
+          "acceleration_limit",
+          "jerk_limit"
+        ],
+        "properties": {
+          "start": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": "number"
+            }
+          },
+          "dest": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": "number"
+            }
+          },
+          "velocity_limit": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": "number"
+            }
+          },
+          "acceleration_limit": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": "number"
+            }
+          },
+          "jerk_limit": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": "number"
+            }
+          },
+          "auto_play": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "MoveJointPlayPayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "motion_id"
+        ],
+        "properties": {
+          "motion_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        }
+      },
+      "MoveJointRequestRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 2
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.move_joint_request"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/MoveJointRequestPayload"
+          }
+        }
+      },
+      "MoveJointPlayRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 2
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.move_joint_play"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/MoveJointPlayPayload"
+          }
+        }
+      },
+      "RegisterExternalFramePayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "pose",
+          "control_point_id"
+        ],
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "pose": {"$ref": "#/components/schemas/FramePoseInput"},
+          "control_point_id": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          }
+        }
+      },
+      "RegisterExternalFrameRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 1
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.register_external_frame"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/RegisterExternalFramePayload"
+          }
+        }
+      },
+      "ChangeExternalFramePayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "pose",
+          "transition_time"
+        ],
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "pose": {"$ref": "#/components/schemas/FramePoseInput"},
+          "transition_time": {
+            "type": "number",
+            "description": "Finite transition duration in seconds. Nonpositive values apply immediately; positive values interpolate the active control-point offset."
+          }
+        }
+      },
+      "ChangeExternalFrameRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 1
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.change_external_frame"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/ChangeExternalFramePayload"
+          }
+        }
+      },
+      "SelectExternalFramePayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "transition_time"
+        ],
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "transition_time": {
+            "type": "number",
+            "description": "Finite transition duration in seconds. Nonpositive values apply immediately; positive values interpolate from the current control-point offset."
+          }
+        }
+      },
+      "SelectExternalFrameRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 1
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.select_external_frame"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/SelectExternalFramePayload"
+          }
+        }
+      },
+      "RemoveExternalFramePayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/Identifier"
+          }
+        }
+      },
+      "RemoveExternalFrameRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 1
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.remove_external_frame"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/RemoveExternalFramePayload"
+          }
+        }
+      },
       "OperationRequest": {
         "description": "Closed union of Control operations submitted by a live generic component session. session_id is copied from ComponentRegistrationResponse. generation and sequence form a command-producer-owned cursor separate from lifecycle writes; sequence increases within a generation and a generation transition is allowed only after older in-flight operations finish. source_timestamp_ns uses the registered session clock domain. UI sessions follow the same contract as other command producers under pass_through.",
         "oneOf": [
@@ -2861,6 +4042,55 @@
           },
           {
             "$ref": "#/components/schemas/RegisterFrameRequest"
+          },
+          {
+            "$ref": "#/components/schemas/ChangeFrameRequest"
+          },
+          {
+            "$ref": "#/components/schemas/RemoveFrameRequest"
+          },
+
+          {
+            "$ref": "#/components/schemas/MoveLinearRequestRequest"
+          },
+          {
+            "$ref": "#/components/schemas/MoveLinearPlayRequest"
+          },
+          {
+            "$ref": "#/components/schemas/MoveCircleRequestRequest"
+          },
+          {
+            "$ref": "#/components/schemas/MoveCirclePlayRequest"
+          },
+          {
+            "$ref": "#/components/schemas/MoveJointRequestRequest"
+          },
+          {
+            "$ref": "#/components/schemas/MoveJointPlayRequest"
+          },
+          {
+            "$ref": "#/components/schemas/RegisterRigidBodyRequest"
+          },
+          {
+            "$ref": "#/components/schemas/AttachRigidBodyRequest"
+          },
+          {
+            "$ref": "#/components/schemas/DetachRigidBodyRequest"
+          },
+          {
+            "$ref": "#/components/schemas/RemoveRigidBodyRequest"
+          },
+          {
+            "$ref": "#/components/schemas/RegisterExternalFrameRequest"
+          },
+          {
+            "$ref": "#/components/schemas/ChangeExternalFrameRequest"
+          },
+          {
+            "$ref": "#/components/schemas/SelectExternalFrameRequest"
+          },
+          {
+            "$ref": "#/components/schemas/RemoveExternalFrameRequest"
           }
         ],
         "discriminator": {
@@ -2875,7 +4105,24 @@
             "control.reset_fault": "#/components/schemas/ResetFaultRequest",
             "control.reset_origin": "#/components/schemas/ResetOriginRequest",
             "control.set_brake_state": "#/components/schemas/SetBrakeStateRequest",
-            "control.register_frame": "#/components/schemas/RegisterFrameRequest"
+            "control.register_frame": "#/components/schemas/RegisterFrameRequest",
+            "control.change_frame": "#/components/schemas/ChangeFrameRequest",
+            "control.remove_frame": "#/components/schemas/RemoveFrameRequest",
+
+            "control.move_linear_request": "#/components/schemas/MoveLinearRequestRequest",
+            "control.move_linear_play": "#/components/schemas/MoveLinearPlayRequest",
+            "control.move_circle_request": "#/components/schemas/MoveCircleRequestRequest",
+            "control.move_joint_request": "#/components/schemas/MoveJointRequestRequest",
+            "control.move_circle_play": "#/components/schemas/MoveCirclePlayRequest",
+            "control.move_joint_play": "#/components/schemas/MoveJointPlayRequest",
+            "control.register_rigid_body": "#/components/schemas/RegisterRigidBodyRequest",
+            "control.attach_rigid_body": "#/components/schemas/AttachRigidBodyRequest",
+            "control.detach_rigid_body": "#/components/schemas/DetachRigidBodyRequest",
+            "control.remove_rigid_body": "#/components/schemas/RemoveRigidBodyRequest",
+            "control.register_external_frame": "#/components/schemas/RegisterExternalFrameRequest",
+            "control.change_external_frame": "#/components/schemas/ChangeExternalFrameRequest",
+            "control.select_external_frame": "#/components/schemas/SelectExternalFrameRequest",
+            "control.remove_external_frame": "#/components/schemas/RemoveExternalFrameRequest"
           }
         }
       },
@@ -2897,6 +4144,32 @@
               "disconnected",
               "protocol_error",
               "queue_full"
+            ]
+          },
+          "connection_generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          }
+        }
+      },
+      "NativeOperationDelivery": {
+        "type": "object",
+        "description": "Embedded Control admission or command-worker delivery evidence. worker_completed does not establish RT application or physical motion.",
+        "additionalProperties": false,
+        "required": [
+          "outcome",
+          "connection_generation"
+        ],
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "worker_completed",
+              "worker_rejected",
+              "native_busy",
+              "native_invalid",
+              "native_stopped",
+              "unsupported",
+              "result_unknown"
             ]
           },
           "connection_generation": {
@@ -3138,7 +4411,7 @@
           }
         }
       },
-      "OperationResult": {
+      "OperationResultV1": {
         "type": "object",
         "additionalProperties": false,
         "required": [
@@ -3171,7 +4444,23 @@
               "control.reset_fault",
               "control.reset_origin",
               "control.set_brake_state",
-              "control.register_frame"
+              "control.register_frame",
+              "control.change_frame",
+              "control.remove_frame",
+              "control.move_linear_request",
+              "control.move_linear_play",
+              "control.move_circle_request",
+              "control.move_joint_request",
+              "control.move_circle_play",
+              "control.move_joint_play",
+              "control.register_rigid_body",
+              "control.attach_rigid_body",
+              "control.detach_rigid_body",
+              "control.remove_rigid_body",
+              "control.register_external_frame",
+              "control.change_external_frame",
+              "control.select_external_frame",
+              "control.remove_external_frame"
             ]
           },
           "control_id": {
@@ -3222,6 +4511,186 @@
             ]
           }
         }
+      },
+      "OperationResultV2": {
+        "type": "object",
+        "description": "Native Control delivery result. A completed command worker is not proof that an RT event was applied or physical motion finished.",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "control_id",
+          "pilot_disposition",
+          "delivery",
+          "control_outcome",
+          "result",
+          "error"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 2
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "control.move_joint_online",
+              "control.move_joint_offline",
+              "control.move_task_online",
+              "control.calculate_forward_kinematics",
+              "control.get_robot_status",
+              "control.set_servo_state",
+              "control.reset_fault",
+              "control.reset_origin",
+              "control.set_brake_state",
+              "control.register_frame",
+              "control.change_frame",
+              "control.remove_frame",
+              "control.move_linear_request",
+              "control.move_linear_play",
+              "control.move_circle_request",
+              "control.move_joint_request",
+              "control.move_circle_play",
+              "control.move_joint_play",
+              "control.register_rigid_body",
+              "control.attach_rigid_body",
+              "control.detach_rigid_body",
+              "control.remove_rigid_body",
+              "control.register_external_frame",
+              "control.change_external_frame",
+              "control.select_external_frame",
+              "control.remove_external_frame"
+            ]
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "pilot_disposition": {
+            "const": "forwarded"
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/NativeOperationDelivery"
+          },
+          "control_outcome": {
+            "$ref": "#/components/schemas/ControlOutcome"
+          },
+          "result": {
+            "type": "null"
+          },
+          "error": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OperationError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "MotionPreparationResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "motion_id",
+          "duration",
+          "play_queued"
+        ],
+        "properties": {
+          "motion_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "duration": {
+            "type": "number",
+            "minimum": 0
+          },
+          "play_queued": {
+            "type": "boolean"
+          }
+        }
+      },
+      "OperationResultV3": {
+        "type": "object",
+        "description": "Native offline motion preparation result; play_queued means RT handoff was queued, not applied or physically completed.",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "control_id",
+          "pilot_disposition",
+          "delivery",
+          "control_outcome",
+          "result",
+          "error"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 3
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "control.move_linear_request",
+              "control.move_circle_request",
+              "control.move_joint_request"
+            ]
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "pilot_disposition": {
+            "const": "forwarded"
+          },
+          "delivery": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "outcome",
+              "connection_generation"
+            ],
+            "properties": {
+              "outcome": {
+                "const": "worker_completed"
+              },
+              "connection_generation": {
+                "$ref": "#/components/schemas/NonNegativeInt64"
+              }
+            }
+          },
+          "control_outcome": {
+            "$ref": "#/components/schemas/ControlOutcome"
+          },
+          "result": {
+            "$ref": "#/components/schemas/MotionPreparationResult"
+          },
+          "error": {
+            "type": "null"
+          }
+        }
+      },
+      "OperationResult": {
+        "description": "Operation response envelope. Schema v1 preserves legacy delivery values; schema v2 carries native Control delivery values. Offline motion requests use schema v2, and successful preparation responses use schema v3.",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/OperationResultV1"
+          },
+          {
+            "$ref": "#/components/schemas/OperationResultV2"
+          },
+          {
+            "$ref": "#/components/schemas/OperationResultV3"
+          }
+        ]
       },
       "SampleStreamsResponse": {
         "type": "object",

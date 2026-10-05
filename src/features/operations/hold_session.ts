@@ -43,7 +43,7 @@ export interface HoldSessionOptions {
 }
 
 const HOLD_TICK_MS = 50;
-const TASK_REFERENCE_FRAME_ID = -2;
+const TASK_REFERENCE_FRAME_ID = 0;
 
 export class HoldSession {
   private readonly now: () => number;

@@ -709,7 +709,7 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Correlated Control response */
+                /** @description Correlated Control response or native worker delivery result; inspect delivery.outcome because HTTP 200 alone does not establish command success or RT application */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -998,7 +998,7 @@ export interface components {
             source_id: components["schemas"]["Identifier"];
             request_id: components["schemas"]["NullableString"];
             /** @enum {string} */
-            outcome: "written_unconfirmed" | "response_received" | "rejected_local" | "timed_out" | "disconnected" | "protocol_error" | "queue_full";
+            outcome: "written_unconfirmed" | "response_received" | "rejected_local" | "timed_out" | "disconnected" | "protocol_error" | "queue_full" | "worker_completed" | "worker_rejected" | "native_busy" | "native_invalid" | "native_stopped" | "unsupported" | "result_unknown";
             connection_generation: components["schemas"]["NonNegativeInt64"];
             error_code: components["schemas"]["NullableString"];
             error_reason: components["schemas"]["NullableString"];
@@ -1112,8 +1112,11 @@ export interface components {
             target_position: components["schemas"]["Vector100"];
             /** @description Frame ID of the task control point to move and the Control task target index. */
             target_id: number;
-            /** @description Frame ID of the coordinate system in which target_position is expressed. Control currently retains this value without applying a pose transform. */
-            reference_id: number;
+            /**
+             * @description World reference for the online task target. Body and relative references are unavailable until Control supports their target coordinates end to end.
+             * @constant
+             */
+            reference_id: 0;
         };
         JointPositionPayload: {
             joint_position: components["schemas"]["Vector500"];
@@ -1124,20 +1127,32 @@ export interface components {
         ReleasedPayload: {
             released: boolean;
         };
-        FrameTransform: {
-            x: components["schemas"]["FiniteNumber"];
-            y: components["schemas"]["FiniteNumber"];
-            z: components["schemas"]["FiniteNumber"];
-            r1: components["schemas"]["FiniteNumber"];
-            r2: components["schemas"]["FiniteNumber"];
-            r3: components["schemas"]["FiniteNumber"];
+        FramePoseInput: number[] | {
+            x: number;
+            y: number;
+            z: number;
+            r1: number;
+            r2: number;
+            r3: number;
             /** @enum {string} */
             euler_type: "XYZ" | "XZY" | "YXZ" | "YZX" | "ZXY" | "ZYX" | "ZXZ" | "ZYZ";
         };
         RegisterFramePayload: {
-            frame_name: string;
-            link_id: number;
-            local_transform: components["schemas"]["FrameTransform"];
+            name: components["schemas"]["Identifier"];
+            parent_link_id: number;
+            pose: components["schemas"]["FramePoseInput"];
+            /**
+             * @default reference_only
+             * @enum {string}
+             */
+            frame_type: "reference_only" | "control_point";
+        };
+        ChangeFramePayload: {
+            name: components["schemas"]["Identifier"];
+            pose: components["schemas"]["FramePoseInput"];
+        };
+        RemoveFramePayload: {
+            name: components["schemas"]["Identifier"];
         };
         MoveJointOnlineRequest: {
             /** @constant */
@@ -1309,11 +1324,364 @@ export interface components {
             control_id: components["schemas"]["Identifier"];
             payload: components["schemas"]["RegisterFramePayload"];
         };
+        ChangeFrameRequest: {
+            /** @constant */
+            schema_version: 1;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.change_frame";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: components["schemas"]["ChangeFramePayload"];
+        };
+        RemoveFrameRequest: {
+            /** @constant */
+            schema_version: 1;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.remove_frame";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: components["schemas"]["RemoveFramePayload"];
+        };
+        MoveLinearRequestPayload: {
+            frame_id: number;
+            /** @description World (0), or a registered distinct reference frame for a joint-supported target. Poses and derivatives are expressed in reference axes. Control validates topology; direct targets remain world-only. */
+            reference_id: number;
+            start: number[];
+            dest: number[];
+            linear_limit: number[];
+            angular_limit: number[];
+            /** @default true */
+            auto_play: boolean;
+        };
+        MoveLinearPlayPayload: {
+            motion_id: number;
+        };
+        MoveLinearRequestRequest: {
+            /** @constant */
+            schema_version: 2;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.move_linear_request";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: components["schemas"]["MoveLinearRequestPayload"];
+        };
+        MoveLinearPlayRequest: {
+            /** @constant */
+            schema_version: 2;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.move_linear_play";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: components["schemas"]["MoveLinearPlayPayload"];
+        };
+        MoveCircleRequestPayload: {
+            frame_id: number;
+            /** @description World (0), or a registered distinct reference frame for a joint-supported target. Poses and derivatives are expressed in reference axes. Control validates topology; direct targets remain world-only. */
+            reference_id: number;
+            start: number[];
+            dest: number[];
+            linear_limit: number[];
+            angular_limit: number[];
+            /** @default true */
+            auto_play: boolean;
+            via: number[];
+        };
+        MoveCirclePlayPayload: {
+            motion_id: number;
+        };
+        MoveCircleRequestRequest: {
+            /** @constant */
+            schema_version: 2;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.move_circle_request";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: components["schemas"]["MoveCircleRequestPayload"];
+        };
+        MoveCirclePlayRequest: {
+            /** @constant */
+            schema_version: 2;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.move_circle_play";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: components["schemas"]["MoveCirclePlayPayload"];
+        };
+        RegisterRigidBodyPayload: {
+            name: components["schemas"]["Identifier"];
+            attach_link: components["schemas"]["Identifier"];
+            mass: number;
+            com: number[];
+            inertia: number[];
+        };
+        RigidBodyTransitionPayload: {
+            name: components["schemas"]["Identifier"];
+            start_time: number;
+            transition_time: number;
+        };
+        RigidBodyNamePayload: {
+            name: components["schemas"]["Identifier"];
+        };
+        RegisterRigidBodyRequest: {
+            /** @constant */
+            schema_version: 1;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.register_rigid_body";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: components["schemas"]["RegisterRigidBodyPayload"];
+        };
+        AttachRigidBodyRequest: {
+            /** @constant */
+            schema_version: 1;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.attach_rigid_body";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: components["schemas"]["RigidBodyTransitionPayload"];
+        };
+        DetachRigidBodyRequest: {
+            /** @constant */
+            schema_version: 1;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.detach_rigid_body";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: components["schemas"]["RigidBodyTransitionPayload"];
+        };
+        RemoveRigidBodyRequest: {
+            /** @constant */
+            schema_version: 1;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.remove_rigid_body";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: components["schemas"]["RigidBodyNamePayload"];
+        };
+        MoveJointRequestPayload: {
+            start: number[];
+            dest: number[];
+            velocity_limit: number[];
+            acceleration_limit: number[];
+            jerk_limit: number[];
+            /** @default true */
+            auto_play: boolean;
+        };
+        MoveJointPlayPayload: {
+            motion_id: number;
+        };
+        MoveJointRequestRequest: {
+            /** @constant */
+            schema_version: 2;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.move_joint_request";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: components["schemas"]["MoveJointRequestPayload"];
+        };
+        MoveJointPlayRequest: {
+            /** @constant */
+            schema_version: 2;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.move_joint_play";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: components["schemas"]["MoveJointPlayPayload"];
+        };
+        RegisterExternalFramePayload: {
+            name: components["schemas"]["Identifier"];
+            pose: components["schemas"]["FramePoseInput"];
+            control_point_id: number;
+        };
+        RegisterExternalFrameRequest: {
+            /** @constant */
+            schema_version: 1;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.register_external_frame";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: components["schemas"]["RegisterExternalFramePayload"];
+        };
+        ChangeExternalFramePayload: {
+            name: components["schemas"]["Identifier"];
+            pose: components["schemas"]["FramePoseInput"];
+            /** @description Finite transition duration in seconds. Nonpositive values apply immediately; positive values interpolate the active control-point offset. */
+            transition_time: number;
+        };
+        ChangeExternalFrameRequest: {
+            /** @constant */
+            schema_version: 1;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.change_external_frame";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: components["schemas"]["ChangeExternalFramePayload"];
+        };
+        SelectExternalFramePayload: {
+            name: components["schemas"]["Identifier"];
+            /** @description Finite transition duration in seconds. Nonpositive values apply immediately; positive values interpolate from the current control-point offset. */
+            transition_time: number;
+        };
+        SelectExternalFrameRequest: {
+            /** @constant */
+            schema_version: 1;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.select_external_frame";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: components["schemas"]["SelectExternalFramePayload"];
+        };
+        RemoveExternalFramePayload: {
+            name: components["schemas"]["Identifier"];
+        };
+        RemoveExternalFrameRequest: {
+            /** @constant */
+            schema_version: 1;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.remove_external_frame";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: components["schemas"]["RemoveExternalFramePayload"];
+        };
         /** @description Closed union of Control operations submitted by a live generic component session. session_id is copied from ComponentRegistrationResponse. generation and sequence form a command-producer-owned cursor separate from lifecycle writes; sequence increases within a generation and a generation transition is allowed only after older in-flight operations finish. source_timestamp_ns uses the registered session clock domain. UI sessions follow the same contract as other command producers under pass_through. */
-        OperationRequest: components["schemas"]["MoveJointOnlineRequest"] | components["schemas"]["MoveJointOfflineRequest"] | components["schemas"]["MoveTaskOnlineRequest"] | components["schemas"]["CalculateForwardKinematicsRequest"] | components["schemas"]["GetRobotStatusRequest"] | components["schemas"]["SetServoStateRequest"] | components["schemas"]["ResetFaultRequest"] | components["schemas"]["ResetOriginRequest"] | components["schemas"]["SetBrakeStateRequest"] | components["schemas"]["RegisterFrameRequest"];
+        OperationRequest: components["schemas"]["MoveJointOnlineRequest"] | components["schemas"]["MoveJointOfflineRequest"] | components["schemas"]["MoveTaskOnlineRequest"] | components["schemas"]["CalculateForwardKinematicsRequest"] | components["schemas"]["GetRobotStatusRequest"] | components["schemas"]["SetServoStateRequest"] | components["schemas"]["ResetFaultRequest"] | components["schemas"]["ResetOriginRequest"] | components["schemas"]["SetBrakeStateRequest"] | components["schemas"]["RegisterFrameRequest"] | components["schemas"]["ChangeFrameRequest"] | components["schemas"]["RemoveFrameRequest"] | components["schemas"]["MoveLinearRequestRequest"] | components["schemas"]["MoveLinearPlayRequest"] | components["schemas"]["MoveCircleRequestRequest"] | components["schemas"]["MoveCirclePlayRequest"] | components["schemas"]["MoveJointRequestRequest"] | components["schemas"]["MoveJointPlayRequest"] | components["schemas"]["RegisterRigidBodyRequest"] | components["schemas"]["AttachRigidBodyRequest"] | components["schemas"]["DetachRigidBodyRequest"] | components["schemas"]["RemoveRigidBodyRequest"] | components["schemas"]["RegisterExternalFrameRequest"] | components["schemas"]["ChangeExternalFrameRequest"] | components["schemas"]["SelectExternalFrameRequest"] | components["schemas"]["RemoveExternalFrameRequest"];
         OperationDelivery: {
             /** @enum {string} */
             outcome: "written_unconfirmed" | "response_received" | "rejected_local" | "timed_out" | "disconnected" | "protocol_error" | "queue_full";
+            connection_generation: components["schemas"]["NonNegativeInt64"];
+        };
+        /** @description Embedded Control admission or command-worker delivery evidence. worker_completed does not establish RT application or physical motion. */
+        NativeOperationDelivery: {
+            /** @enum {string} */
+            outcome: "worker_completed" | "worker_rejected" | "native_busy" | "native_invalid" | "native_stopped" | "unsupported" | "result_unknown";
             connection_generation: components["schemas"]["NonNegativeInt64"];
         };
         ControlOutcome: {
@@ -1371,12 +1739,12 @@ export interface components {
             timestamp_ns: components["schemas"]["NonNegativeInt64"];
             registered: boolean;
         };
-        OperationResult: {
+        OperationResultV1: {
             /** @constant */
             schema_version: 1;
             request_id: components["schemas"]["Identifier"];
             /** @enum {string} */
-            operation: "control.move_joint_online" | "control.move_joint_offline" | "control.move_task_online" | "control.calculate_forward_kinematics" | "control.get_robot_status" | "control.set_servo_state" | "control.reset_fault" | "control.reset_origin" | "control.set_brake_state" | "control.register_frame";
+            operation: "control.move_joint_online" | "control.move_joint_offline" | "control.move_task_online" | "control.calculate_forward_kinematics" | "control.get_robot_status" | "control.set_servo_state" | "control.reset_fault" | "control.reset_origin" | "control.set_brake_state" | "control.register_frame" | "control.change_frame" | "control.remove_frame" | "control.move_linear_request" | "control.move_linear_play" | "control.move_circle_request" | "control.move_joint_request" | "control.move_circle_play" | "control.move_joint_play" | "control.register_rigid_body" | "control.attach_rigid_body" | "control.detach_rigid_body" | "control.remove_rigid_body" | "control.register_external_frame" | "control.change_external_frame" | "control.select_external_frame" | "control.remove_external_frame";
             control_id: components["schemas"]["Identifier"];
             /** @enum {string} */
             pilot_disposition: "rejected" | "forwarded" | "unknown";
@@ -1385,6 +1753,47 @@ export interface components {
             result: components["schemas"]["RobotStatusOperationResult"] | components["schemas"]["RegisterFrameOperationResult"] | null;
             error: components["schemas"]["OperationError"] | null;
         };
+        /** @description Native Control delivery result. A completed command worker is not proof that an RT event was applied or physical motion finished. */
+        OperationResultV2: {
+            /** @constant */
+            schema_version: 2;
+            request_id: components["schemas"]["Identifier"];
+            /** @enum {string} */
+            operation: "control.move_joint_online" | "control.move_joint_offline" | "control.move_task_online" | "control.calculate_forward_kinematics" | "control.get_robot_status" | "control.set_servo_state" | "control.reset_fault" | "control.reset_origin" | "control.set_brake_state" | "control.register_frame" | "control.change_frame" | "control.remove_frame" | "control.move_linear_request" | "control.move_linear_play" | "control.move_circle_request" | "control.move_joint_request" | "control.move_circle_play" | "control.move_joint_play" | "control.register_rigid_body" | "control.attach_rigid_body" | "control.detach_rigid_body" | "control.remove_rigid_body" | "control.register_external_frame" | "control.change_external_frame" | "control.select_external_frame" | "control.remove_external_frame";
+            control_id: components["schemas"]["Identifier"];
+            /** @constant */
+            pilot_disposition: "forwarded";
+            delivery: components["schemas"]["NativeOperationDelivery"];
+            control_outcome: components["schemas"]["ControlOutcome"];
+            result: null;
+            error: components["schemas"]["OperationError"] | null;
+        };
+        MotionPreparationResult: {
+            motion_id: number;
+            duration: number;
+            play_queued: boolean;
+        };
+        /** @description Native offline motion preparation result; play_queued means RT handoff was queued, not applied or physically completed. */
+        OperationResultV3: {
+            /** @constant */
+            schema_version: 3;
+            request_id: components["schemas"]["Identifier"];
+            /** @enum {string} */
+            operation: "control.move_linear_request" | "control.move_circle_request" | "control.move_joint_request";
+            control_id: components["schemas"]["Identifier"];
+            /** @constant */
+            pilot_disposition: "forwarded";
+            delivery: {
+                /** @constant */
+                outcome: "worker_completed";
+                connection_generation: components["schemas"]["NonNegativeInt64"];
+            };
+            control_outcome: components["schemas"]["ControlOutcome"];
+            result: components["schemas"]["MotionPreparationResult"];
+            error: null;
+        };
+        /** @description Operation response envelope. Schema v1 preserves legacy delivery values; schema v2 carries native Control delivery values. Offline motion requests use schema v2, and successful preparation responses use schema v3. */
+        OperationResult: components["schemas"]["OperationResultV1"] | components["schemas"]["OperationResultV2"] | components["schemas"]["OperationResultV3"];
         SampleStreamsResponse: {
             server_instance_id: components["schemas"]["Identifier"];
             streams: components["schemas"]["SampleStreamDescriptor"][];

@@ -1,14 +1,5 @@
 import type { components } from "./generated/pilot_v1";
 
-type NativeDeliveryOutcome =
-  | "worker_completed"
-  | "worker_rejected"
-  | "native_busy"
-  | "native_invalid"
-  | "native_stopped"
-  | "unsupported"
-  | "result_unknown";
-
 const NATIVE_DELIVERY_OUTCOMES = new Set<string>([
   "worker_completed",
   "worker_rejected",
@@ -17,20 +8,9 @@ const NATIVE_DELIVERY_OUTCOMES = new Set<string>([
   "native_stopped",
   "unsupported",
   "result_unknown"
-]);
+] satisfies components["schemas"]["NativeOperationDelivery"]["outcome"][]);
 
-export type PilotOperationResult =
-  | components["schemas"]["OperationResult"]
-  | (Omit<
-      components["schemas"]["OperationResult"],
-      "schema_version" | "delivery"
-    > & {
-      schema_version: 2;
-      delivery: {
-        outcome: NativeDeliveryOutcome;
-        connection_generation: number;
-      };
-    });
+export type PilotOperationResult = components["schemas"]["OperationResult"];
 
 export function isControlStatusResponse(
   value: unknown
@@ -122,7 +102,7 @@ export function isOperationResult(
   const result = value as Record<string, unknown>;
   let valid_version = result.schema_version === 1;
   if (
-    result.schema_version === 2 &&
+    (result.schema_version === 2 || result.schema_version === 3) &&
     result.delivery !== null &&
     typeof result.delivery === "object" &&
     !Array.isArray(result.delivery)
@@ -132,6 +112,27 @@ export function isOperationResult(
       typeof delivery.outcome === "string" &&
       NATIVE_DELIVERY_OUTCOMES.has(delivery.outcome) &&
       isNonNegativeInteger(delivery.connection_generation);
+    if (result.schema_version === 3) {
+      const preparation = result.result as Record<string, unknown> | null;
+      valid_version =
+        valid_version &&
+        delivery.outcome === "worker_completed" &&
+        [
+          "control.move_linear_request",
+          "control.move_circle_request",
+          "control.move_joint_request"
+        ].includes(result.operation as string) &&
+        preparation !== null &&
+        typeof preparation === "object" &&
+        !Array.isArray(preparation) &&
+        isPositiveInteger(preparation.motion_id) &&
+        Number.isSafeInteger(preparation.motion_id) &&
+        isFiniteNumber(preparation.duration) &&
+        preparation.duration >= 0 &&
+        typeof preparation.play_queued === "boolean" &&
+        result.error === null;
+    }
+    valid_version = valid_version && result.pilot_disposition === "forwarded";
   }
   return (
     valid_version &&

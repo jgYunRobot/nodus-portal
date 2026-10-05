@@ -21,7 +21,7 @@ export type OperationTarget =
       control_id: string;
       target_position: readonly number[];
       target_id: number;
-      reference_id: number;
+      reference_id: components["schemas"]["TaskTargetPayload"]["reference_id"];
     }
   | {
       operation: "control.set_servo_state";
@@ -159,9 +159,8 @@ function presentOperationResult(
   http_status: number,
   result: PilotOperationResult
 ): OperationPresentation {
-  if (result.schema_version === 2) {
+  if (result.schema_version === 2 || result.schema_version === 3) {
     if (
-      result.pilot_disposition === "rejected" ||
       result.control_outcome.status === "rejected" ||
       ["worker_rejected", "native_invalid", "unsupported"].includes(
         result.delivery.outcome
@@ -182,7 +181,11 @@ function presentOperationResult(
       return {
         state: "accepted",
         message:
-          "Control command worker completed; RT application is not confirmed.",
+          result.schema_version === 3
+            ? result.result.play_queued
+              ? "Motion prepared and play queued; RT application is not confirmed."
+              : "Motion prepared; play has not been queued."
+            : "Control command worker completed; RT application is not confirmed.",
         terminal: false
       };
     }

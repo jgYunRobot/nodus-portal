@@ -127,7 +127,7 @@ describe("HoldSession", () => {
     expect(sent.at(-1)).toMatchObject({
       operation: "control.move_task_online",
       target_id: 3,
-      reference_id: -2
+      reference_id: 0
     });
     expect(getMotionTarget(sent.at(-1))?.[0]).toBeGreaterThan(0);
     expect(getMotionTarget(sent.at(-1))).toHaveLength(7);
