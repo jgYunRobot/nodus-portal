@@ -1,5 +1,39 @@
 # Progress
 
+## 2026-10-05 - Synchronize the local Pilot API 1.9.0 contract
+
+### Changes
+
+- Replace the API 1.0.3 OpenAPI snapshot with the requested sibling Pilot working-tree
+  API 1.9.0 snapshot and regenerate TypeScript types. Record its base revision, snapshot
+  date, SHA-256, and uncommitted positive ExternalFrame transition support in provenance.
+- Expose all 26 public operation request variants through the existing typed HTTP client,
+  including Joint/Linear/Circle preparation and play, frame lifecycle, rigid bodies, and
+  external frames. No new operation UI is introduced.
+- Consume the generated v1/v2/v3 result union instead of the temporary native v2 type
+  extension. Accept motion preparation fields and distinguish preparation/play handoff
+  from RT application or physical completion.
+- Set online Task Jog world reference to 0 and constrain its request type to the published
+  literal. This supersedes the September 26 reference value below.
+- Update hold/request expectations and add HTTP fixtures for all three schema-v2 motion
+  preparation requests, preserved v3 motion IDs/durations, and malformed preparation results.
+  Update the existing integration design to the current request/response contracts.
+
+### Status and validation
+
+- `./setup_dev.sh` completed with the pinned shared-docs revision unchanged.
+- Contract generation, exact snapshot comparison, scoped ESLint, formatting, and
+  `git diff --check` passed. HTTP/SSE paths and RobotStatus schemas remain compatible.
+- Build, typecheck, tests, browser, live Pilot/Control, and hardware checks were not run
+  under the shared explicit-request rule. Added fixtures have not been executed.
+- Pilot and its existing dirty worktree were preserved. No commit or push.
+
+### Next goals
+
+- Run focused HTTP/operation/hold regression tests and typecheck when requested, then
+  verify Task Jog against the matching Pilot runtime during a requested runtime checkpoint.
+- Refresh provenance to a published revision once the local ExternalFrame change is committed.
+
 ## 2026-09-26 - Align Task Jog with Pilot's world reference
 
 - `HoldSession` now sends `reference_id = -2` for `control.move_task_online`, matching Pilot's current world-only online task contract. The selected status frame ID remains `target_id`, and `PilotOperationClient` forwards both values unchanged.

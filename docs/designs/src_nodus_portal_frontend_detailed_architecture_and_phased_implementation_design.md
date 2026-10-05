@@ -630,8 +630,10 @@ come from the released operation contract and targeted tests. They are named con
 constants, not JSX literals.
 
 For `control.move_task_online`, the selected status frame ID remains `target_id` and the seven-value
-pose target is expressed in world coordinates with `reference_id = -2`. `HoldSession` sets this
+pose target is expressed in world coordinates with `reference_id = 0`. `HoldSession` sets this
 reference when scheduling task jog; `PilotOperationClient` forwards it unchanged.
+Online task targets require a positive `target_id`; the public API reserves world frame 0 for
+the reference. Body and relative online targets are unavailable in the current contract.
 
 ### 9.3 Backpressure and stop behavior
 
@@ -651,8 +653,11 @@ outcome set for that response version. `worker_completed` is nonterminal for a h
 the Control command worker handled the request, not RT application or physical motion. Native
 rejection or unknown/unavailable results are terminal and clear the pending target. A native
 result carrying an error is parsed as an operation result before the generic HTTP error envelope.
-The checked-in Pilot OpenAPI v1 artifact does not yet describe these native v2 results; Portal
-keeps the v2 extension isolated at its response boundary until that upstream contract is versioned.
+The checked-in Pilot API 1.9.0 artifact describes native v2 results directly, so Portal consumes
+the generated result union without a local type extension. Offline Joint/Linear/Circle request
+and play operations use request schema v2. Successful preparation returns response schema v3
+with `motion_id`, `duration`, and `play_queued`; queued play does not establish RT application or
+physical completion. The HTTP client exposes these public operations through generated types.
 
 Pointer capture provides reliable pointer-up behavior. Keyboard activation ignores key repeat and
 uses key-down/key-up lifecycle. Buttons expose pressed and unavailable state accessibly. Home and

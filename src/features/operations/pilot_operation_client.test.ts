@@ -153,7 +153,7 @@ describe("PilotOperationClient", () => {
       control_id: "control-a",
       target_position: [0, 0, 0, 0, 0, 0, 0],
       target_id: 3,
-      reference_id: -2
+      reference_id: 0
     });
     expect(invalidated).toBe(1);
   });
@@ -165,14 +165,14 @@ describe("PilotOperationClient", () => {
         control_id: "control-a",
         target_position: [0, 0, 0, 0, 0, 1, 0],
         target_id: 3,
-        reference_id: -2
+        reference_id: 0 as const
       },
       {
         operation: "control.move_task_online",
         payload: {
           target_position: [0, 0, 0, 0, 0, 1, 0],
           target_id: 3,
-          reference_id: -2
+          reference_id: 0
         }
       }
     ],
