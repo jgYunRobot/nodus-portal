@@ -1,5 +1,55 @@
 # Progress
 
+## 2026-10-05 - Limit expected Pilot-offline development logs
+
+- Keep automatic reconnection requests and Vite's HTTP failure responses unchanged.
+  For Pilot `/api/` proxy `ECONNREFUSED` errors, print one short unavailable warning
+  on disconnect and at most once every 30 seconds during the same outage.
+- Print one connection-restored message after the proxy receives a Pilot response.
+  Other proxy errors and unrelated Vite errors retain their original diagnostics.
+- Scoped ESLint, Prettier, and `git diff --check` passed. Build, typecheck, tests and
+  live outage/recovery validation were not run under the explicit-request rule.
+- Include the automatic-recovery implementation and log changes in the user-authorized
+  commit/push checkpoint on `main`.
+- Next: verify terminal output through an actual Pilot outage/recovery checkpoint
+  together with the pending Portal recovery cases when requested.
+
+## 2026-10-05 - Recover Portal automatically after Pilot returns
+
+### Changes
+
+- Keep the working branch on `main` and implement Portal-only recovery through public
+  Pilot HTTP/SSE contracts.
+- Retry component registration with 500 ms exponential delays capped at 5 seconds.
+  Preserve one in-flight registration, discard stop/invalidation-era results, cancel
+  retry timers on stop, and ignore failures from superseded lifecycle sessions.
+- Close failed RobotStatus SSE connections and recreate them with capped retries.
+  Reseed snapshots and sample-number baselines on connection open, reject callbacks
+  from replaced sources, and cancel retries after the final subscription leaves.
+- Refresh RobotStatus discovery every 5 seconds. Session readiness also refreshes
+  active Pilot queries; a changed server instance clears retained snapshots and
+  reconnects active status streams.
+- Cancel the affected hold and its pending target immediately on status recovery.
+  Session invalidation retains all-hold cancellation. Recovery never replays a Control
+  mutation or automatically resumes a stopped hold.
+- Add deterministic recovery cases for registration outage/backoff/stop races, old
+  lifecycle failures, sample-number restart, source replacement, subscriber cleanup,
+  provider coordination, and discovery refresh without reload or focus events.
+
+### Status and validation
+
+- Scoped ESLint, Prettier, and `git diff --check` passed.
+- Build, typecheck, test suites, browser and live Pilot restart checks were not run
+  under the shared explicit-request rule; added regression cases remain unexecuted.
+- No Pilot/Control/provider sources, submodules, or command contracts changed.
+  Included in the user-authorized commit/push checkpoint on `main`.
+
+### Next goals
+
+- Run focused recovery tests and typecheck when requested, then verify a Portal tab
+  opened while Pilot is stopped and a subsequent Pilot stop/restart cycle without
+  reloading the page. Confirm that observation recovers and holds stay cancelled.
+
 ## 2026-10-05 - Synchronize the local Pilot API 1.9.0 contract
 
 ### Changes

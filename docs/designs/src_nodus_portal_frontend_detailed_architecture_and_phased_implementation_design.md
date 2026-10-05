@@ -564,8 +564,24 @@ snapshot. No global ordering is inferred across different Controls.
 
 The hub re-queries metadata and snapshots after lifecycle events, sequence gaps, retained-record
 gaps, publication/generation changes, or Pilot restart/server-instance changes. Reconnection uses
-bounded exponential backoff with jitter and never creates a second live subscription for the same
+capped exponential retry intervals and never creates a second live subscription for the same
 canonical key.
+
+The restart recovery implementation closes a failed status EventSource and recreates it after
+500 ms, doubling the delay up to 5 seconds while connection attempts fail. The stream's `open`
+event reseeds the authoritative HTTP snapshot and sample-number baseline, allowing a restarted
+Pilot to reuse its previous connection generation with lower sample numbers. Superseded stream
+callbacks and snapshot responses cannot overwrite the current connection. Leaving the final
+subscription cancels pending reconnection timers.
+
+Component registration retries independently with the same capped intervals and one in-flight
+request. Stop/invalidation versions discard late registration results, and a previous lifecycle
+failure cannot invalidate a replacement session. On session readiness, Portal refreshes active
+Pilot queries; a changed server instance clears previous robot snapshots and replaces active
+status subscriptions. Robot discovery also refreshes every 5 seconds, including after an empty
+directory or failed initial request. Status recovery immediately cancels the affected Control's
+hold and pending targets; session invalidation cancels all local holds. Recovery restores
+observation and session availability without replaying mutations or resuming a hold.
 
 ### 8.4 Update scheduling
 

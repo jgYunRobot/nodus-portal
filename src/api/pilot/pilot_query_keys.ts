@@ -1,4 +1,5 @@
 export const pilot_query_keys = {
+  all: ["pilot"] as const,
   health: ["pilot", "health"] as const,
   snapshot: ["pilot", "snapshot"] as const,
   components: ["pilot", "components"] as const,

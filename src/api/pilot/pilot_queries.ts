@@ -43,6 +43,7 @@ export function useRobotStatusStreams() {
   return useQuery({
     queryKey: pilot_query_keys.robot_status_streams,
     queryFn: () => pilot_client.getRobotStatusStreams(),
+    refetchInterval: DIRECTORY_FALLBACK_REFRESH_MS,
     retry: 2
   });
 }

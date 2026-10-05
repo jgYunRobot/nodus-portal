@@ -32,6 +32,8 @@ async function flush(): Promise<void> {
 
 describe("PortalComponentSession", () => {
   afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -237,5 +239,132 @@ describe("PortalComponentSession", () => {
     await flush();
     expect(registrations).toBe(2);
     expect(session.reserveOperation()?.sequence).toBe(1);
+  });
+
+  it("retries failed registration until Pilot returns and cancels retries on stop", async () => {
+    vi.useFakeTimers();
+    const register = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Pilot offline"))
+      .mockRejectedValueOnce(new Error("Pilot offline"))
+      .mockResolvedValue(response());
+    const session = new PortalComponentSession({
+      client: {
+        registerComponent: register,
+        updateComponentState: async () => lifecycleResponse(),
+        heartbeat: async () => lifecycleResponse()
+      } as never,
+      clock: { now: () => 0 },
+      component_id: "nodus-portal.test",
+      instance_id: "portal-test"
+    });
+    session.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(session.getSnapshot().phase).toBe("error");
+    expect(session.reserveOperation()).toBeNull();
+    await vi.advanceTimersByTimeAsync(500);
+    expect(register).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(register).toHaveBeenCalledTimes(3);
+    expect(session.getSnapshot().phase).toBe("ready");
+    expect(session.reserveOperation()?.sequence).toBe(1);
+    session.stop();
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(register).toHaveBeenCalledTimes(3);
+  });
+
+  it("caps registration backoff and clears its outstanding timer", async () => {
+    vi.useFakeTimers();
+    const set_timeout = vi.spyOn(window, "setTimeout");
+    const register = vi.fn().mockRejectedValue(new Error("Pilot offline"));
+    const session = new PortalComponentSession({
+      client: { registerComponent: register } as never,
+      clock: { now: () => 0 },
+      component_id: "nodus-portal.test",
+      instance_id: "portal-test"
+    });
+    session.start();
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(set_timeout.mock.calls.map((call) => call[1])).toEqual([
+      500, 1000, 2000, 4000, 5000, 5000, 5000
+    ]);
+    session.stop();
+    const attempts = register.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(register).toHaveBeenCalledTimes(attempts);
+  });
+
+  it("ignores registration from a stopped runtime and recovers without overlap", async () => {
+    vi.useFakeTimers();
+    let resolve_old: ((value: ReturnType<typeof response>) => void) | undefined;
+    const register = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolve_old = resolve;
+          })
+      )
+      .mockResolvedValue({ ...response(), session_id: "new-session" });
+    const session = new PortalComponentSession({
+      client: {
+        registerComponent: register,
+        updateComponentState: async () => lifecycleResponse(),
+        heartbeat: async () => lifecycleResponse()
+      } as never,
+      clock: { now: () => 0 },
+      component_id: "nodus-portal.test",
+      instance_id: "portal-test"
+    });
+    session.start();
+    session.stop();
+    session.start();
+    expect(register).toHaveBeenCalledTimes(1);
+    resolve_old?.(response());
+    await vi.advanceTimersByTimeAsync(0);
+    expect(session.reserveOperation()).toBeNull();
+    await vi.advanceTimersByTimeAsync(500);
+    expect(register).toHaveBeenCalledTimes(2);
+    expect(session.reserveOperation()?.session_id).toBe("new-session");
+    session.stop();
+  });
+
+  it("does not invalidate a recovered session for an old lifecycle failure", async () => {
+    vi.useFakeTimers();
+    let reject_old: ((error: Error) => void) | undefined;
+    const update_state = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise((_resolve, reject) => {
+            reject_old = reject;
+          })
+      )
+      .mockResolvedValue(lifecycleResponse());
+    const register = vi
+      .fn()
+      .mockResolvedValueOnce({ ...response(), session_id: "old-session" })
+      .mockResolvedValue({ ...response(), session_id: "new-session" });
+    const session = new PortalComponentSession({
+      client: {
+        registerComponent: register,
+        updateComponentState: update_state,
+        heartbeat: async () => lifecycleResponse()
+      } as never,
+      clock: { now: () => 0 },
+      component_id: "nodus-portal.test",
+      instance_id: "portal-test"
+    });
+    session.start();
+    await vi.advanceTimersByTimeAsync(0);
+    session.invalidate("Pilot restarted");
+    await vi.advanceTimersByTimeAsync(0);
+    reject_old?.(new Error("old Pilot disconnected"));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(register).toHaveBeenCalledTimes(2);
+    expect(session.reserveOperation()?.session_id).toBe("new-session");
+    session.notifyVisibilityChange(false);
+    expect(register).toHaveBeenCalledTimes(2);
+    session.stop();
   });
 });

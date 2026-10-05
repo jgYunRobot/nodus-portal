@@ -50,6 +50,8 @@ const COMPONENT_ID_MAX_LENGTH = 128;
 const OBSERVATION_CAPABILITY = "control.robot_status.v1";
 const OPERATION_CAPABILITY = "control.operation.v1";
 const NANOSECONDS_PER_MILLISECOND = 1_000_000;
+const REGISTRATION_RETRY_INITIAL_MS = 500;
+const REGISTRATION_RETRY_MAX_MS = 5000;
 
 function browserClock(): MonotonicClock {
   return { now: () => performance.now() };
@@ -100,6 +102,9 @@ export class PortalComponentSession {
   private lifecycle_chain: Promise<void> = Promise.resolve();
   private record: SessionRecord | null = null;
   private heartbeat_timer: number | null = null;
+  private registration_retry_timer: number | null = null;
+  private registration_retry_delay_ms = REGISTRATION_RETRY_INITIAL_MS;
+  private registration_version = 0;
   private stopped = false;
   private registration_in_flight = false;
   private last_clock_ms: number | null = null;
@@ -138,7 +143,9 @@ export class PortalComponentSession {
 
   stop(): void {
     this.stopped = true;
+    this.registration_version += 1;
     this.clearHeartbeat();
+    this.clearRegistrationRetry();
     this.record = null;
     this.last_clock_ms = null;
     this.publish({
@@ -163,7 +170,9 @@ export class PortalComponentSession {
   }
 
   invalidate(reason: string): void {
+    this.registration_version += 1;
     this.clearHeartbeat();
+    this.clearRegistrationRetry();
     this.record = null;
     this.last_clock_ms = null;
     this.on_invalidate();
@@ -217,8 +226,11 @@ export class PortalComponentSession {
   }
 
   private register(): void {
-    if (this.stopped || this.registration_in_flight) return;
+    if (this.stopped || this.registration_in_flight || this.record !== null)
+      return;
+    this.clearRegistrationRetry();
     this.registration_in_flight = true;
+    const registration_version = this.registration_version;
     const registration_requested_ms = this.clock.now();
     const started_at = Math.floor(
       registration_requested_ms * NANOSECONDS_PER_MILLISECOND
@@ -244,7 +256,8 @@ export class PortalComponentSession {
     void this.client
       .registerComponent(request)
       .then((response) => {
-        if (this.stopped) return;
+        if (this.stopped || this.registration_version !== registration_version)
+          return;
         const response_received_ms = this.clock.now();
         if (
           !Number.isFinite(response_received_ms) ||
@@ -268,6 +281,7 @@ export class PortalComponentSession {
           operation_generation: 0
         };
         this.last_clock_ms = response_received_ms;
+        this.registration_retry_delay_ms = REGISTRATION_RETRY_INITIAL_MS;
         this.publish({
           phase: "ready",
           server_instance_id: response.server_instance_id,
@@ -282,7 +296,10 @@ export class PortalComponentSession {
         this.scheduleHeartbeat();
       })
       .catch((error: unknown) => {
-        if (!this.stopped) {
+        if (
+          !this.stopped &&
+          this.registration_version === registration_version
+        ) {
           this.publish({
             phase: "error",
             server_instance_id: null,
@@ -295,6 +312,8 @@ export class PortalComponentSession {
       })
       .finally(() => {
         this.registration_in_flight = false;
+        if (!this.stopped && this.record === null)
+          this.scheduleRegistrationRetry();
       });
   }
 
@@ -343,6 +362,8 @@ export class PortalComponentSession {
         }
       })
       .catch((error: unknown) => {
+        if (this.stopped || this.record?.session_id !== expected_session_id)
+          return;
         this.invalidate(
           error instanceof Error
             ? error.message
@@ -369,6 +390,24 @@ export class PortalComponentSession {
   private clearHeartbeat(): void {
     if (this.heartbeat_timer !== null) this.clear_timeout(this.heartbeat_timer);
     this.heartbeat_timer = null;
+  }
+
+  private scheduleRegistrationRetry(): void {
+    this.clearRegistrationRetry();
+    this.registration_retry_timer = this.set_timeout(() => {
+      this.registration_retry_timer = null;
+      this.register();
+    }, this.registration_retry_delay_ms);
+    this.registration_retry_delay_ms = Math.min(
+      this.registration_retry_delay_ms * 2,
+      REGISTRATION_RETRY_MAX_MS
+    );
+  }
+
+  private clearRegistrationRetry(): void {
+    if (this.registration_retry_timer !== null)
+      this.clear_timeout(this.registration_retry_timer);
+    this.registration_retry_timer = null;
   }
 
   private publish(snapshot: PortalSessionSnapshot): void {

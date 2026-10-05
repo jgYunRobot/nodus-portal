@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { PilotStreamHub } from "./pilot_stream_hub";
 
 function status(control_id: string, generation: number, sequence: number) {
@@ -46,7 +46,24 @@ function status(control_id: string, generation: number, sequence: number) {
   };
 }
 
+function createStreamSource() {
+  const listeners = new Map<string, (event: Event) => void>();
+  return {
+    addEventListener: (type: string, listener: (event: Event) => void) => {
+      listeners.set(type, listener);
+    },
+    close: vi.fn(),
+    onerror: null as ((event: Event) => unknown) | null,
+    emit: (type: string, value?: unknown) => {
+      listeners.get(type)?.(
+        new MessageEvent(type, { data: JSON.stringify(value) })
+      );
+    }
+  };
+}
+
 describe("PilotStreamHub", () => {
+  afterEach(() => vi.useRealTimers());
   it("keeps the initial external-store snapshot referentially stable", () => {
     const hub = new PilotStreamHub({
       create_source: () => ({
@@ -83,6 +100,16 @@ describe("PilotStreamHub", () => {
     expect(hub.getSnapshot("alpha").state).toBe("live");
     expect(hub.getSnapshot("alpha").status?.sample?.sample_sequence).toBe(3);
     expect(read_latest).not.toHaveBeenCalled();
+  });
+  it("does not rebase numbering for a malformed event in the same connection", () => {
+    const hub = new PilotStreamHub();
+    hub.accept("alpha", status("alpha", 1, 100));
+    hub.accept("alpha", { control_id: "alpha" });
+    hub.accept("alpha", status("alpha", 1, 99));
+    expect(hub.getSnapshot("alpha").state).toBe("malformed");
+    expect(hub.getSnapshot("alpha").status?.sample?.sample_sequence).toBe(100);
+    hub.accept("alpha", status("alpha", 1, 101));
+    expect(hub.getSnapshot("alpha").state).toBe("live");
   });
   it("accepts a new generation without comparing its old cursor", () => {
     const hub = new PilotStreamHub();
@@ -157,5 +184,99 @@ describe("PilotStreamHub", () => {
     resolve_latest?.(status("alpha", 1, 1));
     await Promise.resolve();
     expect(hub.getSnapshot("alpha").status?.sample?.sample_sequence).toBe(3);
+  });
+
+  it("reopens a failed SSE source and accepts restarted sample numbering", async () => {
+    vi.useFakeTimers();
+    const sources: ReturnType<typeof createStreamSource>[] = [];
+    let offline = true;
+    const hub = new PilotStreamHub({
+      create_source: () => {
+        const source = createStreamSource();
+        sources.push(source);
+        return source;
+      },
+      read_latest: async () => {
+        if (offline) throw new Error("Pilot offline");
+        return status("alpha", 1, 1) as never;
+      }
+    });
+    hub.accept("alpha", status("alpha", 1, 100_000));
+    hub.connect("alpha");
+    sources[0]!.onerror?.(new Event("error"));
+    expect(sources[0]!.close).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(hub.getSnapshot("alpha").state).toBe("error");
+    offline = false;
+    await vi.advanceTimersByTimeAsync(500);
+    sources[1]!.emit("open");
+    sources[1]!.emit("robot_status", status("alpha", 1, 2));
+    sources[0]!.emit("robot_status", status("alpha", 1, 200_000));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(sources).toHaveLength(2);
+    expect(hub.getSnapshot("alpha").state).toBe("live");
+    expect(hub.getSnapshot("alpha").status?.sample?.sample_sequence).toBe(2);
+    hub.disconnect("alpha");
+  });
+
+  it("clears reconnection timers when the last subscriber leaves", async () => {
+    vi.useFakeTimers();
+    const source = createStreamSource();
+    const create_source = vi.fn(() => source);
+    const hub = new PilotStreamHub({
+      create_source,
+      read_latest: async () => {
+        throw new Error("Pilot offline");
+      }
+    });
+    const unsubscribe = hub.subscribe("alpha", vi.fn());
+    hub.connect("alpha");
+    source.onerror?.(new Event("error"));
+    unsubscribe();
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(create_source).toHaveBeenCalledTimes(1);
+    expect(hub.getSnapshot("alpha").state).toBe("recovering");
+  });
+
+  it("drops old server snapshots and ignores its delayed recovery response", async () => {
+    const sources: ReturnType<typeof createStreamSource>[] = [];
+    let resolve_old: ((value: ReturnType<typeof status>) => void) | undefined;
+    const read_latest = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolve_old = resolve;
+          })
+      )
+      .mockResolvedValue(status("alpha", 1, 1));
+    const hub = new PilotStreamHub({
+      create_source: () => {
+        const source = createStreamSource();
+        sources.push(source);
+        return source;
+      },
+      read_latest
+    });
+    const on_recovery = vi.fn();
+    const unsubscribe_recovery = hub.subscribeRecovery(on_recovery);
+    hub.observeServerInstance("pilot-a");
+    hub.accept("alpha", status("alpha", 1, 100_000));
+    hub.accept("inactive", status("inactive", 1, 200_000));
+    hub.connect("alpha");
+    hub.observeServerInstance("pilot-b");
+    expect(hub.getSnapshot("alpha").status).toBeNull();
+    expect(hub.getSnapshot("inactive").status).toBeNull();
+    resolve_old?.(status("alpha", 1, 300_000));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(hub.getSnapshot("alpha").status?.sample?.sample_sequence).toBe(1);
+    expect(sources[0]!.close).toHaveBeenCalledTimes(1);
+    expect(sources).toHaveLength(2);
+    expect(on_recovery).toHaveBeenCalledWith("alpha");
+    hub.observeServerInstance("pilot-b");
+    expect(sources).toHaveLength(2);
+    unsubscribe_recovery();
+    hub.disconnect("alpha");
   });
 });

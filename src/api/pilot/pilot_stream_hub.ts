@@ -20,7 +20,12 @@ interface PilotStreamHubOptions {
   read_latest?: (
     control_id: string
   ) => Promise<components["schemas"]["ControlStatusResponse"]>;
+  set_timeout?: typeof window.setTimeout;
+  clear_timeout?: typeof window.clearTimeout;
 }
+
+const STREAM_RETRY_INITIAL_MS = 500;
+const STREAM_RETRY_MAX_MS = 5000;
 
 export class PilotStreamHub {
   private readonly snapshots = new Map<string, ControlStatusSnapshot>();
@@ -28,17 +33,57 @@ export class PilotStreamHub {
   private readonly listeners = new Map<string, Set<Listener>>();
   private readonly sources = new Map<string, StreamSource>();
   private readonly recovery_versions = new Map<string, number>();
+  private readonly reseeding_controls = new Set<string>();
+  private readonly reconnect_timers = new Map<string, number>();
+  private readonly reconnect_delays = new Map<string, number>();
+  private readonly recovery_listeners = new Set<(control_id: string) => void>();
+  private readonly set_timeout: typeof window.setTimeout;
+  private readonly clear_timeout: typeof window.clearTimeout;
+  private server_instance_id: string | null = null;
   private readonly create_source: (url: string) => StreamSource;
   private readonly read_latest: (
     control_id: string
   ) => Promise<components["schemas"]["ControlStatusResponse"]>;
   constructor(options: PilotStreamHubOptions = {}) {
+    this.set_timeout = options.set_timeout ?? window.setTimeout.bind(window);
+    this.clear_timeout =
+      options.clear_timeout ?? window.clearTimeout.bind(window);
     this.create_source =
       options.create_source ??
       ((url) => new EventSource(resolvePilotPath(url)));
     this.read_latest =
       options.read_latest ??
       ((control_id) => new PilotHttpClient().getControlStatus(control_id));
+  }
+  subscribeRecovery(listener: (control_id: string) => void): () => void {
+    this.recovery_listeners.add(listener);
+    return () => this.recovery_listeners.delete(listener);
+  }
+  observeServerInstance(server_instance_id: string): void {
+    const previous_server_instance_id = this.server_instance_id;
+    this.server_instance_id = server_instance_id;
+    if (
+      previous_server_instance_id === null ||
+      previous_server_instance_id === server_instance_id
+    )
+      return;
+    const active_controls = new Set([
+      ...this.sources.keys(),
+      ...this.reconnect_timers.keys()
+    ]);
+    for (const control_id of this.snapshots.keys()) {
+      this.invalidateRecovery(control_id);
+      this.publish({
+        control_id,
+        status: null,
+        state: "recovering",
+        last_error: "Pilot server instance changed; status is being reseeded."
+      });
+    }
+    for (const control_id of active_controls) {
+      this.disconnect(control_id);
+      this.connect(control_id);
+    }
   }
   getSnapshot(control_id: string): ControlStatusSnapshot {
     const snapshot = this.snapshots.get(control_id);
@@ -79,11 +124,11 @@ export class PilotStreamHub {
       });
       return;
     }
-    this.invalidateRecovery(control_id);
     const previous = this.getSnapshot(control_id);
     const next_sample = value.sample;
     const previous_sample = previous.status?.sample;
     if (
+      !this.reseeding_controls.has(control_id) &&
       next_sample !== null &&
       previous_sample !== null &&
       previous_sample !== undefined &&
@@ -93,6 +138,8 @@ export class PilotStreamHub {
       if (next_sample.sample_sequence <= previous_sample.sample_sequence)
         return;
     }
+    this.invalidateRecovery(control_id);
+    this.reseeding_controls.delete(control_id);
     this.publish({
       control_id,
       status: value,
@@ -110,11 +157,24 @@ export class PilotStreamHub {
     });
   }
   connect(control_id: string): void {
-    if (this.sources.has(control_id)) return;
+    if (this.sources.has(control_id) || this.reconnect_timers.has(control_id))
+      return;
+    this.reseeding_controls.add(control_id);
     const source = this.create_source(
       `/api/v1/controls/${encodeURIComponent(control_id)}/status/stream`
     );
+    this.sources.set(control_id, source);
+    source.addEventListener("open", () => {
+      if (this.sources.get(control_id) !== source) return;
+      this.reconnect_delays.delete(control_id);
+      this.reseeding_controls.add(control_id);
+      this.startRecovery(
+        control_id,
+        "Control status SSE connected; reseeding status."
+      );
+    });
     source.addEventListener("robot_status", (event) => {
+      if (this.sources.get(control_id) !== source) return;
       try {
         this.accept(
           control_id,
@@ -127,20 +187,42 @@ export class PilotStreamHub {
         );
       }
     });
-    source.onerror = () =>
+    source.onerror = () => {
+      if (this.sources.get(control_id) !== source) return;
+      this.sources.delete(control_id);
+      source.close();
       this.startRecovery(
         control_id,
         "Control status SSE connection failed; recovery is required."
       );
-    this.sources.set(control_id, source);
+      const delay_ms =
+        this.reconnect_delays.get(control_id) ?? STREAM_RETRY_INITIAL_MS;
+      this.reconnect_delays.set(
+        control_id,
+        Math.min(delay_ms * 2, STREAM_RETRY_MAX_MS)
+      );
+      this.reconnect_timers.set(
+        control_id,
+        this.set_timeout(() => {
+          this.reconnect_timers.delete(control_id);
+          this.connect(control_id);
+        }, delay_ms)
+      );
+    };
     this.startRecovery(
       control_id,
       "Control status subscription is reseeding from the latest snapshot."
     );
   }
   disconnect(control_id: string): void {
-    this.sources.get(control_id)?.close();
+    this.reseeding_controls.add(control_id);
+    const source = this.sources.get(control_id);
     this.sources.delete(control_id);
+    source?.close();
+    const reconnect_timer = this.reconnect_timers.get(control_id);
+    if (reconnect_timer !== undefined) this.clear_timeout(reconnect_timer);
+    this.reconnect_timers.delete(control_id);
+    this.reconnect_delays.delete(control_id);
     this.invalidateRecovery(control_id);
     const snapshot = this.getSnapshot(control_id);
     this.publish({
@@ -169,6 +251,7 @@ export class PilotStreamHub {
           });
           return;
         }
+        this.reseeding_controls.delete(control_id);
         this.publish({
           control_id,
           status,
@@ -194,6 +277,10 @@ export class PilotStreamHub {
   }
   private publish(snapshot: ControlStatusSnapshot): void {
     this.snapshots.set(snapshot.control_id, snapshot);
+    if (snapshot.state !== "live" && snapshot.state !== "idle")
+      this.recovery_listeners.forEach((listener) =>
+        listener(snapshot.control_id)
+      );
     this.listeners.get(snapshot.control_id)?.forEach((listener) => listener());
   }
 }
