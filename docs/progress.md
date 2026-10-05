@@ -1912,3 +1912,89 @@
 
 - When requested, run typecheck and focused existing route/hold-control/Device acceptance suites.
 - Review live camera/operator payloads and actual robot operation as a separate runtime checkpoint.
+
+## 2026-10-03 - Stable real-time value positions
+
+### Changes
+
+- Operation's real-time joint values now reserve one explicit sign and four integer digits
+  before the fixed three-decimal fraction. Left-pad the rounded magnitude in the existing
+  monospace/tabular figures so sign and integer digit changes do not move the decimal point.
+- Render units separately and allow wrapping only between the complete number and its unit.
+  Retained existing unavailable-value dashes, numerical rounding, freshness rules and cadence.
+- Updated the operator workspace design with this presentation rule. Values beyond the reserved
+  four-digit integer capacity remain visible and may extend the field rather than being clipped.
+
+### Status and validation
+
+- Inspected the actual Operation route with isolated, accepted frontend status fixtures.
+  Across `+0.001`, `−0.001`, `+9.999`, `−10.001`, `+999.999` and `−9999.999`, the number
+  field stayed at x=381 with width=64.8125 px, its decimal point at x=417 and unit at
+  x=451.8125. Also inspected `−0.000` and an unavailable torque dash.
+- At 320 px the document width remained 320 px; numbers stay intact and units wrap below.
+  Browser inspection reported no page errors. This does not establish live hardware behavior.
+- Scoped Operation-page ESLint, formatting and `git diff --check` passed. Build, typecheck and
+  test suites were not run under the shared explicit-request rule.
+- Existing logo assets and unrelated working-tree changes were preserved. No commit or push.
+
+### Next goals
+
+- Review the value layout with live feedback during the next requested runtime checkpoint.
+
+## 2026-10-03 - Tactile teaching-pendant motion
+
+### Changes
+
+- Added shared press/release/panel timings (60/240/280 ms) and settling/spring-like easing.
+  Shared keyframes are consumed through global custom properties so CSS Modules do not
+  rename animation references away from their definitions.
+- Buttons and Jog labels press inward and settle back inside their existing hit areas.
+  Joint/Task selection slides; sidebar and Dock widths transition; Device cards move and
+  scale. Home selection, route entry, the theme menu and mobile drawer receive brief motion.
+- Keep telemetry formatting/cadence, hold handlers, capture, cancellation, session and
+  command scheduling unchanged. Reuse existing Radix exit presence and focus restoration.
+  Reduced-motion preferences suppress delays and reduce animation/transition durations;
+  Dock retains its immediate-content path.
+- Updated the existing operator workspace design. Added no dependency or runtime timer.
+
+### Status and validation
+
+- Inspected the Vite UI in Chromium using isolated public-API fixtures and frontend status
+  updates. Confirmed active CSS keyframes/transitions for tabs, menu/drawer, navigation,
+  Dock, Device cards and Home selection; no browser page errors were reported.
+- Mouse and Enter holds showed pressed state and elastic label feedback. Joint hit area
+  remained 44 x 44 px at the same coordinates; the shared button hit area also stayed fixed.
+  Mouse release stopped fixture operations with no further requests during the observed
+  interval; keyboard release cleared pressed state. Touch emulation delivered pointer
+  down/up and capture release events and exercised the same fixture command path.
+- Rapid Dock reversals returned to the collapsed 244 px width, then exposed shared controls
+  after expansion. Drawer exit completed and returned focus to Open navigation. Reduced
+  motion used 1 ms menu/drawer effects and displayed expanded Dock commands. At 320 px
+  the document width stayed 320 px. This is browser inspection, not hardware evidence.
+- Scoped ESLint, formatting and `git diff --check` passed. Build, typecheck and test suites
+  were not run under the shared explicit-request rule. Prior numeric and logo work was
+  preserved; no commit or push.
+
+### Next goals
+
+- Review the interaction feel on the intended touch device during the next requested
+  live-runtime checkpoint and adjust the shared timing tokens if necessary.
+
+## 2026-10-04 - UI/UX commit checkpoint
+
+### Changes and status
+
+- Commit the stable real-time value layout and tactile teaching-pendant motion together
+  with their existing design and validation records.
+- Ignore local logo assets under `temp_design/` and their exploration design document.
+  Preserve both logo rounds on disk and move their uncommitted progress entries into
+  `temp_design/logo_progress_notes.md` so this checkpoint includes only UI/UX work.
+- No command-runtime, dependency or submodule changes. Publication is outside this checkpoint.
+
+### Validation and next goals
+
+- Scoped ESLint, formatting and diff whitespace checks passed. Reviewed the staged
+  file list and diff; logo assets and exploration records are excluded.
+- Reuse the browser inspection evidence recorded in the preceding UI/UX entries; build,
+  typecheck and test suites remain unrun under the shared explicit-request rule.
+- Review feel on the intended touch device during a later requested runtime checkpoint.

@@ -28,10 +28,24 @@ const RobotScene = lazy(() =>
   }))
 );
 
-function formatValue(value: number | undefined, unit: string): string {
-  return typeof value === "number" && Number.isFinite(value)
-    ? `${value.toFixed(3)} ${unit}`
-    : "—";
+function formatValue(value: number | undefined, unit: string) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return <span className={styles.value_number}>—</span>;
+  }
+
+  const formatted_value = value.toFixed(3);
+  const is_negative = formatted_value.startsWith("-");
+  const magnitude = is_negative ? formatted_value.slice(1) : formatted_value;
+
+  return (
+    <span className={styles.value_measurement}>
+      <span className={styles.value_number}>
+        {is_negative ? "−" : "+"}
+        {magnitude.padStart(8, " ")}
+      </span>
+      <span className={styles.value_unit}>{unit}</span>
+    </span>
+  );
 }
 
 export function OperationPage() {

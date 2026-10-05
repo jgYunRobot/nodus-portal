@@ -91,8 +91,10 @@
   position: absolute;
   transform: scale(0.9);
   transition:
-    opacity 160ms ease,
-    transform 160ms ease;
+    opacity var(--motion-exit) var(--ease-settle),
+    transform var(--motion-panel) var(--ease-spring),
+    inset-inline-start var(--motion-panel) var(--ease-settle),
+    inline-size var(--motion-panel) var(--ease-settle);
 }
 
 .deck_card[data-offset="-2"],

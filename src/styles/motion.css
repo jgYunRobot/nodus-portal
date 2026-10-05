@@ -1,10 +1,95 @@
+:root {
+  /* Keep shared keyframe names global when consumed by CSS Modules. */
+  --animation-fade-in: portal-fade-in var(--motion-exit) var(--ease-settle);
+  --animation-reveal: portal-fade-in var(--motion-release) var(--ease-settle);
+  --animation-fade-out: portal-fade-out var(--motion-exit) ease-in;
+  --animation-drawer-in: portal-drawer-in var(--motion-panel) var(--ease-spring);
+  --animation-drawer-out: portal-drawer-out var(--motion-exit) ease-in;
+  --animation-pop-in: portal-pop-in var(--motion-release) var(--ease-spring);
+  --animation-pop-out: portal-pop-out var(--motion-fast) ease-in;
+  --animation-selection: portal-selection var(--motion-release)
+    var(--ease-settle);
+}
+
+@keyframes portal-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes portal-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes portal-drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes portal-drawer-out {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes portal-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes portal-pop-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+@keyframes portal-selection {
+  0% {
+    transform: scale(0.9);
+  }
+  65% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
   }
 }

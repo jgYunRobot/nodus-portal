@@ -18,7 +18,9 @@ export function Button({
     .join(" ");
   return (
     <button className={button_class_name} type="button" {...props}>
-      {children}
+      <span className={styles.content} data-button-content>
+        {children}
+      </span>
     </button>
   );
 }

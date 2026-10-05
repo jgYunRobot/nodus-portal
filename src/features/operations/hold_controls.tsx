@@ -87,7 +87,7 @@ function HoldButton({
       onPointerUp={stop}
       type="button"
     >
-      {display_label}
+      <span className={styles.hold_label}>{display_label}</span>
     </button>
   );
 }
@@ -198,7 +198,12 @@ export function HoldControls({ control_id }: HoldControlsProps) {
         <output htmlFor={`jog-speed-${control_id}`}>{speed_percent}%</output>
       </div>
 
-      <div aria-label="Jog mode" className={styles.tabs} role="tablist">
+      <div
+        aria-label="Jog mode"
+        className={styles.tabs}
+        data-mode={mode}
+        role="tablist"
+      >
         <button
           aria-selected={mode === "joint"}
           className={mode === "joint" ? styles.tab_selected : styles.tab}

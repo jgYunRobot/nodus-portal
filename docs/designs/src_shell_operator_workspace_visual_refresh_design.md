@@ -43,6 +43,21 @@ specific identity; Impeccable Operate's legible states and task-led layout. Thes
 are adapted principles, not imported design libraries or copied brand identities.
 No decorative metrics, fake activity, continuous glow or reconstructed robot asset.
 
+## Fixed-position real-time measurements
+
+2026-10-03 follow-up: reserve one sign position and eight magnitude positions
+(four integer digits, decimal point, three fractional digits) in Operation's
+existing monospace/tabular figures. Show both `+` and `−` explicitly and pad the
+rounded magnitude on the left. Preserve `toFixed(3)` rounding, including negative
+values that round to `−0.000`, and the existing unavailable-value dash.
+
+Render the unit separately so sign changes and ordinary integer digit changes do
+not move the decimal point or unit. Wrap only between the complete number and its
+unit on narrow screens. Values exceeding the reserved integer capacity remain
+fully visible and may extend the number field; do not truncate or clamp telemetry.
+Inspect positive/negative transitions, zero, integer digit changes, unavailable
+values and a 320 px layout without changing status cadence or numerical inputs.
+
 ## Contract and validation boundaries
 
 Keep all published Pilot/provider endpoints, subscription ownership, exact Control
@@ -55,3 +70,23 @@ fixtures; use only presentation interactions, not hardware commands. Report
 fixture inspection separately from runtime/hardware evidence. Format changed
 files, inspect scoped lint and diff whitespace. Shared rules require an explicit
 user request before builds or test suites, so neither runs by default.
+
+## Tactile teaching-pendant motion
+
+2026-10-03: the user requested a more elastic interaction feel for Portal as a
+teaching pendant. Keep motion tied to actions: immediate press feedback, a short
+spring-like release, sliding selection, panel reveal and navigation transitions.
+Use shared CSS durations/easing and existing primitives without a new dependency.
+
+- Animate the inside of buttons rather than the command hit areas. Jog pointer
+  capture, pointer/key release, cancellation and command scheduling remain synchronous.
+- Give Joint/Task an animated sliding selection surface driven by the existing mode.
+- Animate the existing route container with opacity only: no transforms that would
+  change positioning contexts or move measurements/command targets. Do not add a new
+  route key or remount boundary; do not animate each status update.
+- Smooth sidebar width, right-anchored Dock width, Device card position/scale and
+  mobile drawer entry/exit. Keep Dock space independent of main-content dimensions.
+- Reveal the theme menu and acknowledge Home selection; avoid continuous pulses,
+  loading choreography, telemetry interpolation or optimistic hardware-state changes.
+- Honor reduced motion with immediate visual states and no delayed animations.
+  Inspect mouse, keyboard, touch, focus return, rapid reversals and disabled states.
