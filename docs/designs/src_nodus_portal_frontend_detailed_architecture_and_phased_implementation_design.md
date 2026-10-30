@@ -572,7 +572,9 @@ The restart recovery implementation closes a failed status EventSource and recre
 event reseeds the authoritative HTTP snapshot and sample-number baseline, allowing a restarted
 Pilot to reuse its previous connection generation with lower sample numbers. Superseded stream
 callbacks and snapshot responses cannot overwrite the current connection. Leaving the final
-subscription cancels pending reconnection timers.
+subscription cancels pending reconnection timers. Unsubscribe is idempotent under synchronous
+recovery callbacks, and retry timers exist before those callbacks so teardown cancels them.
+Retry delay resets after a valid status sample, rather than an SSE open/close handshake alone.
 
 Component registration retries independently with the same capped intervals and one in-flight
 request. Stop/invalidation versions discard late registration results, and a previous lifecycle

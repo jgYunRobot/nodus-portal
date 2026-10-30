@@ -1,6 +1,16 @@
 import { expect, test } from "@playwright/test";
 import { Buffer } from "node:buffer";
 
+// Legacy route fixtures exercise an explicitly configured single Pilot.
+test.beforeEach(async ({ page }) => {
+  await page.route(
+    (url) => url.pathname === "/__portal/pilots",
+    async (route) => {
+      await route.fulfill({ status: 404, body: "" });
+    }
+  );
+});
+
 function createControlStatus(
   control_id: string,
   options: { available?: boolean; fresh?: boolean; stale?: boolean } = {}

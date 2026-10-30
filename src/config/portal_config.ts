@@ -3,6 +3,8 @@ const SAME_ORIGIN = "same-origin";
 export interface PortalConfig {
   pilot_base_url: string;
   portal_label: string;
+  pilot_discovery_enabled?: boolean;
+  pilot_id?: string | null;
 }
 
 interface RawPortalConfig {

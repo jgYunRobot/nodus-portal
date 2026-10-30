@@ -7,12 +7,13 @@ import {
   PanelLeftClose,
   PanelLeftOpen
 } from "lucide-react";
-import { useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import {
   Navigate,
   NavLink,
   Outlet,
   useLocation,
+  useNavigate,
   useParams
 } from "react-router";
 import { useRobotStatusStreams } from "../api/pilot/pilot_queries";
@@ -20,6 +21,12 @@ import { Button } from "../components/actions/button";
 import { Drawer } from "../components/layout/drawer";
 import { ThemeMenu } from "../components/actions/theme_menu";
 import { getPortalConfig } from "../config/portal_config";
+import { navigateToPilot } from "../config/pilot_launch";
+import {
+  choosePilotId,
+  withPilotScope
+} from "../features/pilot_directory/pilot_directory";
+import { usePilotDirectory } from "../features/pilot_directory/use_pilot_directory";
 import { createRobotDirectory } from "../features/robot_directory/robot_directory";
 import { getEffectiveControlId } from "./robot_route_selection";
 import { useRobotDockState } from "./robot_dock_state";
@@ -33,6 +40,49 @@ export function PortalShell() {
   const navigation_trigger = useRef<HTMLButtonElement>(null);
   const { control_id: route_control_id } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
+  const pilots = usePilotDirectory();
+  const config = getPortalConfig();
+  useEffect(() => {
+    if (
+      config.pilot_discovery_enabled &&
+      config.pilot_id === null &&
+      pilots.data
+    ) {
+      const pilot_id = choosePilotId(pilots.data, null, null);
+      if (pilot_id !== null)
+        navigateToPilot(
+          pilot_id,
+          `${location.pathname}${location.search}${location.hash}`
+        );
+    }
+  }, [
+    config.pilot_discovery_enabled,
+    config.pilot_id,
+    pilots.data,
+    location.pathname,
+    location.search,
+    location.hash
+  ]);
+  useEffect(() => {
+    if (
+      config.pilot_id &&
+      new URLSearchParams(location.search).get("pilot") !== config.pilot_id
+    )
+      void navigate(
+        withPilotScope(
+          `${location.pathname}${location.search}${location.hash}`,
+          config.pilot_id
+        ),
+        { replace: true }
+      );
+  }, [
+    config.pilot_id,
+    location.pathname,
+    location.search,
+    location.hash,
+    navigate
+  ]);
   const robot_dock = useRobotDockState();
   const streams = useRobotStatusStreams();
   const directory =
@@ -45,7 +95,9 @@ export function PortalShell() {
   const operation_target = createRobotPageTarget(control_id);
 
   if (has_no_discovered_robots && route_control_id !== undefined)
-    return <Navigate replace to="/home" />;
+    return (
+      <Navigate replace to={withPilotScope("/home", config.pilot_id ?? null)} />
+    );
 
   return (
     <div
@@ -125,11 +177,20 @@ export function PortalShell() {
                 : `Control ${route_control_id}`}
           </p>
           <p className={styles.connection}>
-            {streams.isError
-              ? "Pilot discovery unavailable"
-              : streams.isPending
-                ? "Checking Pilot discovery…"
-                : "Pilot directory loaded"}
+            {config.pilot_discovery_enabled && config.pilot_id === null
+              ? "Select a robot to connect"
+              : streams.isError
+                ? "Pilot discovery unavailable"
+                : streams.isPending
+                  ? "Checking Pilot discovery…"
+                  : "Pilot directory loaded"}
+            {config.pilot_discovery_enabled
+              ? ` · ${pilots.data?.pilots.length ?? 0} Pilots`
+              : ""}
+            {pilots.data?.partial ? " · Partial discovery" : ""}
+            {pilots.data?.discovery_error
+              ? " · Local discovery unavailable"
+              : ""}
           </p>
         </div>
         <ThemeMenu />
@@ -149,8 +210,11 @@ export function PortalShell() {
 }
 
 function createRobotPageTarget(control_id: string | null): string {
-  if (control_id === null) return "/home";
-  return `/robots/${encodeURIComponent(control_id)}/operation`;
+  const path =
+    control_id === null
+      ? "/home"
+      : `/robots/${encodeURIComponent(control_id)}/operation`;
+  return withPilotScope(path, getPortalConfig().pilot_id ?? null);
 }
 
 function Navigation({
@@ -173,11 +237,20 @@ function Navigation({
   return (
     <nav aria-label="Portal navigation" className={styles.navigation}>
       <p>Workspace</p>
-      <NavLink end onClick={on_navigate} title="Home" to="/home">
+      <NavLink
+        end
+        onClick={on_navigate}
+        title="Home"
+        to={withPilotScope("/home", getPortalConfig().pilot_id ?? null)}
+      >
         <House aria-hidden="true" />
         <span>Home</span>
       </NavLink>
-      <NavLink onClick={on_navigate} title="Devices" to="/devices">
+      <NavLink
+        onClick={on_navigate}
+        title="Devices"
+        to={withPilotScope("/devices", getPortalConfig().pilot_id ?? null)}
+      >
         <Boxes aria-hidden="true" />
         <span>Devices</span>
       </NavLink>

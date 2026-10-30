@@ -1,5 +1,6 @@
 import { createLogger, defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
+import { localPilotPlugin } from "./scripts/local_pilots";
 
 export default defineConfig(({ mode }) => {
   const environment = loadEnv(mode, process.cwd(), "VITE_");
@@ -36,7 +37,15 @@ export default defineConfig(({ mode }) => {
 
   return {
     customLogger: logger,
-    plugins: [react()],
+    plugins: [
+      react(),
+      localPilotPlugin([
+        ...(pilot_proxy_target ? [pilot_proxy_target] : []),
+        ...(process.env.PORTAL_PILOT_URLS?.split(",")
+          .map((url) => url.trim())
+          .filter(Boolean) ?? [])
+      ])
+    ],
     server:
       pilot_proxy_target === undefined || pilot_proxy_target.length === 0
         ? undefined

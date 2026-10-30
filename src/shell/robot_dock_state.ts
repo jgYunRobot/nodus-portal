@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { getPortalConfig } from "../config/portal_config";
 
 export type RobotDockMode = "expanded" | "collapsed";
 
@@ -8,6 +9,13 @@ export interface RobotDockPresentationState {
 }
 
 export const ROBOT_DOCK_STORAGE_KEY = "nodus_portal.robot_dock.v1";
+
+function getStorageKey(): string {
+  const config = getPortalConfig();
+  return config.pilot_discovery_enabled
+    ? `${ROBOT_DOCK_STORAGE_KEY}.${config.pilot_id ?? "unselected"}`
+    : ROBOT_DOCK_STORAGE_KEY;
+}
 
 const EMPTY_STATE: RobotDockPresentationState = {
   preferred_control_id: null,
@@ -27,6 +35,22 @@ export function useRobotDockState(): RobotDockPresentationState {
 
 export function setPreferredControlId(control_id: string | null): void {
   updateRobotDockState({ ...state, preferred_control_id: control_id });
+}
+
+export function setPilotPreferredControlId(
+  pilot_id: string,
+  control_id: string
+): void {
+  try {
+    const key = `${ROBOT_DOCK_STORAGE_KEY}.${pilot_id}`;
+    const target = parseRobotDockState(window.localStorage.getItem(key));
+    window.localStorage.setItem(
+      key,
+      JSON.stringify({ ...target, preferred_control_id: control_id })
+    );
+  } catch {
+    // The robot-scoped URL still identifies the destination without storage.
+  }
 }
 
 export function setRobotDockMode(mode: RobotDockMode): void {
@@ -67,9 +91,7 @@ function getRobotDockState(): RobotDockPresentationState {
 export function readRobotDockState(): RobotDockPresentationState {
   if (typeof window === "undefined") return EMPTY_STATE;
   try {
-    return parseRobotDockState(
-      window.localStorage.getItem(ROBOT_DOCK_STORAGE_KEY)
-    );
+    return parseRobotDockState(window.localStorage.getItem(getStorageKey()));
   } catch {
     return EMPTY_STATE;
   }
@@ -79,10 +101,7 @@ function updateRobotDockState(next_state: RobotDockPresentationState): void {
   state = next_state;
   if (typeof window !== "undefined") {
     try {
-      window.localStorage.setItem(
-        ROBOT_DOCK_STORAGE_KEY,
-        JSON.stringify(state)
-      );
+      window.localStorage.setItem(getStorageKey(), JSON.stringify(state));
     } catch {
       // 브라우저 저장소를 사용할 수 없어도 현재 Portal 세션의 선택 상태는 유지한다.
     }

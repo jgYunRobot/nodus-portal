@@ -164,3 +164,9 @@
 .action:hover {
   background: var(--color-accent-hover);
 }
+
+.select_button:disabled,
+.action[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}

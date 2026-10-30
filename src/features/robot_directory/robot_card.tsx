@@ -4,6 +4,9 @@ import { useControlStatus } from "../../api/pilot/use_control_status";
 import { Card } from "../../components/feedback/card";
 import { StatusBadge } from "../../components/feedback/status_badge";
 import type { RobotDirectoryEntry } from "./robot_directory";
+import { getPortalConfig } from "../../config/portal_config";
+import { withPilotScope } from "../pilot_directory/pilot_directory";
+import { useRobotSelectionLocked } from "../operations/portal_operation_context";
 import { createRobotCardViewModel } from "./robot_card_model";
 import {
   setPreferredControlId,
@@ -16,8 +19,10 @@ export function RobotCard({ entry }: { entry: RobotDirectoryEntry }) {
   const robot = createRobotCardViewModel(entry, snapshot);
   const robot_dock = useRobotDockState();
   const is_selected = robot.control_id === robot_dock.preferred_control_id;
+  const locked = useRobotSelectionLocked();
 
   function selectRobot(): void {
+    if (locked) return;
     setPreferredControlId(robot.control_id);
   }
 
@@ -68,6 +73,7 @@ export function RobotCard({ entry }: { entry: RobotDirectoryEntry }) {
           aria-label={`Select ${robot.control_id}`}
           aria-pressed={is_selected}
           className={styles.select_button}
+          disabled={locked}
           onClick={selectRobot}
           type="button"
         >
@@ -80,8 +86,15 @@ export function RobotCard({ entry }: { entry: RobotDirectoryEntry }) {
         </button>
         <Link
           className={styles.action}
-          onClick={selectRobot}
-          to={`/robots/${encodeURIComponent(robot.control_id)}/operation`}
+          aria-disabled={locked}
+          onClick={(event) => {
+            if (locked) event.preventDefault();
+            else selectRobot();
+          }}
+          to={withPilotScope(
+            `/robots/${encodeURIComponent(robot.control_id)}/operation`,
+            getPortalConfig().pilot_id ?? null
+          )}
         >
           Open Operation <ArrowUpRight aria-hidden="true" />
         </Link>

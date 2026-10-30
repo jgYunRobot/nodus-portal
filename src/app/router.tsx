@@ -6,6 +6,12 @@ import {
   useParams
 } from "react-router";
 import { PortalShell } from "../shell/portal_shell";
+import { getPortalConfig } from "../config/portal_config";
+import { withPilotScope } from "../features/pilot_directory/pilot_directory";
+
+function scoped(path: string): string {
+  return withPilotScope(path, getPortalConfig().pilot_id ?? null);
+}
 
 const HomePage = lazy(() =>
   import("../pages/home_page").then((module) => ({ default: module.HomePage }))
@@ -44,7 +50,7 @@ function LegacyRobotOperationRedirect() {
     control_id === undefined
       ? "/home"
       : `/robots/${encodeURIComponent(control_id)}/operation`;
-  return <Navigate replace to={target} />;
+  return <Navigate replace to={scoped(target)} />;
 }
 
 const router = createBrowserRouter([
@@ -52,12 +58,12 @@ const router = createBrowserRouter([
     path: "/",
     element: <PortalShell />,
     children: [
-      { index: true, element: <Navigate replace to="/home" /> },
+      { index: true, element: <Navigate replace to={scoped("/home")} /> },
       { path: "home", element: lazyPage(HomePage) },
       { path: "devices", element: lazyPage(DevicePage) },
       {
         path: "robots/:control_id/device",
-        element: <Navigate replace to="/devices" />
+        element: <Navigate replace to={scoped("/devices")} />
       },
       {
         path: "robots/:control_id/operation",

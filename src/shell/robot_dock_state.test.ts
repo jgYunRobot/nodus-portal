@@ -4,8 +4,14 @@ import {
   parseRobotDockState,
   readRobotDockState,
   setPreferredControlId,
+  setPilotPreferredControlId,
   useRobotDockState
 } from "./robot_dock_state";
+
+import {
+  configurePortalConfig,
+  DEFAULT_PORTAL_CONFIG
+} from "../config/portal_config";
 
 describe("robot dock presentation state", () => {
   afterEach(() => vi.restoreAllMocks());
@@ -57,4 +63,25 @@ describe("robot dock presentation state", () => {
     act(() => setPreferredControlId(null));
     state.unmount();
   });
+});
+
+it("isolates saved Control choices under their Pilot identity", () => {
+  try {
+    setPilotPreferredControlId("pilot-a", "control-a");
+    setPilotPreferredControlId("pilot-b", "control-b");
+    configurePortalConfig({
+      ...DEFAULT_PORTAL_CONFIG,
+      pilot_discovery_enabled: true,
+      pilot_id: "pilot-a"
+    });
+    expect(readRobotDockState().preferred_control_id).toBe("control-a");
+    configurePortalConfig({
+      ...DEFAULT_PORTAL_CONFIG,
+      pilot_discovery_enabled: true,
+      pilot_id: "pilot-b"
+    });
+    expect(readRobotDockState().preferred_control_id).toBe("control-b");
+  } finally {
+    configurePortalConfig(DEFAULT_PORTAL_CONFIG);
+  }
 });

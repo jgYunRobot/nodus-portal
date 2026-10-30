@@ -54,7 +54,12 @@ export function resolvePilotPath(
   path: string,
   base_url = getPortalConfig().pilot_base_url
 ): string {
-  return base_url === "same-origin" ? path : new URL(path, base_url).toString();
+  return base_url === "same-origin"
+    ? path
+    : new URL(
+        path.replace(/^\//, ""),
+        `${base_url.replace(/\/$/, "")}/`
+      ).toString();
 }
 
 export class PilotHttpClient {

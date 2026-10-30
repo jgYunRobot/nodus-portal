@@ -106,7 +106,7 @@ export class PilotStreamHub {
     listeners.add(listener);
     this.listeners.set(control_id, listeners);
     return () => {
-      listeners.delete(listener);
+      if (!listeners.delete(listener)) return;
       if (listeners.size === 0) {
         this.listeners.delete(control_id);
         this.disconnect(control_id);
@@ -140,6 +140,7 @@ export class PilotStreamHub {
     }
     this.invalidateRecovery(control_id);
     this.reseeding_controls.delete(control_id);
+    this.reconnect_delays.delete(control_id);
     this.publish({
       control_id,
       status: value,
@@ -166,7 +167,6 @@ export class PilotStreamHub {
     this.sources.set(control_id, source);
     source.addEventListener("open", () => {
       if (this.sources.get(control_id) !== source) return;
-      this.reconnect_delays.delete(control_id);
       this.reseeding_controls.add(control_id);
       this.startRecovery(
         control_id,
@@ -191,10 +191,6 @@ export class PilotStreamHub {
       if (this.sources.get(control_id) !== source) return;
       this.sources.delete(control_id);
       source.close();
-      this.startRecovery(
-        control_id,
-        "Control status SSE connection failed; recovery is required."
-      );
       const delay_ms =
         this.reconnect_delays.get(control_id) ?? STREAM_RETRY_INITIAL_MS;
       this.reconnect_delays.set(
@@ -207,6 +203,11 @@ export class PilotStreamHub {
           this.reconnect_timers.delete(control_id);
           this.connect(control_id);
         }, delay_ms)
+      );
+      // Recovery listeners may synchronously unsubscribe and clear this retry.
+      this.startRecovery(
+        control_id,
+        "Control status SSE connection failed; recovery is required."
       );
     };
     this.startRecovery(

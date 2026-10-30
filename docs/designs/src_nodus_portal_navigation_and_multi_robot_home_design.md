@@ -488,3 +488,14 @@ This design does not authorize:
 - per-card Camera payloads or Three.js robot canvases on Home;
 - placeholder navigation for unimplemented pages; or
 - changing the accepted continuous hold-to-run behavior.
+
+
+## 2026-10-29 - Approved multi-Pilot selection extension
+
+The operator approved selecting physical and Gym/VC robots through the existing Select Robot
+control. [Pilot discovery and selection](src_features_pilot_directory_design.md) extends identity
+to `(pilot_id, control_id)` and public host discovery. Control switches within one Pilot retain
+these route and Dock rules. A Pilot switch closes the old UI runtime and loads a new one; same-ID
+Controls cannot share status/command state. Saved or direct selections are never silently replaced.
+Home shows other Pilots as metadata cards until selected. Existing hold/in-flight selection locks
+also apply to these Home actions; no motion or other repository change is authorized by this note.

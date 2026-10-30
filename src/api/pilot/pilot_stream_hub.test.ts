@@ -280,3 +280,47 @@ describe("PilotStreamHub", () => {
     hub.disconnect("alpha");
   });
 });
+
+it("does not resurrect an SSE retry after a recovery listener removes the last subscriber", async () => {
+  vi.useFakeTimers();
+  const source = createStreamSource();
+  const create_source = vi.fn(() => source);
+  const hub = new PilotStreamHub({
+    create_source,
+    read_latest: async () => status("alpha", 1, 1) as never
+  });
+  const unsubscribe = hub.subscribe("alpha", vi.fn());
+  hub.connect("alpha");
+  hub.subscribeRecovery(unsubscribe);
+  source.onerror?.(new Event("error"));
+  expect(vi.getTimerCount()).toBe(0);
+  await vi.advanceTimersByTimeAsync(10000);
+  expect(create_source).toHaveBeenCalledTimes(1);
+  vi.useRealTimers();
+});
+
+it("backs off across streams that open and fail before delivering any valid status", async () => {
+  vi.useFakeTimers();
+  const sources: ReturnType<typeof createStreamSource>[] = [];
+  const hub = new PilotStreamHub({
+    create_source: () => {
+      const source = createStreamSource();
+      sources.push(source);
+      return source;
+    },
+    read_latest: async () => status("alpha", 1, 1) as never
+  });
+  hub.connect("alpha");
+  sources[0].emit("open");
+  sources[0].onerror?.(new Event("error"));
+  await vi.advanceTimersByTimeAsync(500);
+  sources[1].emit("open");
+  sources[1].onerror?.(new Event("error"));
+  await vi.advanceTimersByTimeAsync(500);
+  expect(sources).toHaveLength(2);
+  await vi.advanceTimersByTimeAsync(500);
+  expect(sources).toHaveLength(3);
+  hub.disconnect("alpha");
+  expect(vi.getTimerCount()).toBe(0);
+  vi.useRealTimers();
+});

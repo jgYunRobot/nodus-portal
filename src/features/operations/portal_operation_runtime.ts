@@ -15,6 +15,7 @@ interface ControlRuntime {
 export class PortalOperationRuntime {
   readonly session: PortalComponentSession;
   private readonly controls = new Map<string, ControlRuntime>();
+  private readonly selection_listeners = new Set<() => void>();
   constructor() {
     this.session = new PortalComponentSession({
       on_invalidate: () => this.cancelAll()
@@ -37,6 +38,9 @@ export class PortalOperationRuntime {
         })
       };
       this.controls.set(control_id, runtime);
+      scheduler.subscribe(() =>
+        this.selection_listeners.forEach((listener) => listener())
+      );
     }
     if (runtime === undefined)
       throw new Error("Control runtime could not be created.");
@@ -54,5 +58,19 @@ export class PortalOperationRuntime {
 
   cancelAll(): void {
     this.controls.forEach((runtime) => runtime.hold.stop());
+  }
+
+  isSelectionLocked(): boolean {
+    return [...this.controls.values()].some(({ hold, scheduler }) => {
+      const operation = scheduler.getSnapshot();
+      return hold.active || operation.in_flight || operation.has_pending;
+    });
+  }
+
+  subscribeSelection(listener: () => void): () => void {
+    this.selection_listeners.add(listener);
+    return () => {
+      this.selection_listeners.delete(listener);
+    };
   }
 }

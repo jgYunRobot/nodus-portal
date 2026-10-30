@@ -10,5 +10,10 @@
     "strict": true,
     "noEmit": true
   },
-  "include": [".storybook", "vite.config.ts", "eslint.config.js"]
+  "include": [
+    ".storybook",
+    "vite.config.ts",
+    "scripts/local_pilots.ts",
+    "eslint.config.js"
+  ]
 }

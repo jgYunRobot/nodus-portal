@@ -4,11 +4,13 @@ import {
   useContext,
   useEffect,
   useState,
+  useSyncExternalStore,
   type ReactNode
 } from "react";
 import { pilot_query_keys } from "../../api/pilot/pilot_query_keys";
 import { pilot_stream_hub } from "../../api/pilot/use_control_status";
 import { PortalOperationRuntime } from "./portal_operation_runtime";
+import { getPortalConfig } from "../../config/portal_config";
 
 const PortalOperationContext = createContext<PortalOperationRuntime | null>(
   null
@@ -28,7 +30,9 @@ export function PortalOperationProvider({ children }: { children: ReactNode }) {
       pilot_stream_hub.observeServerInstance(snapshot.server_instance_id);
       void query_client.invalidateQueries({ queryKey: pilot_query_keys.all });
     });
-    runtime.session.start();
+    const config = getPortalConfig();
+    if (!config.pilot_discovery_enabled || config.pilot_id !== null)
+      runtime.session.start();
     const on_visibility = () =>
       runtime.session.notifyVisibilityChange(document.hidden);
     const on_online = () => runtime.session.reconnect();
@@ -55,4 +59,13 @@ export function usePortalOperationRuntime(): PortalOperationRuntime {
   if (runtime === null)
     throw new Error("Portal operation runtime is unavailable.");
   return runtime;
+}
+
+export function useRobotSelectionLocked(): boolean {
+  const runtime = usePortalOperationRuntime();
+  return useSyncExternalStore(
+    (listener) => runtime.subscribeSelection(listener),
+    () => runtime.isSelectionLocked(),
+    () => runtime.isSelectionLocked()
+  );
 }

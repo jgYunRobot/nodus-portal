@@ -1,5 +1,106 @@
 # Progress
 
+## 2026-10-30 - Publish Pilot discovery and recovery checkpoint
+
+- User requested committing and pushing the Portal work: local multi-Pilot discovery/selection,
+  endpoint-stable restart recovery and bounded proxy/subscription cleanup, with their tests and
+  documentation. Include the existing typed timer-fixture fix needed by the validated build.
+- Reuse the completed TypeScript/Vite build, scoped Vitest44/44, Chromium3/3 and finite resource
+  stress evidence above. Review the staged file set/diff and whitespace before publication.
+  No Pilot/Control files, gitlinks, secrets or raw measurement artifacts belong to this commit.
+- Follow-up: separately remove the deleted SimToReal compliance experiment's remaining state and
+  obsolete tests/docs in Control; that cleanup is outside this Portal publication.
+
+## 2026-10-30 - Bound Portal reconnect and proxy resource use
+
+- Reproduced two cleanup failures before fixing them: cancelling a browser connection during the
+  identity probe left an upstream socket without a request; repeated final unsubscribe from a
+  recovery listener recursed through disconnect notifications. Retry installation after recovery
+  notification could also resurrect an SSE after teardown. Preserve user/other dirty work.
+- Skip forwarding when the browser has already gone; destroy forwarding on downstream errors and
+  upstream aborts. Apply five-second inactivity timeout to response headers/ordinary HTTP and retain
+  established SSE streaming. Cancel probe readers, cap JSON at 1 MiB, and share concurrent identity
+  checks without caching old process identity. Reset SSE backoff only on valid status.
+- Added regression cases for delayed-probe cancellation, idempotent/reentrant unsubscribe, flapping
+  SSE, 24 concurrent identity requests, oversized JSON and a silent request forwarded only once.
+- Scoped Vitest 44/44; Chromium 3/3, including five mock outages/recoveries, unchanged selection/new
+  session, exactly one returning SSE and zero after leaving, no page errors, no operations, and
+  21–29 API requests per restart. Browser GC heap after the first recovery grew about 325 KiB.
+- Isolated stress: 12,500 HTTP requests, 2,500 SSE open/close cycles (peak ten simultaneous), 250
+  mock identity changes with synthetic discovery clock advancement. All batches ended with zero
+  active SSE. Settled GC heap growth 125,864 bytes, FD range three; after 12s idle RSS about120 MiB,
+  FD30. This is finite software evidence, not proof of no leak under arbitrary duration/input.
+- TypeScript/Vite builds, scoped ESLint/Prettier and whitespace checks passed. User Portal port5173
+  was not listening at investigation start; recent kernel logs showed no OOM. That does not prove
+  its prior exit cause. Hardware Pilot/robot were untouched; only mock/temp servers were used.
+- Next: user starts Portal normally to consume the built fix. No commit/push or deployment performed.
+
+## 2026-10-30 - Recover the selected Pilot after restart
+
+- Fix discovery IDs that hashed endpoint plus process instance: restarting Pilot previously produced
+  a new selector entry while the old selected namespace remained unavailable. Hash only the endpoint
+  and retain `server_instance_id` for the existing process check and session/stream recovery.
+- Keep the selected Control, URL and per-Pilot preference across restarts. Rediscovery confirms the
+  new process before forwarding resumes; no proxy retry, old hold resume or operation replay is added.
+  Another endpoint remains a separate selection even with the same Control ID. Legacy process-ID
+  selections require one explicit endpoint selection because their hashes cannot reveal the address.
+- Update middleware regression coverage for retained IDs, changed process checks, no command replay,
+  and Portal-host restart. Add a browser fixture scenario covering outage, recovery, fresh status,
+  new registration and unchanged selection. Existing unrelated Portal changes are preserved.
+- Validation: reviewed the source changes; scoped Prettier, ESLint and `git diff --check` passed.
+  Build, typecheck and test suites were not run under the shared explicit-request rule. The user
+  will restart Portal; leave the running Portal host, hardware Pilot and robot state untouched.
+- Next: on the next Portal launch, select the endpoint once for any legacy process-scoped preference.
+  New selections then recover across Pilot restarts. Browser restart acceptance remains unverified.
+
+## 2026-10-29 - Discover local Pilots in Select Robot
+
+- Add Portal-host public-API discovery of loopback listening sockets, including VC/Gym's automatic
+  ports, plus optional `PORTAL_PILOT_URLS` candidates. Development and local built-file preview use
+  the same middleware; no Pilot/VC source, ROS dependency, Control IPC, new daemon, or gitlink changes.
+- Bind each host namespace to endpoint plus `server_instance_id` and recheck identity before HTTP
+  or streaming SSE forwarding. Unknown/replaced processes are unavailable; mutating requests are
+  never replayed. Selected communication does not wait for catalog discovery refresh.
+- Extend the existing Select Robot groups and Home metadata cards across Pilots, isolate duplicate
+  Control IDs and stored preferences, retain Pilot scope in URLs, and load a new UI runtime on a
+  Pilot switch after old tree cleanup. Keep existing hold/in-flight locks for Home and Dock.
+  Complete first-visit discovery may auto-connect a sole Pilot; missing selections and incomplete
+  results never select a different target. Configuration now precedes singleton client imports.
+- Validation: focused multi-Pilot/regression tests 46/46, Chromium feature scenarios 2/2 with real
+  random-port mock HTTP Pilots and the actual host proxy, formal build, scoped lint/format, and
+  desktop/mobile inspection. Preview's inotify instances/watch entries are zero. Browser Back,
+  old SSE close, exact command destination, pending selection lock, late discovery, and missing
+  selected Pilot were exercised. No physical robot operations were performed.
+- Broader regression checkpoint: unit run 146/148 and browser run 18/20. The two unit failures
+  (`hold_controls` readiness copy and `operator_remote_panel` obsolete copy) and two browser failures
+  (ambiguous Devices locator and obsolete carousel button expectation) reproduce identically in
+  an untouched HEAD snapshot under `/tmp/nodus_portal_before_multi`. They are not new regressions.
+- Preserve the earlier timer-test fix and PC shortcut work. Next: restart the running Portal through
+  `portal` to load the updated host middleware, then select a live Pilot/robot. Remote hosts require
+  explicit addresses; arbitrary LAN discovery and hardware acceptance remain outside this checkpoint.
+
+
+## 2026-10-29 - Run the local Portal shortcut without file watching
+
+- Change the PC-local `~/.bashrc` `portal()` function to enter this repository, run the existing
+  `npm run build`, and serve the resulting `dist/` with the installed `vite preview` command on
+  `127.0.0.1:5173` with `--strictPort`. Preserve the explicit
+  `VITE_PILOT_PROXY_TARGET=http://127.0.0.1:8765`; preview inherits the existing `/api` proxy.
+  This is a local built-file launcher; the repository development launcher remains available.
+- Unblock the existing TypeScript build by returning a correctly typed captured timer handle from
+  the hold-hook test mock. Flush the immediate mock Start promise with async `act` instead of
+  `waitFor`, whose polling interval was also intercepted by the heartbeat timer mock.
+- Validation: `npm run build`, the focused hold-hook Vitest case (1 test), scoped Prettier, and
+  Bash syntax checks passed. Run the actual new function from `/tmp` on a temporary port: HTML,
+  compiled JavaScript, and SPA fallback returned HTTP 200; no development client was injected;
+  the running server process group had zero inotify instances and watch entries. Stop only the
+  temporary validation server and leave the existing port 5173 process untouched.
+- Pilot at `127.0.0.1:8765` was unavailable during the live check, so backend forwarding acceptance
+  was not established. No robot requests, application runtime code, or dependency pins changed.
+- Next: reload the updated Bash function and restart the old development server through `portal`;
+  confirm live Pilot connectivity when Pilot is running.
+
+
 ## 2026-10-05 - Limit expected Pilot-offline development logs
 
 - Keep automatic reconnection requests and Vite's HTTP failure responses unchanged.

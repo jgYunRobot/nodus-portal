@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DeviceDirectoryEntry } from "../device_directory/device_directory";
@@ -74,9 +74,11 @@ describe("Operator hold activation hook", () => {
 
   it("keeps the owned lease when directory refresh replaces same-runtime objects", async () => {
     let heartbeat_callback: (() => void) | null = null;
+    const interval_handle = globalThis.setInterval(() => undefined, 60_000);
+    globalThis.clearInterval(interval_handle);
     vi.spyOn(window, "setInterval").mockImplementation((callback) => {
       heartbeat_callback = callback as () => void;
-      return 17;
+      return interval_handle;
     });
     const client = {
       startHold: vi.fn(async () => ({
@@ -133,8 +135,11 @@ describe("Operator hold activation hook", () => {
       }
     );
 
-    act(() => expect(result.result.current.start()).toBe(true));
-    await waitFor(() => expect(result.result.current.state).toBe("holding"));
+    await act(async () => {
+      expect(result.result.current.start()).toBe(true);
+      await Promise.resolve();
+    });
+    expect(result.result.current.state).toBe("holding");
 
     result.rerender({
       endpoints: { ...endpoints },

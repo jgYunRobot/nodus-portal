@@ -1,13 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { PilotHttpClient } from "./pilot_http_client";
 import { pilot_query_keys } from "./pilot_query_keys";
+import { getPortalConfig } from "../../config/portal_config";
 
 const pilot_client = new PilotHttpClient();
 const DIRECTORY_FALLBACK_REFRESH_MS = 5000;
 
+function isPilotSelected(): boolean {
+  const config = getPortalConfig();
+  return !config.pilot_discovery_enabled || config.pilot_id !== null;
+}
+
 export function usePilotHealth() {
   return useQuery({
     queryKey: pilot_query_keys.health,
+    enabled: isPilotSelected(),
     queryFn: () => pilot_client.getHealth(),
     retry: 2
   });
@@ -16,6 +23,7 @@ export function usePilotHealth() {
 export function usePilotSnapshot() {
   return useQuery({
     queryKey: pilot_query_keys.snapshot,
+    enabled: isPilotSelected(),
     queryFn: () => pilot_client.getSnapshot(),
     retry: 2
   });
@@ -24,6 +32,7 @@ export function usePilotSnapshot() {
 export function usePilotComponents() {
   return useQuery({
     queryKey: pilot_query_keys.components,
+    enabled: isPilotSelected(),
     queryFn: () => pilot_client.getComponents(),
     refetchInterval: DIRECTORY_FALLBACK_REFRESH_MS,
     retry: 2
@@ -33,6 +42,7 @@ export function usePilotComponents() {
 export function usePilotEndpoints() {
   return useQuery({
     queryKey: pilot_query_keys.endpoints,
+    enabled: isPilotSelected(),
     queryFn: () => pilot_client.getEndpoints(),
     refetchInterval: DIRECTORY_FALLBACK_REFRESH_MS,
     retry: 2
@@ -42,6 +52,7 @@ export function usePilotEndpoints() {
 export function useRobotStatusStreams() {
   return useQuery({
     queryKey: pilot_query_keys.robot_status_streams,
+    enabled: isPilotSelected(),
     queryFn: () => pilot_client.getRobotStatusStreams(),
     refetchInterval: DIRECTORY_FALLBACK_REFRESH_MS,
     retry: 2

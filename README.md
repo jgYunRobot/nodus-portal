@@ -86,6 +86,24 @@ npm run build
 There is no `make_full.sh` wrapper for Portal; dependency installation remains `npm ci` and the
 production build remains `npm run build`.
 
+### Select robots across local Pilot instances
+
+Development and built-file preview discover running local Pilot instances through their public
+health and RobotStatus stream-directory APIs. `Select Robot` in the existing Dock groups controls
+by Pilot endpoint, including dynamically allocated Gym/VC ports. Identical Control IDs on separate
+Pilots remain separate selections. The host owns discovery and identity-scoped API/SSE forwarding;
+no ROS package, Control IPC, motion command, or background service is required.
+
+One Pilot on a first visit is selected automatically. Multiple Pilots require selecting a robot;
+an unavailable previous selection never switches to another endpoint automatically. Restarting Pilot
+at the selected endpoint recovers the session and status without replaying commands. Changing Pilot
+loads a fresh UI runtime and retains the selected identity in the URL. Ordinary Control switches
+within one Pilot keep the current page. Local built-file preview has no development file watcher.
+
+For explicit remote Pilot addresses, set `PORTAL_PILOT_URLS` to a comma-separated list before
+starting the Portal host. See [static hosting](docs/static_hosting.md) and the
+[Pilot directory design](docs/designs/src_features_pilot_directory_design.md).
+
 ## Normal stack startup order
 
 For the current same-host research deployment, start the processes in separate terminals:

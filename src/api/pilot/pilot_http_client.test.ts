@@ -3,7 +3,7 @@ import {
   configurePortalConfig,
   DEFAULT_PORTAL_CONFIG
 } from "../../config/portal_config";
-import { PilotHttpClient } from "./pilot_http_client";
+import { PilotHttpClient, resolvePilotPath } from "./pilot_http_client";
 import type { components } from "./generated/pilot_v1";
 
 afterEach(() => configurePortalConfig(DEFAULT_PORTAL_CONFIG));
@@ -237,5 +237,17 @@ describe("PilotHttpClient", () => {
 
     await client.getHealth();
     expect(requests).toEqual(["https://pilot.example.test/api/v1/health"]);
+  });
+});
+
+describe("identity-scoped Pilot URLs", () => {
+  it("keeps HTTP and SSE routes under the selected Pilot prefix", () => {
+    const base = "http://portal.test/__portal/pilots/aaaaaaaaaaaaaaaaaaaaaaaa/";
+    expect(
+      resolvePilotPath("/api/v1/controls/control.same/status/stream", base)
+    ).toBe(base + "api/v1/controls/control.same/status/stream");
+    expect(resolvePilotPath("/api/v1/endpoints?cursor=next", base)).toBe(
+      base + "api/v1/endpoints?cursor=next"
+    );
   });
 });
