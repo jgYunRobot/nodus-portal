@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Nodus Pilot Public API",
-    "version": "1.9.0"
+    "version": "1.11.0"
   },
   "paths": {
     "/api/v1/health": {
@@ -2592,6 +2592,190 @@
           }
         }
       },
+      "SetForceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 1
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.set_force"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "frame_id",
+              "reference_id",
+              "force",
+              "stiffness",
+              "damping",
+              "transition_time"
+            ],
+            "properties": {
+              "frame_id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "reference_id": {
+                "const": 0
+              },
+              "force": {
+                "type": "array",
+                "minItems": 6,
+                "maxItems": 6,
+                "items": {
+                  "type": "number"
+                }
+              },
+              "stiffness": {
+                "oneOf": [
+                  {
+                    "type": "array",
+                    "minItems": 6,
+                    "maxItems": 6,
+                    "items": {
+                      "type": "number"
+                    }
+                  },
+                  {
+                    "type": "array",
+                    "minItems": 36,
+                    "maxItems": 36,
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                ]
+              },
+              "damping": {
+                "oneOf": [
+                  {
+                    "type": "array",
+                    "minItems": 6,
+                    "maxItems": 6,
+                    "items": {
+                      "type": "number"
+                    }
+                  },
+                  {
+                    "type": "array",
+                    "minItems": 36,
+                    "maxItems": 36,
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                ]
+              },
+              "transition_time": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "SetIkModeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 1
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.set_ik_mode"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "mode"
+            ],
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "dls",
+                  "pseudo"
+                ]
+              }
+            }
+          }
+        }
+      },
       "SetServoStateRequest": {
         "type": "object",
         "additionalProperties": false,
@@ -2666,6 +2850,228 @@
           },
           "operation": {
             "const": "control.reset_fault"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/EmptyPayload"
+          }
+        }
+      },
+      "DlogEnableRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 1
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.dlog_enable"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/EmptyPayload"
+          }
+        }
+      },
+      "DlogDisableRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 1
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.dlog_disable"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/EmptyPayload"
+          }
+        }
+      },
+      "DlogSetPayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "name"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "저장 디렉터리. 상대 경로는 native 프로세스 작업 디렉터리 기준이다."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "확장자를 포함한 파일명. 기존 파일에는 이어 쓴다."
+          }
+        }
+      },
+      "DlogSetRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 1
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.dlog_set"
+          },
+          "session_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "generation": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "sequence": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "source_timestamp_ns": {
+            "$ref": "#/components/schemas/NonNegativeInt64"
+          },
+          "ttl_ms": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "control_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/DlogSetPayload"
+          }
+        }
+      },
+      "DlogResetRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "request_id",
+          "operation",
+          "session_id",
+          "generation",
+          "sequence",
+          "source_timestamp_ns",
+          "ttl_ms",
+          "control_id",
+          "payload"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": 1
+          },
+          "request_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "operation": {
+            "const": "control.dlog_reset"
           },
           "session_id": {
             "$ref": "#/components/schemas/Identifier"
@@ -4032,10 +4438,28 @@
             "$ref": "#/components/schemas/SetServoStateRequest"
           },
           {
+            "$ref": "#/components/schemas/SetIkModeRequest"
+          },
+          {
+            "$ref": "#/components/schemas/SetForceRequest"
+          },
+          {
             "$ref": "#/components/schemas/ResetFaultRequest"
           },
           {
             "$ref": "#/components/schemas/ResetOriginRequest"
+          },
+          {
+            "$ref": "#/components/schemas/DlogEnableRequest"
+          },
+          {
+            "$ref": "#/components/schemas/DlogDisableRequest"
+          },
+          {
+            "$ref": "#/components/schemas/DlogResetRequest"
+          },
+          {
+            "$ref": "#/components/schemas/DlogSetRequest"
           },
           {
             "$ref": "#/components/schemas/SetBrakeStateRequest"
@@ -4102,8 +4526,14 @@
             "control.calculate_forward_kinematics": "#/components/schemas/CalculateForwardKinematicsRequest",
             "control.get_robot_status": "#/components/schemas/GetRobotStatusRequest",
             "control.set_servo_state": "#/components/schemas/SetServoStateRequest",
+            "control.set_ik_mode": "#/components/schemas/SetIkModeRequest",
+            "control.set_force": "#/components/schemas/SetForceRequest",
             "control.reset_fault": "#/components/schemas/ResetFaultRequest",
             "control.reset_origin": "#/components/schemas/ResetOriginRequest",
+            "control.dlog_enable": "#/components/schemas/DlogEnableRequest",
+            "control.dlog_disable": "#/components/schemas/DlogDisableRequest",
+            "control.dlog_reset": "#/components/schemas/DlogResetRequest",
+            "control.dlog_set": "#/components/schemas/DlogSetRequest",
             "control.set_brake_state": "#/components/schemas/SetBrakeStateRequest",
             "control.register_frame": "#/components/schemas/RegisterFrameRequest",
             "control.change_frame": "#/components/schemas/ChangeFrameRequest",
@@ -4441,8 +4871,14 @@
               "control.calculate_forward_kinematics",
               "control.get_robot_status",
               "control.set_servo_state",
+              "control.set_ik_mode",
+              "control.set_force",
               "control.reset_fault",
               "control.reset_origin",
+              "control.dlog_enable",
+              "control.dlog_disable",
+              "control.dlog_reset",
+              "control.dlog_set",
               "control.set_brake_state",
               "control.register_frame",
               "control.change_frame",
@@ -4543,8 +4979,14 @@
               "control.calculate_forward_kinematics",
               "control.get_robot_status",
               "control.set_servo_state",
+              "control.set_ik_mode",
+              "control.set_force",
               "control.reset_fault",
               "control.reset_origin",
+              "control.dlog_enable",
+              "control.dlog_disable",
+              "control.dlog_reset",
+              "control.dlog_set",
               "control.set_brake_state",
               "control.register_frame",
               "control.change_frame",

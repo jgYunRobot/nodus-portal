@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  selection_locked: false,
   cancel: vi.fn(),
   resume: vi.fn(),
   schedule: vi.fn(),
@@ -34,6 +35,7 @@ vi.mock("../../api/pilot/use_control_status", () => ({
 }));
 
 vi.mock("./portal_operation_context", () => ({
+  useRobotSelectionLocked: () => mocks.selection_locked,
   usePortalOperationRuntime: () => ({
     cancel: mocks.cancel,
     getHold: () => ({ active: false }),
@@ -56,6 +58,7 @@ describe("RobotCommandControls", () => {
   afterEach(cleanup);
 
   beforeEach(() => {
+    mocks.selection_locked = false;
     mocks.cancel.mockReset();
     mocks.resume.mockReset();
     mocks.schedule.mockReset();
@@ -100,4 +103,17 @@ describe("RobotCommandControls", () => {
     expect(screen.queryByRole("status")).toBeNull();
     expect(screen.getByRole("button", { name: "Servo Off" })).not.toBeNull();
   });
+});
+
+it("blocks Dock commands while an API mutation owns the shared runtime", () => {
+  mocks.selection_locked = true;
+  render(<RobotCommandControls control_id="control-b" />);
+  expect(
+    (screen.getByRole("button", { name: "Servo Off" }) as HTMLButtonElement)
+      .disabled
+  ).toBe(true);
+  fireEvent.click(screen.getByRole("button", { name: "Fault Reset" }));
+  expect(mocks.schedule).not.toHaveBeenCalled();
+  cleanup();
+  mocks.selection_locked = false;
 });

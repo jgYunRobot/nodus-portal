@@ -26,6 +26,11 @@ const DevicePage = lazy(() =>
     default: module.DevicePage
   }))
 );
+const CommandsPage = lazy(() =>
+  import("../pages/commands_page").then((module) => ({
+    default: module.CommandsPage
+  }))
+);
 const NotFoundPage = lazy(() =>
   import("../pages/not_found_page").then((module) => ({
     default: module.NotFoundPage
@@ -61,6 +66,7 @@ const router = createBrowserRouter([
       { index: true, element: <Navigate replace to={scoped("/home")} /> },
       { path: "home", element: lazyPage(HomePage) },
       { path: "devices", element: lazyPage(DevicePage) },
+      { path: "commands", element: lazyPage(CommandsPage) },
       {
         path: "robots/:control_id/device",
         element: <Navigate replace to={scoped("/devices")} />

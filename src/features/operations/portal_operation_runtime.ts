@@ -16,6 +16,7 @@ export class PortalOperationRuntime {
   readonly session: PortalComponentSession;
   private readonly controls = new Map<string, ControlRuntime>();
   private readonly selection_listeners = new Set<() => void>();
+  private api_request: { cancel: () => void } | null = null;
   constructor() {
     this.session = new PortalComponentSession({
       on_invalidate: () => this.cancelAll()
@@ -38,9 +39,7 @@ export class PortalOperationRuntime {
         })
       };
       this.controls.set(control_id, runtime);
-      scheduler.subscribe(() =>
-        this.selection_listeners.forEach((listener) => listener())
-      );
+      scheduler.subscribe(() => this.publishSelection());
     }
     if (runtime === undefined)
       throw new Error("Control runtime could not be created.");
@@ -57,14 +56,33 @@ export class PortalOperationRuntime {
   }
 
   cancelAll(): void {
+    this.api_request?.cancel();
     this.controls.forEach((runtime) => runtime.hold.stop());
   }
 
   isSelectionLocked(): boolean {
+    if (this.api_request !== null) return true;
     return [...this.controls.values()].some(({ hold, scheduler }) => {
       const operation = scheduler.getSnapshot();
       return hold.active || operation.in_flight || operation.has_pending;
     });
+  }
+
+  // The API explorer shares command exclusion without creating another operation queue.
+  beginApiRequest(cancel: () => void): (() => void) | null {
+    if (this.isSelectionLocked()) return null;
+    const request = { cancel };
+    this.api_request = request;
+    this.publishSelection();
+    return () => {
+      if (this.api_request !== request) return;
+      this.api_request = null;
+      this.publishSelection();
+    };
+  }
+
+  private publishSelection(): void {
+    for (const listener of [...this.selection_listeners]) listener();
   }
 
   subscribeSelection(listener: () => void): () => void {

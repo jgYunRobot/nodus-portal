@@ -1,5 +1,6 @@
 import {
   Boxes,
+  Braces,
   CircuitBoard,
   House,
   Menu,
@@ -253,6 +254,14 @@ function Navigation({
       >
         <Boxes aria-hidden="true" />
         <span>Devices</span>
+      </NavLink>
+      <NavLink
+        onClick={on_navigate}
+        title="Commands"
+        to={withPilotScope("/commands", getPortalConfig().pilot_id ?? null)}
+      >
+        <Braces aria-hidden="true" />
+        <span>Commands</span>
       </NavLink>
       <p>Robot</p>
       <NavLink

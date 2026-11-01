@@ -43,3 +43,30 @@ describe("robot selection handoff", () => {
     unsubscribe();
   });
 });
+
+describe("API request ownership", () => {
+  it("excludes concurrent mutations and releases idempotently without releasing a later request", () => {
+    const runtime = new PortalOperationRuntime();
+    const cancel = vi.fn();
+    const release = runtime.beginApiRequest(cancel)!;
+    expect(runtime.isSelectionLocked()).toBe(true);
+    expect(runtime.beginApiRequest(vi.fn())).toBeNull();
+    runtime.cancelAll();
+    expect(cancel).toHaveBeenCalledTimes(1);
+    release();
+    expect(runtime.isSelectionLocked()).toBe(false);
+    const release_next = runtime.beginApiRequest(vi.fn())!;
+    release();
+    expect(runtime.isSelectionLocked()).toBe(true);
+    release_next();
+    expect(runtime.isSelectionLocked()).toBe(false);
+  });
+  it("does not allow API ownership while a Dock operation remains in flight", () => {
+    mocks.submit.mockReturnValue(new Promise(() => undefined));
+    const runtime = new PortalOperationRuntime();
+    runtime
+      .getScheduler("control-b")
+      .schedule({ operation: "control.reset_fault", control_id: "control-b" });
+    expect(runtime.beginApiRequest(vi.fn())).toBeNull();
+  });
+});

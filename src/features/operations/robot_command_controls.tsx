@@ -1,11 +1,15 @@
 import { useSyncExternalStore } from "react";
 import { useControlStatus } from "../../api/pilot/use_control_status";
-import { usePortalOperationRuntime } from "./portal_operation_context";
+import {
+  usePortalOperationRuntime,
+  useRobotSelectionLocked
+} from "./portal_operation_context";
 import type { OperationTarget } from "./pilot_operation_client";
 import styles from "./robot_command_controls.module.css";
 
 export function RobotCommandControls({ control_id }: { control_id: string }) {
   const runtime = usePortalOperationRuntime();
+  const selection_locked = useRobotSelectionLocked();
   const hold = runtime.getHold(control_id);
   const scheduler = runtime.getScheduler(control_id);
   const status = useControlStatus(control_id);
@@ -31,7 +35,8 @@ export function RobotCommandControls({ control_id }: { control_id: string }) {
     session.phase !== "ready" ||
     !has_authoritative_status ||
     hold.active ||
-    command_pending;
+    command_pending ||
+    selection_locked;
   const servo_activated = robot_interface?.servo_activated === true;
   const brake_released = robot_interface?.brake_released === true;
 

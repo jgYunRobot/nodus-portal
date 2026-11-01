@@ -1239,6 +1239,51 @@ export interface components {
             control_id: components["schemas"]["Identifier"];
             payload: components["schemas"]["EmptyPayload"];
         };
+        SetForceRequest: {
+            /** @constant */
+            schema_version: 1;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.set_force";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: {
+                frame_id: number;
+                /** @constant */
+                reference_id: 0;
+                force: number[];
+                stiffness: number[] | number[];
+                damping: number[] | number[];
+                transition_time: number;
+            };
+        };
+        SetIkModeRequest: {
+            /** @constant */
+            schema_version: 1;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.set_ik_mode";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: {
+                /** @enum {string} */
+                mode: "dls" | "pseudo";
+            };
+        };
         SetServoStateRequest: {
             /** @constant */
             schema_version: 1;
@@ -1265,6 +1310,80 @@ export interface components {
              * @enum {string}
              */
             operation: "control.reset_fault";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: components["schemas"]["EmptyPayload"];
+        };
+        DlogEnableRequest: {
+            /** @constant */
+            schema_version: 1;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.dlog_enable";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: components["schemas"]["EmptyPayload"];
+        };
+        DlogDisableRequest: {
+            /** @constant */
+            schema_version: 1;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.dlog_disable";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: components["schemas"]["EmptyPayload"];
+        };
+        DlogSetPayload: {
+            /** @description 저장 디렉터리. 상대 경로는 native 프로세스 작업 디렉터리 기준이다. */
+            path: string;
+            /** @description 확장자를 포함한 파일명. 기존 파일에는 이어 쓴다. */
+            name: string;
+        };
+        DlogSetRequest: {
+            /** @constant */
+            schema_version: 1;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.dlog_set";
+            session_id: components["schemas"]["Identifier"];
+            generation: components["schemas"]["NonNegativeInt64"];
+            sequence: components["schemas"]["NonNegativeInt64"];
+            source_timestamp_ns: components["schemas"]["NonNegativeInt64"];
+            ttl_ms: number;
+            control_id: components["schemas"]["Identifier"];
+            payload: components["schemas"]["DlogSetPayload"];
+        };
+        DlogResetRequest: {
+            /** @constant */
+            schema_version: 1;
+            request_id: components["schemas"]["Identifier"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "control.dlog_reset";
             session_id: components["schemas"]["Identifier"];
             generation: components["schemas"]["NonNegativeInt64"];
             sequence: components["schemas"]["NonNegativeInt64"];
@@ -1672,7 +1791,7 @@ export interface components {
             payload: components["schemas"]["RemoveExternalFramePayload"];
         };
         /** @description Closed union of Control operations submitted by a live generic component session. session_id is copied from ComponentRegistrationResponse. generation and sequence form a command-producer-owned cursor separate from lifecycle writes; sequence increases within a generation and a generation transition is allowed only after older in-flight operations finish. source_timestamp_ns uses the registered session clock domain. UI sessions follow the same contract as other command producers under pass_through. */
-        OperationRequest: components["schemas"]["MoveJointOnlineRequest"] | components["schemas"]["MoveJointOfflineRequest"] | components["schemas"]["MoveTaskOnlineRequest"] | components["schemas"]["CalculateForwardKinematicsRequest"] | components["schemas"]["GetRobotStatusRequest"] | components["schemas"]["SetServoStateRequest"] | components["schemas"]["ResetFaultRequest"] | components["schemas"]["ResetOriginRequest"] | components["schemas"]["SetBrakeStateRequest"] | components["schemas"]["RegisterFrameRequest"] | components["schemas"]["ChangeFrameRequest"] | components["schemas"]["RemoveFrameRequest"] | components["schemas"]["MoveLinearRequestRequest"] | components["schemas"]["MoveLinearPlayRequest"] | components["schemas"]["MoveCircleRequestRequest"] | components["schemas"]["MoveCirclePlayRequest"] | components["schemas"]["MoveJointRequestRequest"] | components["schemas"]["MoveJointPlayRequest"] | components["schemas"]["RegisterRigidBodyRequest"] | components["schemas"]["AttachRigidBodyRequest"] | components["schemas"]["DetachRigidBodyRequest"] | components["schemas"]["RemoveRigidBodyRequest"] | components["schemas"]["RegisterExternalFrameRequest"] | components["schemas"]["ChangeExternalFrameRequest"] | components["schemas"]["SelectExternalFrameRequest"] | components["schemas"]["RemoveExternalFrameRequest"];
+        OperationRequest: components["schemas"]["MoveJointOnlineRequest"] | components["schemas"]["MoveJointOfflineRequest"] | components["schemas"]["MoveTaskOnlineRequest"] | components["schemas"]["CalculateForwardKinematicsRequest"] | components["schemas"]["GetRobotStatusRequest"] | components["schemas"]["SetServoStateRequest"] | components["schemas"]["SetIkModeRequest"] | components["schemas"]["SetForceRequest"] | components["schemas"]["ResetFaultRequest"] | components["schemas"]["ResetOriginRequest"] | components["schemas"]["DlogEnableRequest"] | components["schemas"]["DlogDisableRequest"] | components["schemas"]["DlogResetRequest"] | components["schemas"]["DlogSetRequest"] | components["schemas"]["SetBrakeStateRequest"] | components["schemas"]["RegisterFrameRequest"] | components["schemas"]["ChangeFrameRequest"] | components["schemas"]["RemoveFrameRequest"] | components["schemas"]["MoveLinearRequestRequest"] | components["schemas"]["MoveLinearPlayRequest"] | components["schemas"]["MoveCircleRequestRequest"] | components["schemas"]["MoveCirclePlayRequest"] | components["schemas"]["MoveJointRequestRequest"] | components["schemas"]["MoveJointPlayRequest"] | components["schemas"]["RegisterRigidBodyRequest"] | components["schemas"]["AttachRigidBodyRequest"] | components["schemas"]["DetachRigidBodyRequest"] | components["schemas"]["RemoveRigidBodyRequest"] | components["schemas"]["RegisterExternalFrameRequest"] | components["schemas"]["ChangeExternalFrameRequest"] | components["schemas"]["SelectExternalFrameRequest"] | components["schemas"]["RemoveExternalFrameRequest"];
         OperationDelivery: {
             /** @enum {string} */
             outcome: "written_unconfirmed" | "response_received" | "rejected_local" | "timed_out" | "disconnected" | "protocol_error" | "queue_full";
@@ -1744,7 +1863,7 @@ export interface components {
             schema_version: 1;
             request_id: components["schemas"]["Identifier"];
             /** @enum {string} */
-            operation: "control.move_joint_online" | "control.move_joint_offline" | "control.move_task_online" | "control.calculate_forward_kinematics" | "control.get_robot_status" | "control.set_servo_state" | "control.reset_fault" | "control.reset_origin" | "control.set_brake_state" | "control.register_frame" | "control.change_frame" | "control.remove_frame" | "control.move_linear_request" | "control.move_linear_play" | "control.move_circle_request" | "control.move_joint_request" | "control.move_circle_play" | "control.move_joint_play" | "control.register_rigid_body" | "control.attach_rigid_body" | "control.detach_rigid_body" | "control.remove_rigid_body" | "control.register_external_frame" | "control.change_external_frame" | "control.select_external_frame" | "control.remove_external_frame";
+            operation: "control.move_joint_online" | "control.move_joint_offline" | "control.move_task_online" | "control.calculate_forward_kinematics" | "control.get_robot_status" | "control.set_servo_state" | "control.set_ik_mode" | "control.set_force" | "control.reset_fault" | "control.reset_origin" | "control.dlog_enable" | "control.dlog_disable" | "control.dlog_reset" | "control.dlog_set" | "control.set_brake_state" | "control.register_frame" | "control.change_frame" | "control.remove_frame" | "control.move_linear_request" | "control.move_linear_play" | "control.move_circle_request" | "control.move_joint_request" | "control.move_circle_play" | "control.move_joint_play" | "control.register_rigid_body" | "control.attach_rigid_body" | "control.detach_rigid_body" | "control.remove_rigid_body" | "control.register_external_frame" | "control.change_external_frame" | "control.select_external_frame" | "control.remove_external_frame";
             control_id: components["schemas"]["Identifier"];
             /** @enum {string} */
             pilot_disposition: "rejected" | "forwarded" | "unknown";
@@ -1759,7 +1878,7 @@ export interface components {
             schema_version: 2;
             request_id: components["schemas"]["Identifier"];
             /** @enum {string} */
-            operation: "control.move_joint_online" | "control.move_joint_offline" | "control.move_task_online" | "control.calculate_forward_kinematics" | "control.get_robot_status" | "control.set_servo_state" | "control.reset_fault" | "control.reset_origin" | "control.set_brake_state" | "control.register_frame" | "control.change_frame" | "control.remove_frame" | "control.move_linear_request" | "control.move_linear_play" | "control.move_circle_request" | "control.move_joint_request" | "control.move_circle_play" | "control.move_joint_play" | "control.register_rigid_body" | "control.attach_rigid_body" | "control.detach_rigid_body" | "control.remove_rigid_body" | "control.register_external_frame" | "control.change_external_frame" | "control.select_external_frame" | "control.remove_external_frame";
+            operation: "control.move_joint_online" | "control.move_joint_offline" | "control.move_task_online" | "control.calculate_forward_kinematics" | "control.get_robot_status" | "control.set_servo_state" | "control.set_ik_mode" | "control.set_force" | "control.reset_fault" | "control.reset_origin" | "control.dlog_enable" | "control.dlog_disable" | "control.dlog_reset" | "control.dlog_set" | "control.set_brake_state" | "control.register_frame" | "control.change_frame" | "control.remove_frame" | "control.move_linear_request" | "control.move_linear_play" | "control.move_circle_request" | "control.move_joint_request" | "control.move_circle_play" | "control.move_joint_play" | "control.register_rigid_body" | "control.attach_rigid_body" | "control.detach_rigid_body" | "control.remove_rigid_body" | "control.register_external_frame" | "control.change_external_frame" | "control.select_external_frame" | "control.remove_external_frame";
             control_id: components["schemas"]["Identifier"];
             /** @constant */
             pilot_disposition: "forwarded";

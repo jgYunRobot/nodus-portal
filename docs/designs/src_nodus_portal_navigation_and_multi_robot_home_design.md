@@ -499,3 +499,9 @@ these route and Dock rules. A Pilot switch closes the old UI runtime and loads a
 Controls cannot share status/command state. Saved or direct selections are never silently replaced.
 Home shows other Pilots as metadata cards until selected. Existing hold/in-flight selection locks
 also apply to these Home actions; no motion or other repository change is authorized by this note.
+
+## 2026-11-01 - Approved Commands workspace
+
+The user requested a global Commands tab for all published Pilot APIs. Add `/commands` under Workspace,
+retaining Pilot URL scope and the Robot Dock. The endpoint/form/response flow is defined in
+`src_features_api_explorer_design.md`; Operation hold-to-run behavior remains page-owned.

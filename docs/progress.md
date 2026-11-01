@@ -1,5 +1,30 @@
 # Progress
 
+## 2026-11-01 - Add the Pilot Commands workspace
+
+- User requested all Pilot APIs, renamed the page to Commands, then clarified that moveL/moveJ/
+  setForce must be easy to test. Add /commands and a command-first list of32 operations with
+  direct scalar/vector/pose inputs. Keep all17 HTTP endpoints in advanced HTTP APIs mode.
+- Joint degree inputs and Z-Y-X pose angles convert to the published radian/xyzw payloads. Add
+  named wrench axes, stiffness/damping units, uniform/per-joint limits, current-state loading,
+  command drafts, and explicit prepare-versus-auto-play actions.
+- Refresh pinned Pilot public contract1.9 to1.11 from the current working tree; preserve exact
+  provenance for uncommitted force support and regenerate TS types. Do not edit Pilot/Control.
+- Allocate operation context from the existing Portal session at Send time. A shared runtime
+  mutation gate prevents overlap with Dock commands and blocks robot switching while in flight.
+- Bound HTTP waits and response display; SSE has Start/Stop, a65,536-character rolling buffer
+  and10Hz rendering. Abort on unmount or mutating-session invalidation; no retries or replay.
+- TypeScript/Vite build and scoped ESLint pass. Focused48/48 regression cases pass. Full suite
+  is170/172; both failures (HoldControls recovery mock
+  state and OperatorRemotePanel obsolete text expectation) reproduce unchanged from HEAD in an
+  isolated /tmp baseline (6/8), so unrelated test files remain untouched.
+- Browser verification against a separate mock Pilot: moveJ15deg arrives as pi/12 radians,
+  setForce Fx12 arrives on the correct axis, moveL X0.15/yaw30deg arrives as xyz+xyzw; one request
+  each with increasing session cursor. HTTP GET returns200, SSE reaches the display bound and
+  Stop closes the stream (active count returns to0) and shows a normal stopped state. No physical robot command, Pilot restart, commit or push performed.
+- /commands avoids the existing /api prefix proxy; the temporary proxy matcher change was
+  removed after the requested rename. Frame-name selection and command draft retention are covered. Temporary QA services are cleaned up after checks.
+
 ## 2026-10-30 - Publish Pilot discovery and recovery checkpoint
 
 - User requested committing and pushing the Portal work: local multi-Pilot discovery/selection,
