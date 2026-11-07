@@ -230,6 +230,17 @@ status store before deriving another target.
 Joint jog, task jog, Home, and Ready remain continuous hold-to-run controls. They must not be
 replaced by click-once fixed-distance controls.
 
+Motion requires a ready component session and fresh authoritative RobotStatus with
+`interface.servo_activated === true`. With Servo OFF, Joint/Task jog, Home and Ready
+cannot create or advance a projected target. Their buttons expose the unavailable reason.
+An accepted Servo ON-to-OFF transition synchronously cancels the active hold, clears its
+projection and discards unsent candidates before React renders. Target calculation and
+dispatch also check the latest status, including when an in-flight response releases a
+queued candidate. Servo ON requires a new press and seeds from the latest real pose;
+it never resumes a previous hold or replays its targets. Servo/Fault/Brake commands remain
+available under their existing conditions. This is a cooperative Portal motion guard;
+it cannot revoke requests already dispatched or replace a Control stop.
+
 The operator selects a speed percentage. While the pointer remains held, elapsed hold time and the
 selected speed continue to produce motion distance. A higher selected speed produces a larger
 delta over the same elapsed time.

@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   resume: vi.fn(),
   schedule: vi.fn(),
   start: vi.fn(),
+  servo_activated: true,
   current_intent: null as Readonly<HoldIntent> | null,
   operation_snapshot: {
     in_flight: false,
@@ -68,7 +69,7 @@ vi.mock("../../api/pilot/use_control_status", () => ({
             robot_type: "test",
             connected: true,
             dof: 6,
-            servo_activated: true,
+            servo_activated: mocks.servo_activated,
             brake_released: true,
             brake_state_source: "test",
             motion_gate_state: "test",
@@ -142,10 +143,54 @@ describe("HoldControls", () => {
     mocks.resume.mockReset();
     mocks.schedule.mockReset();
     mocks.start.mockReset();
+    mocks.servo_activated = true;
     mocks.current_intent = null;
     mocks.operation_snapshot.presentation = null;
     mocks.session_snapshot.phase = "ready";
     mocks.session_snapshot.last_error = null;
+  });
+
+  it("disables joint, Home and Ready holds while Servo is off", () => {
+    mocks.servo_activated = false;
+    render(<HoldControls control_id="control-a" />);
+    for (const label of ["Joint 1 +", "Joint 6 −", "Home", "Ready"]) {
+      const button = screen.getByRole("button", { name: label });
+      expect(isDisabled(button)).toBe(true);
+      fireEvent.keyDown(button, { key: "Enter" });
+    }
+    expect(mocks.start).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("recovery: Servo is off. Turn Servo On before jogging.")
+    ).toBeTruthy();
+  });
+
+  it("disables task holds and cancels the active hold when Servo turns off", () => {
+    const view = render(<HoldControls control_id="control-a" />);
+    fireEvent.click(screen.getByRole("tab", { name: "Task" }));
+    mocks.current_intent = {
+      kind: "task",
+      frame_name: "Tool",
+      frame_id: 1,
+      axis_index: 2,
+      direction: 1,
+      speed_percent: 25
+    };
+    mocks.servo_activated = false;
+    view.rerender(<HoldControls control_id="control-a" />);
+    expect(isDisabled(screen.getByRole("button", { name: "Task Z +" }))).toBe(
+      true
+    );
+    expect(isDisabled(screen.getByRole("button", { name: "Task Rx −" }))).toBe(
+      true
+    );
+    expect(mocks.cancel).toHaveBeenCalledWith("control-a");
+    mocks.current_intent = null;
+    mocks.servo_activated = true;
+    view.rerender(<HoldControls control_id="control-a" />);
+    expect(isDisabled(screen.getByRole("button", { name: "Task Z +" }))).toBe(
+      false
+    );
+    expect(mocks.start).not.toHaveBeenCalled();
   });
 
   it("exposes joint, task, Home, and Ready holds", () => {
@@ -238,9 +283,7 @@ describe("HoldControls", () => {
     const status_panel = screen.getAllByRole("status").at(-1);
     if (status_panel === undefined)
       throw new Error("Operation status panel is unavailable.");
-    expect(status_panel.textContent).toContain(
-      "Hold-to-run controls are available."
-    );
+    expect(status_panel.textContent).toContain("Controls unavailable");
     expect(status_panel.textContent).toContain("recovery:");
     expect(status_panel.textContent).toContain(
       "Pilot session recovery is in progress."

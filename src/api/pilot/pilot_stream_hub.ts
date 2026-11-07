@@ -277,8 +277,16 @@ export class PilotStreamHub {
     return recovery_version;
   }
   private publish(snapshot: ControlStatusSnapshot): void {
+    const servo_deactivated =
+      this.snapshots.get(snapshot.control_id)?.status?.sample?.robot_state
+        .interface.servo_activated === true &&
+      snapshot.status?.sample?.robot_state.interface.servo_activated !== true;
     this.snapshots.set(snapshot.control_id, snapshot);
-    if (snapshot.state !== "live" && snapshot.state !== "idle")
+    // End held motion before React renders or an OFF/ON pair can reuse its projection.
+    if (
+      (snapshot.state !== "live" && snapshot.state !== "idle") ||
+      servo_deactivated
+    )
       this.recovery_listeners.forEach((listener) =>
         listener(snapshot.control_id)
       );

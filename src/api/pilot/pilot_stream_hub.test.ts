@@ -64,6 +64,23 @@ function createStreamSource() {
 
 describe("PilotStreamHub", () => {
   afterEach(() => vi.useRealTimers());
+  it("invalidates held motion on accepted Servo Off before a rapid Servo On", () => {
+    const hub = new PilotStreamHub();
+    const invalidate = vi.fn();
+    const unsubscribe = hub.subscribeRecovery(invalidate);
+    hub.accept("alpha", status("alpha", 1, 1));
+    const off = status("alpha", 1, 2);
+    off.sample.robot_state.interface.servo_activated = false;
+    hub.accept("alpha", off);
+    hub.accept("alpha", status("alpha", 1, 3));
+    hub.accept("alpha", off);
+    expect(invalidate).toHaveBeenCalledExactlyOnceWith("alpha");
+    expect(
+      hub.getSnapshot("alpha").status?.sample?.robot_state.interface
+        .servo_activated
+    ).toBe(true);
+    unsubscribe();
+  });
   it("keeps the initial external-store snapshot referentially stable", () => {
     const hub = new PilotStreamHub({
       create_source: () => ({

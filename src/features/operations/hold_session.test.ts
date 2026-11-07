@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ControlStatusSnapshot } from "../../api/pilot/pilot_stream_hub";
 import { HoldSession } from "./hold_session";
 import { OperationScheduler } from "./operation_scheduler";
+import type { HoldIntent } from "./hold_session";
 import type { OperationTarget } from "./pilot_operation_client";
 
 function getMotionTarget(
@@ -15,7 +16,11 @@ function getMotionTarget(
   return target.target_position;
 }
 
-function status(generation = 1, fresh = true): ControlStatusSnapshot {
+function status(
+  generation = 1,
+  fresh = true,
+  servo_activated = true
+): ControlStatusSnapshot {
   return {
     control_id: "control-a",
     state: "live",
@@ -49,7 +54,7 @@ function status(generation = 1, fresh = true): ControlStatusSnapshot {
             robot_type: "test",
             connected: true,
             dof: 6,
-            servo_activated: true,
+            servo_activated,
             brake_released: true,
             brake_state_source: "test",
             motion_gate_state: "test",
@@ -79,6 +84,93 @@ function status(generation = 1, fresh = true): ControlStatusSnapshot {
 }
 
 describe("HoldSession", () => {
+  it.each<HoldIntent>([
+    { kind: "joint", joint_index: 0, direction: 1, speed_percent: 100 },
+    {
+      kind: "task",
+      frame_name: "Base",
+      frame_id: 3,
+      axis_index: 0,
+      direction: 1,
+      speed_percent: 100
+    },
+    { kind: "home", speed_percent: 100 },
+    { kind: "ready", speed_percent: 100 }
+  ])("does not start a $kind hold with Servo Off", (intent) => {
+    const submit = vi.fn();
+    const set_interval = vi.fn(() => 1);
+    const hold = new HoldSession({
+      control_id: "control-a",
+      read_snapshot: () => status(1, true, false),
+      scheduler: new OperationScheduler<OperationTarget>(submit),
+      set_interval: set_interval as unknown as typeof window.setInterval
+    });
+    hold.start(intent);
+    expect(hold.active).toBe(false);
+    expect(hold.current_intent).toBeNull();
+    expect(set_interval).not.toHaveBeenCalled();
+    expect(submit).not.toHaveBeenCalled();
+  });
+
+  it("drops pending targets and projection on Servo Off without resuming on Servo On", async () => {
+    let now = 0;
+    let snapshot = status();
+    let tick: (() => void) | undefined;
+    let complete!: (result: {
+      state: "accepted";
+      message: string;
+      terminal: false;
+    }) => void;
+    const sent: OperationTarget[] = [];
+    const scheduler = new OperationScheduler<OperationTarget>((target) => {
+      sent.push(target);
+      return new Promise((resolve) => {
+        complete = resolve;
+      });
+    });
+    const hold = new HoldSession({
+      control_id: "control-a",
+      read_snapshot: () => snapshot,
+      scheduler,
+      now: () => now,
+      set_interval: ((callback: () => void) => {
+        tick = callback;
+        return 1;
+      }) as typeof window.setInterval,
+      clear_interval: (() => undefined) as typeof window.clearInterval
+    });
+    const intent: HoldIntent = {
+      kind: "joint",
+      joint_index: 0,
+      direction: 1,
+      speed_percent: 100
+    };
+    hold.start(intent);
+    now = 50;
+    tick?.();
+    expect(scheduler.getSnapshot().has_pending).toBe(true);
+
+    snapshot = status(1, true, false);
+    now = 100;
+    tick?.();
+    expect(hold.active).toBe(false);
+    expect(scheduler.getSnapshot().has_pending).toBe(false);
+
+    snapshot = status();
+    snapshot.status!.sample!.robot_state.real.pos[0] = 0.5;
+    now = 5000;
+    tick?.();
+    complete({ state: "accepted", message: "ok", terminal: false });
+    await Promise.resolve();
+    expect(sent).toHaveLength(1);
+    expect(hold.active).toBe(false);
+
+    hold.start(intent);
+    expect(sent).toHaveLength(2);
+    expect(getMotionTarget(sent[1])?.[0]).toBe(0.5);
+    hold.stop();
+  });
+
   it("continues joint and task projection from the direct latest status read", async () => {
     let now = 0;
     let tick: (() => void) | undefined;

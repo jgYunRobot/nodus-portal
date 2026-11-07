@@ -125,13 +125,21 @@ export function HoldControls({ control_id }: HoldControlsProps) {
     !status.status.stale &&
     robot_state !== undefined;
   const controls_disabled =
-    session.phase !== "ready" || !has_authoritative_status;
+    session.phase !== "ready" ||
+    !has_authoritative_status ||
+    robot_state?.interface.servo_activated !== true;
   const hold_active = hold.active;
   const interaction_locked = controls_disabled || hold_active;
   const unavailable_reason =
     session.phase !== "ready"
       ? (session.last_error ?? "Pilot component session is not ready.")
-      : "A fresh authoritative RobotStatus is required before a hold can begin.";
+      : !has_authoritative_status
+        ? "A fresh authoritative RobotStatus is required before a hold can begin."
+        : "Servo is off. Turn Servo On before jogging.";
+
+  useEffect(() => {
+    if (controls_disabled) runtime.cancel(control_id);
+  }, [control_id, controls_disabled, runtime]);
 
   useEffect(() => {
     const stop = () => runtime.cancel(control_id);

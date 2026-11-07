@@ -26,7 +26,8 @@ export function adaptMotionRobotStatus(
     !snapshot.status.available ||
     !snapshot.status.fresh ||
     snapshot.status.stale ||
-    snapshot.status.sample === null
+    snapshot.status.sample === null ||
+    snapshot.status.sample.robot_state.interface.servo_activated !== true
   ) {
     return null;
   }

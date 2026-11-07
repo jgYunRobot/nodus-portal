@@ -6,6 +6,7 @@ import {
   type OperationTarget
 } from "./pilot_operation_client";
 import { PortalComponentSession } from "./pilot_component_session";
+import { adaptMotionRobotStatus } from "./robot_status_adapter";
 
 interface ControlRuntime {
   hold: HoldSession;
@@ -27,9 +28,22 @@ export class PortalOperationRuntime {
     let runtime = this.controls.get(control_id);
     if (runtime === undefined) {
       const client = new PilotOperationClient(this.session);
-      const scheduler = new OperationScheduler<OperationTarget>((target) =>
-        client.submit(target)
-      );
+      const scheduler = new OperationScheduler<OperationTarget>((target) => {
+        if (
+          (target.operation === "control.move_joint_online" ||
+            target.operation === "control.move_task_online") &&
+          adaptMotionRobotStatus(pilot_stream_hub.getSnapshot(control_id)) ===
+            null
+        ) {
+          this.cancel(control_id);
+          return Promise.resolve({
+            state: "unavailable",
+            message: "Jogging requires fresh RobotStatus with Servo On.",
+            terminal: true
+          } as const);
+        }
+        return client.submit(target);
+      });
       runtime = {
         scheduler,
         hold: new HoldSession({

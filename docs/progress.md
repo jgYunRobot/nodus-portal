@@ -2174,3 +2174,37 @@
 - Reuse the browser inspection evidence recorded in the preceding UI/UX entries; build,
   typecheck and test suites remain unrun under the shared explicit-request rule.
 - Review feel on the intended touch device during a later requested runtime checkpoint.
+
+## 2026-11-07 - Cancel Portal jogging while Servo is off
+
+### Changes
+
+- Require fresh authoritative Servo ON status for Joint/Task jog, Home and Ready.
+  Disable motion buttons and show the Servo OFF reason while unavailable.
+- Reject motion status before creating or advancing hold projections. Synchronously
+  cancel active holds and discard pending targets on an accepted Servo ON-to-OFF
+  transition, before React renders; also cancel on unavailable UI conditions.
+- Recheck current motion status immediately before dispatch, including a queued
+  target released by an earlier response. Preserve shared Servo/Fault/Brake commands.
+- Servo ON requires a new press and reseeds from the latest real pose; old targets
+  and holds never resume automatically. Updated the owning hold-to-run design.
+
+### Status and validation
+
+- Scoped Vitest: 5 files, 39 tests passed. Coverage includes all four hold kinds
+  while OFF, pending/projection cancellation, explicit restart from a new real pose,
+  rapid OFF/ON without replay, UI disabling and pending dispatch rechecks for both
+  online motion variants. Servo ON requests remain permitted while motion is blocked.
+- Corrected the existing recovering-session UI expectation to match the existing
+  unavailable panel. Initial added-test failures were fixture/assertion issues
+  (status text prefix and a mock-returning test hook); corrected before the passing run.
+- TypeScript project check, scoped ESLint, formatting and whitespace checks passed.
+  Production build and physical/browser runtime acceptance were not run. Robot power
+  and Pilot were untouched; this Portal guard cannot revoke an already dispatched
+  command or provide a Control stop. Direct main commit/push was subsequently
+  authorized by the user; Pilot and parent-repository changes are excluded.
+
+### Next goals
+
+- Verify the OFF/ON interaction during a separately requested runtime checkpoint.
+  Hardware motion acceptance remains outstanding.
