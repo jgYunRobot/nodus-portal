@@ -48,7 +48,10 @@ function status(model: string) {
   };
 }
 
+let fixture_sequence = 0;
+
 async function mockPilot(id: string) {
+  id = `${id}-${process.pid}-${fixture_sequence++}`;
   const state = {
     id,
     available: true,
@@ -286,6 +289,10 @@ test("Select Robot isolates two real HTTP Pilot fixtures, routes commands, and c
     await expect(page).toHaveURL(
       new RegExp(`/robots/control.same/operation\\?pilot=${pilot_a.pilot_id}`)
     );
+    // URL updates before the lazy route commits; switch from the rendered workspace.
+    await expect(
+      page.getByRole("heading", { name: "Operation", exact: true })
+    ).toBeVisible();
     await selector.selectOption(
       JSON.stringify([pilot_b.pilot_id, "control.same"])
     );
@@ -442,7 +449,7 @@ test("recovers the selected Pilot after repeated restarts without accumulating s
         selector.locator("option", { hasText: "Pilot unavailable" })
       ).toHaveCount(1, { timeout: 15000 });
       await expect.poll(() => pilot.state.open_streams).toBe(0);
-      pilot.state.id = `fixture-restart-after-${cycle}`;
+      pilot.state.id = `${pilot.id}-restart-after-${cycle}`;
       pilot.state.available = true;
       await expect(
         selector.locator("option", { hasText: "Pilot unavailable" })
@@ -483,5 +490,126 @@ test("recovers the selected Pilot after repeated restarts without accumulating s
   } finally {
     await page.goto("about:blank");
     await closeServer(pilot.server);
+  }
+});
+
+test("sibling tabs keep independent Portal component identities", async ({
+  page,
+  context,
+  request
+}) => {
+  const pilot = await mockPilot("fixture-sibling-tabs");
+  const identities: string[] = [];
+  context.on("request", (outgoing) => {
+    if (outgoing.url().endsWith("/api/v1/components/register"))
+      identities.push(outgoing.postDataJSON().component_id);
+  });
+  try {
+    let pilot_id: string | undefined;
+    await expect
+      .poll(
+        async () => {
+          const directory = await (
+            await request.get("/__portal/pilots")
+          ).json();
+          pilot_id = directory.pilots.find(
+            (candidate: { endpoint: string }) =>
+              candidate.endpoint === pilot.endpoint
+          )?.pilot_id;
+          return pilot_id !== undefined;
+        },
+        { timeout: 15000 }
+      )
+      .toBe(true);
+    await page.goto(`/home?pilot=${pilot_id}`);
+    await expect.poll(() => pilot.state.registrations).toBe(1);
+    const sibling = await context.newPage();
+    await sibling.goto(`/home?pilot=${pilot_id}`);
+    await expect.poll(() => pilot.state.registrations).toBe(2);
+    expect(identities).toHaveLength(2);
+    expect(new Set(identities).size).toBe(2);
+    expect(pilot.state.operations).toEqual([]);
+    await sibling.close();
+  } finally {
+    await page.goto("about:blank");
+    await closeServer(pilot.server);
+  }
+});
+
+test("recovers a bookmarked address when a restarted Pilot is also discovered through an alias", async ({
+  page,
+  request
+}) => {
+  test.setTimeout(45000);
+  const direct = await mockPilot("fixture-address-before");
+  let alias: Awaited<ReturnType<typeof mockPilot>> | undefined;
+  try {
+    let selected_id: string | undefined;
+    await expect
+      .poll(
+        async () => {
+          const directory = await (
+            await request.get("/__portal/pilots")
+          ).json();
+          selected_id = directory.pilots.find(
+            (pilot: { endpoint: string }) => pilot.endpoint === direct.endpoint
+          )?.pilot_id;
+          return selected_id !== undefined;
+        },
+        { timeout: 15000 }
+      )
+      .toBe(true);
+    direct.state.available = false;
+    direct.server.closeAllConnections();
+    await expect
+      .poll(
+        async () => {
+          const directory = await (
+            await request.get("/__portal/pilots")
+          ).json();
+          return directory.pilots.some(
+            (pilot: { pilot_id: string }) => pilot.pilot_id === selected_id
+          );
+        },
+        { timeout: 15000 }
+      )
+      .toBe(false);
+    alias = await mockPilot("fixture-address-after");
+    await expect
+      .poll(
+        async () => {
+          const directory = await (
+            await request.get("/__portal/pilots")
+          ).json();
+          return directory.pilots.some(
+            (pilot: { endpoint: string }) => pilot.endpoint === alias!.endpoint
+          );
+        },
+        { timeout: 15000 }
+      )
+      .toBe(true);
+    direct.state.id = alias.id;
+    direct.state.available = true;
+    const selected_url = `/robots/control.same/operation?pilot=${selected_id}`;
+    await page.goto(selected_url);
+    const selector = page.getByLabel("Selected robot", { exact: true });
+    await expect(selector).toHaveValue(
+      JSON.stringify([selected_id, "control.same"])
+    );
+    await expect(
+      selector.locator("option", { hasText: "Pilot unavailable" })
+    ).toHaveCount(0, { timeout: 15000 });
+    await expect(
+      page.getByRole("button", { name: "Servo On", exact: true })
+    ).toBeEnabled({ timeout: 15000 });
+    await expect.poll(() => direct.state.open_streams).toBe(1);
+    expect(alias.state.open_streams).toBe(0);
+    expect(page.url()).toContain(selected_url);
+    expect(direct.state.operations).toEqual([]);
+    expect(alias.state.operations).toEqual([]);
+  } finally {
+    await page.goto("about:blank");
+    await closeServer(direct.server);
+    if (alias) await closeServer(alias.server);
   }
 });

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Nodus Pilot Public API",
-    "version": "1.11.0"
+    "version": "1.12.0"
   },
   "paths": {
     "/api/v1/health": {
@@ -2645,7 +2645,8 @@
               "reference_id",
               "force",
               "stiffness",
-              "damping",
+              "damping_ratio",
+              "inertia",
               "transition_time"
             ],
             "properties": {
@@ -2685,25 +2686,19 @@
                   }
                 ]
               },
-              "damping": {
-                "oneOf": [
-                  {
-                    "type": "array",
-                    "minItems": 6,
-                    "maxItems": 6,
-                    "items": {
-                      "type": "number"
-                    }
-                  },
-                  {
-                    "type": "array",
-                    "minItems": 36,
-                    "maxItems": 36,
-                    "items": {
-                      "type": "number"
-                    }
-                  }
-                ]
+              "damping_ratio": {
+                "type": "number",
+                "default": 1.0,
+                "description": "Dimensionless damping ratio shared by all task axes."
+              },
+              "inertia": {
+                "type": "array",
+                "minItems": 6,
+                "maxItems": 6,
+                "items": {
+                  "type": "number"
+                },
+                "description": "Added task virtual mass [mx,my,mz,Ix,Iy,Iz], translation in kg and rotation in kg m^2."
               },
               "transition_time": {
                 "type": "number",

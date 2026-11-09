@@ -742,6 +742,22 @@ whole shell.
 No unsupported fixed robot-count claim is made in design. Checkpoint F7 establishes the first
 measured fixture and reports hardware, browser, sample rates, and resulting frame/update behavior.
 
+#### Development performance-track retention
+
+`src/app/react_performance_tracks.ts` owns cleanup of React's development User Timing measures.
+The development-only branch in `src/main.tsx` installs one observer before the first render and
+disposes it on HMR replacement, draining queued records before disconnecting. Buffered observation
+also removes records created before installation. React component and scheduler records are
+recognized by their `detail.devtools.track` / `trackGroup` metadata and cleared by name, once per
+delivered batch. Other measure names, the measurement API, telemetry cadence, and rendering stay
+intact. User Timing only supports removal by name; application measures must not reuse React's
+record names. This version-specific adapter must be rechecked when updating React or R3F.
+
+React 19.2.8 and the R3F 9.7.0 renderer produced unbounded retained prop-detail measures while a
+60Hz status page was merely left open. The observed heap converged to the timing-disabled baseline
+after those records were cleared. This development integration does not run in production and does
+not certify the unrelated whole-UI freeze, which the user excluded from the current scope.
+
 ## 12. Phased implementation plan
 
 Each checkpoint ends with a focused diff, validation evidence, progress-log update, and review.
@@ -899,9 +915,8 @@ Later checkpoints do not begin by assumption when an earlier acceptance conditio
 - implement typed public Pilot operation requests and response/error mapping;
 - add pure projector, HoldSession, and one-in-flight newest-target scheduler;
 - bind joint jog, task jog, Home, Ready, and other approved command controls;
-- persist one randomly generated public `component_id` per browser profile while keeping the
-  `instance_id` unique per page runtime, so independent devices do not replace each other's Pilot
-  lifecycle sessions;
+- derive a runtime-scoped public `component_id` from the random page `instance_id`, so sibling
+  tabs and independent devices do not replace each other's Pilot lifecycle sessions;
 - reconcile every target with the newest accepted authoritative status;
 - implement pointer capture, keyboard lifecycle, blur/visibility/route cleanup; and
 - expose factual pending/accepted/failed/degraded states without claiming Phase B authority.
@@ -915,11 +930,13 @@ Later checkpoints do not begin by assumption when an earlier acceptance conditio
 - no click-once fixed-distance replacement appears; and
 - public Pilot black-box operation fixtures pass.
 
-The browser-profile identity is presentation-client lifecycle identity, not command authority. A
-reload replaces only the previous runtime from the same browser profile. Different devices retain
-independent heartbeat, session generation, and operation cursors while consuming the same
-Pilot-owned RobotStatus source. If persistent browser storage is unavailable, Portal uses a
-runtime-scoped random component ID rather than falling back to the shared legacy ID.
+The page-runtime identity is presentation-client lifecycle identity, not command authority.
+Retries within one runtime retain its component ID; a reload or sibling tab receives a new ID.
+The previous runtime expires through the published Pilot lease. Tabs and devices retain independent
+heartbeat, session generation, and operation cursors while consuming the same Pilot-owned
+RobotStatus source. Robot selection and presentation preferences remain browser-profile settings.
+A shared localStorage component ID caused sibling tabs to replace each other's sessions and
+continuously re-register; automatic recovery amplified that collision.
 
 ### F8D - Persistent Robot Dock retrofit
 

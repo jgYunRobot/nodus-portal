@@ -36,7 +36,9 @@ prominent aliases. HTTP APIs retains all17 raw public endpoints as an advanced m
 - Use schema-derived scalar, enum, nested, vector and union-format inputs.
 - Joint positions/limits use degrees in the form and radians on the wire. MoveL poses use XYZ
   metres and Z-Y-X degree angles, converted to published xyz+qx,qy,qz,qw.
-- Force/torque and diagonal stiffness/damping have named axes and visible units.
+- Force/torque, diagonal stiffness and added virtual mass have named axes and visible units.
+- setForce uses one dimensionless damping_ratio input and inertia [mx,my,mz,Ix,Iy,Iz]
+  in kg / kg·m². The stiffness diagonal/full-matrix selector is retained.
 - Motion Request APIs expose auto_play=true as an explicit Run-after-preparation checkbox;
   clearing it changes the action to Prepare. No second request or replay is synthesized.
 - Target/reference frame selectors show names from public status, so IDs need not be memorized.

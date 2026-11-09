@@ -1,4 +1,5 @@
 import { createRoot } from "react-dom/client";
+import { startReactPerformanceTrackCleanup } from "./app/react_performance_tracks";
 import {
   configurePortalConfig,
   loadPortalConfig
@@ -10,6 +11,11 @@ import {
 } from "./config/pilot_launch";
 import { withPilotScope } from "./features/pilot_directory/pilot_directory";
 import "./styles/layers.css";
+
+if (import.meta.env.DEV) {
+  const stop_performance_track_cleanup = startReactPerformanceTrackCleanup();
+  import.meta.hot?.dispose(stop_performance_track_cleanup);
+}
 
 const root_element = document.getElementById("root");
 if (root_element === null) {

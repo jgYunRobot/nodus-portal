@@ -38,15 +38,12 @@ interface PortalComponentSessionOptions {
   clock?: MonotonicClock;
   component_id?: string;
   instance_id?: string;
-  storage?: Pick<Storage, "getItem" | "setItem">;
   set_timeout?: typeof window.setTimeout;
   clear_timeout?: typeof window.clearTimeout;
   on_invalidate?: () => void;
 }
 
 const COMPONENT_ID_PREFIX = "nodus-portal.";
-const COMPONENT_ID_STORAGE_KEY = "nodus.portal.component_id.v1";
-const COMPONENT_ID_MAX_LENGTH = 128;
 const OBSERVATION_CAPABILITY = "control.robot_status.v1";
 const OPERATION_CAPABILITY = "control.operation.v1";
 const NANOSECONDS_PER_MILLISECOND = 1_000_000;
@@ -59,35 +56,6 @@ function browserClock(): MonotonicClock {
 
 function createInstanceId(): string {
   return `portal-${createRandomUuid()}`;
-}
-
-function createComponentId(
-  storage?: Pick<Storage, "getItem" | "setItem">
-): string {
-  let active_storage: Pick<Storage, "getItem" | "setItem">;
-  try {
-    active_storage = storage ?? window.localStorage;
-    const stored_component_id = active_storage.getItem(
-      COMPONENT_ID_STORAGE_KEY
-    );
-    if (
-      stored_component_id !== null &&
-      stored_component_id.startsWith(COMPONENT_ID_PREFIX) &&
-      stored_component_id.length <= COMPONENT_ID_MAX_LENGTH
-    ) {
-      return stored_component_id;
-    }
-  } catch {
-    return `${COMPONENT_ID_PREFIX}${createRandomUuid()}`;
-  }
-
-  const component_id = `${COMPONENT_ID_PREFIX}${createRandomUuid()}`;
-  try {
-    active_storage.setItem(COMPONENT_ID_STORAGE_KEY, component_id);
-  } catch {
-    // The runtime-scoped ID still prevents cross-device replacement.
-  }
-  return component_id;
 }
 
 export class PortalComponentSession {
@@ -117,9 +85,10 @@ export class PortalComponentSession {
   constructor(options: PortalComponentSessionOptions = {}) {
     this.client = options.client ?? new PilotHttpClient();
     this.clock = options.clock ?? browserClock();
-    this.component_id =
-      options.component_id ?? createComponentId(options.storage);
     this.instance_id = options.instance_id ?? createInstanceId();
+    // Each page runtime needs its own registry slot, including sibling tabs.
+    this.component_id =
+      options.component_id ?? `${COMPONENT_ID_PREFIX}${this.instance_id}`;
     this.set_timeout = options.set_timeout ?? window.setTimeout.bind(window);
     this.clear_timeout =
       options.clear_timeout ?? window.clearTimeout.bind(window);

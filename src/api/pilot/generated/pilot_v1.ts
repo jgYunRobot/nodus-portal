@@ -1260,7 +1260,13 @@ export interface components {
                 reference_id: 0;
                 force: number[];
                 stiffness: number[] | number[];
-                damping: number[] | number[];
+                /**
+                 * @description Dimensionless damping ratio shared by all task axes.
+                 * @default 1
+                 */
+                damping_ratio: number;
+                /** @description Added task virtual mass [mx,my,mz,Ix,Iy,Iz], translation in kg and rotation in kg m^2. */
+                inertia: number[];
                 transition_time: number;
             };
         };

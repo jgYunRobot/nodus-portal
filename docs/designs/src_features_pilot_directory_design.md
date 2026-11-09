@@ -19,6 +19,17 @@ Discovery uses at most 256 endpoints, eight concurrent probes, 400 ms probe time
 reported. Only matching health and stream-directory server identities are published. The host owns
 the discovered list; browser requests cannot specify a proxy destination.
 
+A Pilot may be reachable through more than one verified address (including a local reverse proxy).
+Retain all verified address identities in the bounded forwarding map while showing each process
+once. Discovery also retries known addresses after an empty outage, before considering newly
+enumerated sockets. `GET /__portal/pilots?pilot=<selected-id>` projects the same deduplicated
+catalog using the selected verified address for that process. Both launch resolution and periodic
+browser discovery supply the saved/URL selection, and the browser query key includes that selection.
+This keeps a bookmark usable when socket enumeration order changes or another address becomes
+canonical. The query selects only an address discovered by the host; it cannot introduce a URL.
+Unknown or currently absent selections remain unavailable, and forwarding still checks process
+identity before every request.
+
 Each Pilot selection has an opaque ID bound to its endpoint; `server_instance_id` identifies the
 current process separately. The endpoint ID remains stable across Pilot and Portal host restarts.
 The host checks the last discovered process identity before forwarding. Until discovery confirms

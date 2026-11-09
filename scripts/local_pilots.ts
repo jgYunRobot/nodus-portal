@@ -159,6 +159,7 @@ export function createLocalPilotMiddleware(
     discovery_error: null
   };
   const known_pilots = new Map<string, DiscoveredPilot>();
+  let discovered_pilots: DiscoveredPilot[] = [];
   const identity_checks = new Map<string, Promise<Record<string, unknown>>>();
 
   function checkIdentity(
@@ -191,6 +192,7 @@ export function createLocalPilotMiddleware(
         ...new Set([
           ...catalog.pilots.map((pilot) => pilot.endpoint),
           ...(options.configured_endpoints ?? []),
+          ...[...known_pilots.values()].map((pilot) => pilot.endpoint),
           ...local
         ])
       ].filter((endpoint) => {
@@ -223,6 +225,7 @@ export function createLocalPilotMiddleware(
       found.sort(
         (a, b) => endpoints.indexOf(a.endpoint) - endpoints.indexOf(b.endpoint)
       );
+      discovered_pilots = found;
       for (const pilot of found)
         if (!unique.has(pilot.server_instance_id))
           unique.set(pilot.server_instance_id, pilot);
@@ -234,7 +237,8 @@ export function createLocalPilotMiddleware(
         partial,
         discovery_error
       };
-      for (const pilot of catalog.pilots) {
+      // Keep every verified address current, even when the displayed process is deduplicated.
+      for (const pilot of found) {
         known_pilots.delete(pilot.pilot_id);
         known_pilots.set(pilot.pilot_id, pilot);
       }
@@ -249,7 +253,8 @@ export function createLocalPilotMiddleware(
   }
 
   return (request, response, next) => {
-    const path = new URL(request.url ?? "/", "http://portal.local").pathname;
+    const request_url = new URL(request.url ?? "/", "http://portal.local");
+    const path = request_url.pathname;
     if (path !== DIRECTORY_PATH && !path.startsWith(`${DIRECTORY_PATH}/`))
       return next();
     void (async () => {
@@ -259,7 +264,25 @@ export function createLocalPilotMiddleware(
           return sendError(response, 405, "GET required");
         response.setHeader("Content-Type", "application/json");
         response.setHeader("Cache-Control", "no-store");
-        response.end(JSON.stringify(directory));
+        const selected = discovered_pilots.find(
+          (pilot) => pilot.pilot_id === request_url.searchParams.get("pilot")
+        );
+        response.end(
+          JSON.stringify(
+            selected === undefined
+              ? directory
+              : {
+                  ...directory,
+                  pilots: directory.pilots
+                    .map((pilot) =>
+                      pilot.server_instance_id === selected.server_instance_id
+                        ? selected
+                        : pilot
+                    )
+                    .sort((a, b) => a.endpoint.localeCompare(b.endpoint))
+                }
+          )
+        );
         return;
       }
       const match = /^\/__portal\/pilots\/([a-f0-9]{24})(\/api\/v1\/.*)$/.exec(

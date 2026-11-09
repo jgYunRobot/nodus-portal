@@ -63,17 +63,7 @@ describe("PortalComponentSession", () => {
     expect(instance_id).toBe("portal-00010203-0405-4607-8809-0a0b0c0d0e0f");
   });
 
-  it("reuses one component ID for the same browser profile", async () => {
-    vi.stubGlobal("crypto", {
-      randomUUID: () => "browser-profile-id"
-    });
-    const values = new Map<string, string>();
-    const storage = {
-      getItem: (key: string) => values.get(key) ?? null,
-      setItem: (key: string, value: string) => {
-        values.set(key, value);
-      }
-    };
+  it("keeps concurrent page runtimes in independent component registry slots", async () => {
     const component_ids: string[] = [];
     const client = {
       registerComponent: async (request: { component_id: string }) => {
@@ -83,31 +73,27 @@ describe("PortalComponentSession", () => {
       updateComponentState: async () => lifecycleResponse(),
       heartbeat: async () => lifecycleResponse()
     };
-
     const first_session = new PortalComponentSession({
       client: client as never,
-      component_id: undefined,
-      instance_id: "portal-first",
-      storage
+      instance_id: "portal-first"
     });
-    first_session.start();
-    await flush();
-    first_session.stop();
-
     const second_session = new PortalComponentSession({
       client: client as never,
-      component_id: undefined,
-      instance_id: "portal-second",
-      storage
+      instance_id: "portal-second"
     });
+    first_session.start();
     second_session.start();
     await flush();
-    second_session.stop();
-
     expect(component_ids).toEqual([
-      "nodus-portal.browser-profile-id",
-      "nodus-portal.browser-profile-id"
+      "nodus-portal.portal-first",
+      "nodus-portal.portal-second"
     ]);
+    first_session.stop();
+    first_session.start();
+    await flush();
+    expect(component_ids[2]).toBe(component_ids[0]);
+    first_session.stop();
+    second_session.stop();
   });
 
   it("serializes lifecycle writes while keeping operation sequence separate", async () => {

@@ -89,3 +89,16 @@ it("does not fall back to the physical proxy after invalid JSON metadata or host
     )
   ).toMatchObject({ pilot_discovery_enabled: true, pilot_id: null });
 });
+
+it("requests the selected address when discovery deduplicates process aliases", async () => {
+  const fetch_directory = vi.fn<typeof fetch>(response);
+  await resolvePilotLaunch(
+    DEFAULT_PORTAL_CONFIG,
+    { ...location, search: `?pilot=${id}` },
+    fetch_directory,
+    null
+  );
+  expect(fetch_directory.mock.calls[0]?.[0]).toBe(
+    `/__portal/pilots?pilot=${id}`
+  );
+});

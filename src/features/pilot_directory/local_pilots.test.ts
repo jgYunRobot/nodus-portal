@@ -28,9 +28,14 @@ async function listen(server: Server): Promise<string> {
 }
 
 async function fakePilot(id: string) {
-  const state = { id, operations: [] as string[] };
+  const state = { id, available: true, operations: [] as string[] };
   const endpoint = await listen(
     createServer((request, response) => {
+      if (!state.available) {
+        response.writeHead(503);
+        response.end("{}");
+        return;
+      }
       if (request.url?.endsWith("/status/stream")) {
         response.writeHead(200, { "Content-Type": "text/event-stream" });
         response.write(
@@ -168,6 +173,63 @@ describe("local Pilot discovery and identity-scoped proxy", () => {
       await fetch(`${restarted_origin}/__portal/pilots`)
     ).json();
     expect(restarted.pilots[0].pilot_id).toBe(old_id);
+  });
+
+  it("keeps a selected alternate address usable when one process has two discovered addresses", async () => {
+    const direct = await fakePilot("same-process");
+    const alias = await fakePilot("same-process");
+    const alias_host = await host([alias.endpoint]);
+    const alias_directory: PilotDirectory = await (
+      await fetch(`${alias_host}/__portal/pilots`)
+    ).json();
+    const selected_id = alias_directory.pilots[0].pilot_id;
+    const origin = await host([direct.endpoint, alias.endpoint]);
+    const directory: PilotDirectory = await (
+      await fetch(`${origin}/__portal/pilots?pilot=${selected_id}`)
+    ).json();
+    expect(directory.pilots).toHaveLength(1);
+    expect(directory.pilots[0].pilot_id).toBe(selected_id);
+    expect(
+      (await fetch(`${origin}/__portal/pilots/${selected_id}/api/v1/health`))
+        .status
+    ).toBe(200);
+    expect(direct.state.operations).toEqual([]);
+    expect(alias.state.operations).toEqual([]);
+  });
+
+  it("retains endpoint selection after an empty outage and reversed address discovery order", async () => {
+    const direct = await fakePilot("before-restart");
+    const alias = await fakePilot("before-restart");
+    const endpoints = [direct.endpoint, alias.endpoint];
+    const origin = await host(endpoints);
+    const initial: PilotDirectory = await (
+      await fetch(`${origin}/__portal/pilots`)
+    ).json();
+    const selected_id = initial.pilots[0].pilot_id;
+    direct.state.available = false;
+    alias.state.available = false;
+    const now = Date.now();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now + 5000);
+    expect(
+      (await (await fetch(`${origin}/__portal/pilots`)).json()).pilots
+    ).toEqual([]);
+    direct.state.id = alias.state.id = "after-restart";
+    direct.state.available = alias.state.available = true;
+    endpoints.reverse();
+    clock.mockReturnValue(now + 10000);
+    const recovered: PilotDirectory = await (
+      await fetch(`${origin}/__portal/pilots?pilot=${selected_id}`)
+    ).json();
+    expect(recovered.pilots).toHaveLength(1);
+    expect(recovered.pilots[0]).toMatchObject({
+      pilot_id: selected_id,
+      endpoint: direct.endpoint,
+      server_instance_id: "after-restart"
+    });
+    expect(
+      (await fetch(`${origin}/__portal/pilots/${selected_id}/api/v1/health`))
+        .status
+    ).toBe(200);
   });
 
   it("streams SSE immediately through the selected namespace", async () => {

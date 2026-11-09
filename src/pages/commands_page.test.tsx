@@ -204,10 +204,19 @@ describe("direct command entry", () => {
     fireEvent.change(screen.getByLabelText("Fx (N)"), {
       target: { value: "12" }
     });
+    fireEvent.change(screen.getByLabelText("Damping ratio (ζ)"), {
+      target: { value: "0.7" }
+    });
+    fireEvent.change(screen.getByLabelText("Mz (kg)"), {
+      target: { value: "3" }
+    });
     fireEvent.click(screen.getByRole("button", { name: "Run setForce" }));
     await waitFor(() => expect(mocks.release).toHaveBeenCalledTimes(1));
     const body = JSON.parse(String(vi.mocked(fetch).mock.calls[0][1]!.body));
     expect(body.payload.force).toEqual([12, 0, 0, 0, 0, 0]);
+    expect(body.payload.damping_ratio).toBe(0.7);
+    expect(body.payload.inertia).toEqual([0, 0, 3, 0, 0, 0]);
+    expect(body.payload).not.toHaveProperty("damping");
     expect(body.payload.frame_id).toBe(7);
     expect(body.session_id).toBe("current-session");
   });

@@ -24,7 +24,7 @@ const titles: Record<string, string> = {
   dest: "Destination",
   force: "Force / torque",
   stiffness: "Stiffness",
-  damping: "Damping",
+  damping_ratio: "Damping ratio (ζ)",
   linear_limit: "Linear limits",
   angular_limit: "Angular limits",
   velocity_limit: "Velocity limit",
@@ -243,14 +243,16 @@ function NumericVector(props: FieldProps & { value: number[] }) {
             "Kry (Nm/rad)",
             "Krz (Nm/rad)"
           ]
-        : props.name === "damping" && values.length === 6
+        : props.name === "inertia" &&
+            props.operation === "control.set_force" &&
+            values.length === 6
           ? [
-              "Dx (Ns/m)",
-              "Dy (Ns/m)",
-              "Dz (Ns/m)",
-              "Drx (Nms/rad)",
-              "Dry (Nms/rad)",
-              "Drz (Nms/rad)"
+              "Mx (kg)",
+              "My (kg)",
+              "Mz (kg)",
+              "Ix (kg·m²)",
+              "Iy (kg·m²)",
+              "Iz (kg·m²)"
             ]
           : props.name === "linear_limit"
             ? ["Velocity (m/s)", "Acceleration (m/s²)", "Jerk (m/s³)"]
@@ -264,7 +266,11 @@ function NumericVector(props: FieldProps & { value: number[] }) {
   const shown = uniform_limit && !per_joint ? values.slice(0, 1) : values;
   return (
     <fieldset className={styles.vector}>
-      <legend>{titles[props.name] ?? props.name.replaceAll("_", " ")}</legend>
+      <legend>
+        {props.name === "inertia" && props.operation === "control.set_force"
+          ? "Added virtual mass"
+          : (titles[props.name] ?? props.name.replaceAll("_", " "))}
+      </legend>
       {uniform_limit ? (
         <label className={styles.session_option}>
           <input

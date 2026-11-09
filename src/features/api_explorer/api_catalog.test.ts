@@ -10,7 +10,7 @@ import {
 
 describe("Pilot API catalog", () => {
   it("exposes current operations absent from the old Portal contract", () => {
-    expect(api_document.info.version).toBe("1.11.0");
+    expect(api_document.info.version).toBe("1.12.0");
     expect(operation_schemas.map((item) => item.name)).toEqual(
       expect.arrayContaining([
         "control.set_ik_mode",
@@ -51,6 +51,9 @@ describe("Pilot API catalog", () => {
     const body = JSON.parse(createBodyExample(schema, "control-b", true));
     expect(body.payload.force).toHaveLength(6);
     expect(body.payload.stiffness).toHaveLength(6);
+    expect(body.payload.damping_ratio).toBe(1);
+    expect(body.payload.inertia).toEqual([0, 0, 0, 0, 0, 0]);
+    expect(body.payload).not.toHaveProperty("damping");
     expect(body.control_id).toBe("control-b");
   });
   it("escapes path values and preserves repeated query values without allowing URL replacement", () => {

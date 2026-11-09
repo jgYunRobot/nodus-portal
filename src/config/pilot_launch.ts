@@ -46,10 +46,13 @@ export async function resolvePilotLaunch(
   let selected_id = requested_id ?? saved_id;
   let managed = selected_id !== null;
   try {
-    const response = await fetch_directory(PILOT_DIRECTORY_PATH, {
-      cache: "no-store",
-      signal: AbortSignal.timeout(5000)
-    });
+    const response = await fetch_directory(
+      withPilotScope(PILOT_DIRECTORY_PATH, selected_id),
+      {
+        cache: "no-store",
+        signal: AbortSignal.timeout(5000)
+      }
+    );
     if (response.ok) {
       const data: unknown = await response.json();
       managed = true;

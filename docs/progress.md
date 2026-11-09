@@ -2208,3 +2208,149 @@
 
 - Verify the OFF/ON interaction during a separately requested runtime checkpoint.
   Hardware motion acceptance remains outstanding.
+
+## 2026-11-07 — Scalar force damping ratio and added virtual mass
+
+- Updated Pilot public contract snapshot to1.12.0, recorded working-tree provenance and matching SHA256, regenerated TypeScript. setForce now submits damping_ratio as one scalar and inertia as six task-axis masses; old damping matrix input removed.
+- Commands keeps the existing form and stiffness diagonal/matrix selector, with one damping ratio (ζ) field and Mx/My/Mz in kg plus Ix/Iy/Iz in kg·m². Updated catalog and mocked command test source to check the payload.
+- TypeScript typecheck and ESLint on changed source passed; schema bytes/hash match Pilot. Vitest was not run. Browser verification was attempted but blocked by unavailable iab and Chrome tab timeoutMs tool error; rendered appearance remains unverified. No operation sent to robot; no runtime restart, commit or push. Follow-up: requested browser/test verification and coordinated runtime deployment.
+
+## 2026-11-08 - Portal/Pilot reconnect stalls: current results
+
+- User authorized actual Chrome experiments, repeated Pilot restarts, and physical eRob supply/
+  Pilot connection, with an investigation window up to one hour. Preserve the pre-existing
+  contract/Commands edits and Pilot/Control working-tree changes; no commit or push requested.
+- Reproduced a separate session instability in two tabs of one actual headed Google Chrome
+  context against native Pilot plus demo Control: shared localStorage component identity caused
+  each tab to replace the other's session. In 60 seconds: 119 registrations and 112 failed
+  heartbeats. Runtime-scoped component identity repeats the same experiment with two registrations,
+  zero failed heartbeats, and both status UIs live. A retry retains its runtime identity.
+- Updated the lifecycle design, component-session regression, and sibling-tab browser regression.
+  Focused Vitest: 33/33; TypeScript: passed; Pilot directory Playwright: 4/4; scoped ESLint and
+  whitespace checks passed. These tests establish the identity fix and existing bounded recovery,
+  not the user's full single-tab long-duration stall.
+- Physical observation began at 02:43:26 UTC using literal default `./run_app.sh`. Current eRob
+  feedback is fresh, WKC 18/18, Servo OFF, startup motion gate reports fault; no robot operations
+  are submitted. Headed Google Chrome displays the Operation route with the eRob 3 kg profile.
+  The experiment checks advancing samples, one status source, and usable controls after each
+  restart; includes visibility return, browser offline/online, and increasing idle intervals.
+  A separate Chrome experiment retains normal background throttling and periodically checks menu
+  interaction. Windows belong on monitor 1 (DP-0), upper-right, per user instruction.
+- Still required: finish/capture the live long-duration experiments, investigate any actual stall,
+  validate any further fix against its reproducer, reconcile final runtime/power state, and report
+  the evidence boundary. Single-tab total UI freeze has not yet been reproduced. Raw browser and
+  runtime logs remain local under `/tmp/portal_*`; Archive received only the bounded identity
+  finding, event `nodus-portal:20261108-reconnect:shared-tab-session-collision`, receipt
+  `tkt_88a6b485-6a4e-4d87-87ed-21c4eb672ca4` (queued, not independent verification).
+
+### Additional reconnection finding and correction
+
+- While comparing the historical `e9db1a4` Portal through a second local reverse proxy (5174),
+  actual physical restart recovery failed after 14 successful recoveries: the next main Chrome
+  tab did not regain advancing status and usable controls within 45 seconds. The legacy direct
+  proxy tab still received fresh native status. This is a real, induced multi-address recovery
+  stall, not proof that the user's original topology included another proxy or that a complete
+  Chrome UI lock has been reproduced.
+- Confirmed the routing cause independently: native Pilot health returned HTTP 200, but discovery
+  deduplicated that process onto the proxy address and the original selected endpoint namespace
+  returned HTTP 503 continuously. The forwarding map updated only displayed canonical addresses.
+- Keep every verified address current in the bounded map, retry known addresses after an empty
+  outage, and project the deduplicated catalog onto the requested verified selection using
+  `/__portal/pilots?pilot=<id>`. Bootstrap and periodic discovery include the selected address;
+  query keys include the selection. Unknown selections and per-request identity checks remain.
+- Two focused HTTP reproducers failed before the fix and passed afterward. Combined focused tests:
+  54/54; TypeScript/scoped ESLint passed. The alias bookmark Chrome regression passed. Full browser
+  regression initially exposed a lazy-route-commit test race and reused fixture identities during
+  repeat runs; wait for the actual Operation heading and allocate fixture IDs per process/counter.
+- Fixed physical validation began at 03:02:26 UTC with the proxy alias still exposed. Fifteen
+  consecutive native restarts had recovered by 03:09:52 UTC with no operation requests or page
+  errors. The one-hour investigation limit still applies; the fixed physical script ends by
+  03:31 UTC and the independent normal-background Chrome observation by 03:30 UTC.
+- Harness corrections: Playwright focus emulation kept tabs visible despite foreground changes;
+  the valid background run uses ordinary Google Chrome plus `connectOverCDP(noDefaults: true)`
+  and verifies `document.hidden=true`. An initial menu-return probe used visible text `Theme`
+  instead of the actual accessible name `Choose theme`; that timeout was a test error. An old
+  stop marker ended one replacement run immediately; its terminal handle was checked before a
+  new run was started. These runs are not counted as successful long-duration evidence.
+- Archive receipt for the address-selection finding: `tkt_5eeb5a95-0547-4aff-8d78-ce368de70455`,
+  event `nodus-portal:20261108-reconnect:duplicate-address-selection-loss` (queued submitter report).
+- Final scoped browser run after harness corrections: 5/5 passed; combined unit/HTTP tests 54/54,
+  TypeScript and scoped ESLint passed. Fixed physical recovery count reached 24 by 03:17 UTC,
+  with zero operation requests, page errors, or recovery failures. The normal background run
+  displays the actual eRob model in its return screenshot; DOM/listener counts stay bounded while
+  native embedder heap rises, so a GC comparison is scheduled only at the end of the observation.
+
+
+### Final checkpoint requested by the user
+
+- The user chose no further experiments and requested the current results. The prepared synthetic
+  memory-isolation comparison was syntax-checked but never executed. Investigation stops at this
+  checkpoint; the original broad long-duration freeze is not certified completely resolved.
+- Two concrete reconnection defects are fixed in the working tree: sibling-tab component identity
+  replacement, and loss of a selected endpoint when the same Pilot is found at another address.
+  The latter was induced by the historical proxy comparison; it does not establish that the user's
+  original environment had that topology. No commit, push, or gitlink change was made.
+- Final fixed physical run: 03:02:27–03:31:00 UTC, 27 native Pilot restart recoveries. All 91 periodic
+  observations had a ready session, available/fresh/non-stale status, one status source, and usable
+  Servo-On controls while actual Servo remained OFF. Longest observed server-ready-to-browser
+  recovery was 7.056 seconds. Zero robot operation requests, page errors, or recovery failures.
+- Ordinary Chrome background run completed with 98 periodic observations spanning
+  03:05:47–03:30:05 UTC and successful periodic menu-return/screenshot operations. A separate
+  uninterrupted hidden-tab run kept every periodic sample hidden for more than eight minutes;
+  returning restored enabled controls and advancing samples in about 1.28 seconds, and the menu
+  appeared. This is finite observation, not an arbitrary-lifetime guarantee.
+- Memory remains unresolved: before/after explicit JS GC, `usedSize` changed from 55,020,432 to
+  48,396,708 bytes, but `embedderHeapUsedSize` changed only from 207,551,696 to 207,421,808 bytes.
+  DOM nodes remained 1,025 and listeners changed from 708 to 498. These observations do not prove
+  whether Portal, browser behavior, or diagnostic instrumentation owns the increase. Do not claim
+  leak-free operation or a confirmed memory-leak cause. Metric definitions:
+  https://chromedevtools.github.io/devtools-protocol/v8/Runtime/#method-getHeapUsage
+- Validation: scoped Vitest 54/54; Pilot browser cases 5/5; TypeScript, scoped ESLint/source formatting,
+  and whitespace checks passed. Production build was not run. Tests and experiments do not
+  establish robot motion acceptance; no motion was attempted and startup gate reported fault.
+- Cleanup: native Pilot passed its Servo-OFF shutdown check and exited at 03:31:00 UTC; port8765
+  was free. Both owned Vite servers (5173/5174), all experiment runners and Chrome processes
+  ended. Registered eRob3/P115 supply OFF was acknowledged and independently read back OFF,
+  restoring the pre-experiment state. Off intent run `e881d795399540469ff92f735189e2b1`; final status
+  run `801b90399b334a9bb50383a1d271ecdd`. This supply operation was not used as a motion stop.
+- The local aggregate evidence is `/tmp/portal_reconnect_summary.json`; raw experiment logs and
+  screenshots remain local. The summary aggregates this run's existing events rather than an
+  independent trial. Further memory diagnosis would need a separately authorized experiment.
+
+## 2026-11-08 — Development performance-track memory retention fix
+
+- The user resumed analysis, then explicitly limited the task to memory accumulation and
+  requested implementation. Whole-UI freeze diagnosis is outside this change's scope.
+- Idle-only 60Hz/3D comparison isolated retained React development User Timing measures:
+  483,744 records and 69.79MB embedder heap remained after pausing status and collecting GC;
+  clearing the records reduced it to 2.56MB, matching the timing-disabled control. These are
+  browser embedder heap measurements, not overall process RSS.
+- Added `src/app/react_performance_tracks.ts` to clear React component/scheduler measure names
+  once per observer delivery, including buffered records. Unrelated measure names and the
+  measurement API remain available. This uses the inspected React 19.2.8/R3F 9.7.0 metadata;
+  recheck that metadata on renderer updates. User Timing removes by name, so other application
+  measurements must not reuse React's names.
+- `src/main.tsx` installs the observer only in development before rendering and drains/disconnects
+  it on HMR disposal. Status publication, 3D updates, dependencies and production initialization
+  behavior are unchanged. Third-party packages were not patched.
+- Focused Vitest: 3/3 passed, covering unrelated records, component/scheduler batches, buffered
+  observation and disposal/replacement. TypeScript and scoped ESLint passed. Production build
+  was not run. Source formatting and whitespace checks passed.
+- Applied-bootstrap verification: ordinary Chrome 148.0.7778.96, 07:06:39–07:12:53 UTC, two
+  separate browser processes, same approximately 60Hz public fixture and eRob3kg visualization.
+  At minute 1–6 after GC, the fixed page's embedder heap stayed between 3.05 and 4.63MB;
+  it retained only 1–8 measures including one unrelated sentinel, rather than hundreds of
+  thousands. The original measurement API remained available and the sentinel survived every
+  observation. Both pages advanced live samples with zero page errors and working menus.
+- With status paused and GC completed, fixed embedder heap was 2.81MB versus 3.05MB in the
+  timing-disabled reference. Final DOM counts were 1,025 for both; intermediate counts varied
+  together between 1,025 and 1,038. This verifies the identified retention fix over the measured
+  interval, not arbitrary-lifetime memory behavior. Local evidence:
+  `/tmp/portal_applied_fix_memory_result.json` and `/tmp/portal_applied_fix_memory_probe.log`.
+- An isolated-cache Vite server with `NODE_ENV=production` verified that the actual bootstrap
+  installed no measure observer while the app, status stream and menus worked. This is a
+  production-conditions check, not a production build/deployment. Local evidence:
+  `/tmp/portal_memory_prod_gate_result.json`.
+- No robot commands, commit, push or gitlink change. Existing unrelated edits were preserved.
+- Cleanup verified: owned verification ports 5176/5177/37041 closed and temporary Chrome
+  processes exited. The pre-existing user server on 5173 was left running.
